@@ -1,0 +1,7 @@
+{
+  "name": "Kinni",
+  "description": "Anjali's Pregnancy Journey tracker with week-by-week baby development, countdown to due date, nutrition checklist, hydration tracker, and pregnancy insights.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
