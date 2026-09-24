@@ -185,7 +185,8 @@
   };
 
   // One entry point for every MIDI operation, so the page can post the same
-  // request to a worklet or call it directly: op = feed | load | get | learn | info.
+  // request to a worklet or call it directly:
+  // op = feed | load | get | learn | info | builtins | builtinText | match.
   Runtime.prototype.midi = function (op, arg) {
     var ex = this.exports, m = this._midiHandle(), ptr, r;
     if (op === "feed") {
@@ -217,6 +218,26 @@
       r = ex.djn_midi_learn(m, ptr);
       ex.djnw_free(ptr);
       return r;
+    }
+    if (op === "builtins") {  // [{id, name}] of the mappings built into the engine
+      var list = [];
+      for (var i = 0; i < ex.djn_midi_builtin_count(); i++) {
+        list.push({ id: utf8Decode(this._cstring(ex.djn_midi_builtin_id(i))),
+          name: utf8Decode(this._cstring(ex.djn_midi_builtin_name(i))) });
+      }
+      return list;
+    }
+    if (op === "builtinText") {
+      ptr = this._bytesIn(utf8Encode(arg), true);
+      r = ex.djn_midi_builtin_text(ptr);
+      ex.djnw_free(ptr);
+      return r ? utf8Decode(this._cstring(r)) : null;
+    }
+    if (op === "match") {  // port name -> built-in mapping id, or null
+      ptr = this._bytesIn(utf8Encode(arg), true);
+      r = ex.djn_midi_builtin_for_device(ptr);
+      ex.djnw_free(ptr);
+      return r ? utf8Decode(this._cstring(r)) : null;
     }
     if (op === "info") {  // learning flag and the last message received
       var len = ex.djn_midi_last_message(m, this.midiBuf);

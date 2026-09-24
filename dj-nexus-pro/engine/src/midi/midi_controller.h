@@ -74,6 +74,10 @@ class Controller {
   std::array<bool, 4> pfl_{};
   std::array<bool, 4> quantize_{{true, true, true, true}};
   double lastService_ = -1.0;
+  double lastDt_ = 0.005;
+  std::array<double, 4> vu_{};        // meter LEDs with a fall-back, 0..1
+  bool sendInit_ = true;              // one-shot sends due (after load / new output)
+  std::vector<double> sendAt_;        // next due time per mapping send
 
   std::vector<uint8_t> out_;      // queued feedback bytes
   std::vector<int> ledSent_;      // last value sent per LED, -1 = unknown

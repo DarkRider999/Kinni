@@ -439,7 +439,7 @@
       });
     },
 
-    // MIDI: op = feed | load | get | learn | info (see djnexus-runtime.js).
+    // MIDI: op = feed | load | get | learn | info | builtins | builtinText | match (see djnexus-runtime.js).
     midi(op, arg) {
       if (this.rt) {
         try { return Promise.resolve(this.rt.midi(op, arg)); } catch (e) { return Promise.reject(e); }
@@ -874,7 +874,7 @@
           <div class="midirow"><button type="button" id="midi-connect">CONNECT</button>
             <select id="midi-in" aria-label="MIDI input"><option value="">No input</option></select>
             <select id="midi-out" aria-label="MIDI output for LEDs"><option value="">No LED output</option></select></div>
-          <p class="midimsg" id="midi-msg">Plug in a controller and press Connect. Chrome and Edge support Web MIDI; Safari does not. No controller? Send test messages below.</p>
+          <p class="midimsg" id="midi-msg">Plug in a controller and press Connect. A Pioneer DDJ-FLX4 is recognised and mapped automatically. Chrome and Edge support Web MIDI; Safari does not. No controller? Send test messages below.</p>
           <span class="label">Test message (hex)</span>
           <div class="midirow"><input id="midi-test" value="90 0B 7F" aria-label="MIDI bytes in hex" spellcheck="false">
             <button type="button" id="midi-send">SEND</button></div>
@@ -889,10 +889,10 @@
           <div class="monitor" id="midi-mon" aria-live="off"></div>
         </div>
         <div>
-          <span class="label">Mapping</span>
+          <div class="midirow"><span class="label" style="flex:0 0 auto">Mapping</span>
+            <select id="midi-preset" aria-label="Built-in mapping"></select></div>
           <textarea class="mapedit" id="midi-map" spellcheck="false" aria-label="MIDI mapping text"></textarea>
-          <div class="midirow"><button type="button" id="midi-apply">APPLY</button><button type="button" id="midi-reload">RELOAD</button>
-            <button type="button" id="midi-default">DEFAULT</button></div>
+          <div class="midirow"><button type="button" id="midi-apply">APPLY</button><button type="button" id="midi-reload">RELOAD</button></div>
           <p class="midimsg" id="midi-map-msg">One line per control: <code>note 1 0x0B -&gt; deck1.play</code>. LEDs: <code>led note 1 0x0B &lt;- deck1.playing</code>.</p>
         </div>
       </div>
@@ -1536,7 +1536,7 @@
 
   // ------------------------------------------------------------------ MIDI
   const Midi = {
-    access: null, input: null, output: null, defaultText: "", lines: [], lastInfo: "",
+    access: null, input: null, output: null,
     hex: (bytes) => Array.from(bytes, (b) => b.toString(16).toUpperCase().padStart(2, "0")).join(" "),
 
     log(kind, text) {
@@ -1563,11 +1563,38 @@
       this.log("in", `${this.hex(bytes)}   ${this.describe(bytes)}`);
     },
 
-    // LED bytes from the engine: to the controller, and a short note in the monitor.
+    // Splits a byte stream into whole messages (SysEx included).
+    split(bytes) {
+      const out = [];
+      for (let i = 0; i < bytes.length;) {
+        if (bytes[i] < 0x80) { i++; continue; }
+        let len = bytes[i] === 0xF0 ? bytes.indexOf(0xF7, i) - i + 1 : ((bytes[i] & 0xF0) === 0xC0 || (bytes[i] & 0xF0) === 0xD0 ? 2 : 3);
+        if (len <= 0 || i + len > bytes.length) break;
+        out.push(bytes.subarray(i, i + len));
+        i += len;
+      }
+      return out;
+    },
+
+    // Bytes from the engine (LEDs, and keep-alive SysEx some controllers need):
+    // to the controller, and LED changes into the monitor.
     onOut(bytes) {
-      if (this.output) { try { this.output.send(bytes); } catch (e) { console.warn(e); } }
-      for (let i = 0; i + 2 < bytes.length && i < 9; i += 3) this.log("out", `${this.hex(bytes.subarray(i, i + 3))}   ${this.describe(bytes.subarray(i, i + 3))}`);
-      if (bytes.length > 9) this.log("note", `     … ${bytes.length / 3 - 3 | 0} more LED messages`);
+      const msgs = this.split(bytes);
+      if (this.output) {
+        for (const m of msgs) {
+          if (m[0] === 0xF0 && !this.access.sysexEnabled) continue;  // needs SysEx permission
+          try { this.output.send(m); } catch (e) { console.warn(e); break; }
+        }
+      }
+      const leds = msgs.filter((m) => m[0] !== 0xF0);
+      const mon = $("#midi-mon");
+      leds.slice(0, 3).forEach((m) => {
+        // A meter LED changes constantly: update its line instead of adding rows.
+        const key = this.hex(m.subarray(0, 2)), last = mon.lastElementChild;
+        if (last && last.dataset.key === key) last.textContent = `LED  ${this.hex(m)}   ${this.describe(m)}`;
+        else { this.log("out", `${this.hex(m)}   ${this.describe(m)}`); mon.lastElementChild.dataset.key = key; }
+      });
+      if (leds.length > 3) this.log("note", `     … ${leds.length - 3} more LED messages`);
     },
 
     async connect() {
@@ -1578,7 +1605,10 @@
         return;
       }
       try {
-        this.access = await navigator.requestMIDIAccess({ sysex: false });
+        // SysEx lets the page send keep-alive messages (the DDJ-FLX4 needs them);
+        // without it, controls and LEDs still work.
+        try { this.access = await navigator.requestMIDIAccess({ sysex: true }); }
+        catch (e) { this.access = await navigator.requestMIDIAccess({ sysex: false }); }
       } catch (e) {
         msg.className = "midimsg err";
         msg.textContent = "MIDI access was blocked (" + (e && e.name ? e.name : e) + "). Embedded previews often can't use MIDI: open this page directly in Chrome or Edge and allow MIDI.";
@@ -1598,16 +1628,29 @@
       const ins = Array.from(this.access.inputs.values()), outs = Array.from(this.access.outputs.values());
       fill($("#midi-in"), ins, "No input");
       fill($("#midi-out"), outs, "No LED output");
-      this.pick();
       const msg = $("#midi-msg");
       msg.className = "midimsg";
       msg.textContent = ins.length ? `${ins.length} input${ins.length > 1 ? "s" : ""} found. Controls are matched against the mapping on the right.`
         : "MIDI is on, but no controller is plugged in. Plug one in: it appears here automatically.";
+      this.pick(true);
     },
 
-    pick() {
+    async pick(fromInput) {
       if (this.input) this.input.onmidimessage = null;
       this.input = this.access ? this.access.inputs.get($("#midi-in").value) || null : null;
+      if (fromInput && this.input) {
+        // The controller's LED port usually has the same name as its input.
+        const twin = Array.from(this.access.outputs.values()).find((o) => o.name === this.input.name);
+        if (twin) $("#midi-out").value = twin.id;
+        const id = await Engine.midi("match", this.input.name);
+        if (id && id !== $("#midi-preset").value) {
+          $("#midi-preset").value = id;
+          await this.usePreset(id);
+          const msg = $("#midi-msg");
+          msg.className = "midimsg";
+          msg.textContent = `Recognised ${$("#midi-preset").selectedOptions[0].textContent}: its mapping is loaded.`;
+        }
+      }
       this.output = this.access ? this.access.outputs.get($("#midi-out").value) || null : null;
       if (this.input) this.input.onmidimessage = (e) => this.feed(e.data);
       const chip = $("#midi-chip");
@@ -1618,6 +1661,13 @@
     },
 
     async reloadText() { $("#midi-map").value = await Engine.midi("get"); },
+
+    async usePreset(id) {
+      const text = await Engine.midi("builtinText", id);
+      if (text == null) return;
+      $("#midi-map").value = text;
+      await this.apply(text);
+    },
 
     async apply(text) {
       const err = await Engine.midi("load", text);
@@ -1643,11 +1693,14 @@
 
     async init() {
       Engine.onMidiOut = (b) => this.onOut(b);
-      this.defaultText = await Engine.midi("get");
-      $("#midi-map").value = this.defaultText;
+      $("#midi-map").value = await Engine.midi("get");
       $("#midi-connect").onclick = () => this.connect();
-      $("#midi-in").onchange = () => this.pick();
-      $("#midi-out").onchange = () => this.pick();
+      $("#midi-in").onchange = () => this.pick(true);
+      $("#midi-out").onchange = () => this.pick(false);
+      const presets = await Engine.midi("builtins");
+      $("#midi-preset").innerHTML = presets.map((p) => `<option value="${p.id}">${p.id === "generic" ? "Generic template" : p.name}</option>`).join("")
+        + `<option value="custom">Custom (edited)</option>`;
+      $("#midi-preset").onchange = (e) => { if (e.target.value !== "custom") this.usePreset(e.target.value); };
       const send = (text) => {
         const bytes = text.trim().split(/[\s,]+/).filter(Boolean).map((h) => parseInt(h, 16));
         if (!bytes.length || bytes.some((b) => !(b >= 0 && b <= 255))) { toast("Type bytes in hex, e.g. 90 0B 7F"); return; }
@@ -1671,7 +1724,7 @@
       };
       $("#midi-apply").onclick = () => this.apply($("#midi-map").value);
       $("#midi-reload").onclick = () => this.reloadText();
-      $("#midi-default").onclick = () => { $("#midi-map").value = this.defaultText; this.apply(this.defaultText); };
+      $("#midi-map").addEventListener("input", () => { $("#midi-preset").value = "custom"; });
       setInterval(() => this.poll(), 150);
     }
   };

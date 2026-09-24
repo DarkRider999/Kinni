@@ -4,9 +4,28 @@ A mapping is a plain-text file that says what each control on a MIDI controller 
 
 Load one with `djn_midi_load_mapping()`. Read the current one back with `djn_midi_get_mapping()`, which includes bindings added with MIDI Learn. The engine starts with a generic template (`defaultMappingText()` in `src/midi/midi_controller.cpp`). Deck Lab shows it in its MIDI panel.
 
+## Built-in mappings
+
+Files in [`mappings/`](../mappings/) are compiled into the engine, so apps don't need to ship them:
+
+| Id | Controller | Guide |
+|---|---|---|
+| `generic` | Template for any controller (use with MIDI Learn) | this page |
+| `pioneer-ddj-flx4` | Pioneer DJ DDJ-FLX4 | [DDJ_FLX4.md](DDJ_FLX4.md) |
+
+```c
+const char* id = djn_midi_builtin_for_device(port_name);   /* "pioneer-ddj-flx4" for "DDJ-FLX4 MIDI 1" */
+if (id) djn_midi_load_mapping(midi, djn_midi_builtin_text(id), NULL, 0);
+```
+
+`djn_midi_builtin_count()`, `djn_midi_builtin_id(i)` and `djn_midi_builtin_name(i)` list them for a picker. To add a controller, add a `.txt` file to `mappings/` with a `device:` line, and a test in `tests/test_midi.cpp` that plays its messages.
+
 ```
 # comment
 name: My Controller
+device: DDJ-FLX4                     # port names containing this pick this mapping
+send every=200 F0 00 40 05 00 00 04 05 00 50 02 F7   # keep-alive
+send 90 10 7F                        # sent once when the mapping loads
 
 note 1 0x0B -> deck1.play            # a button
 cc 1 0x13 -> deck1.volume            # a fader
@@ -68,6 +87,7 @@ Channels are 1–16. Numbers can be decimal (`11`) or hex (`0x0B`). Put `shift` 
 |---|---|---|
 | `mixer.crossfader` | fader | Crossfader |
 | `mixer.master` | knob | Master level. Three quarters of the way up is 0 dB; the top is +6 dB |
+| `mixer.cuemix` | knob | Headphone mix: cue only (left) to master only (right) |
 | `mixer.colorparam` | knob | Colour FX parameter |
 | `mixer.colorfx+` · `mixer.colorfx-` | button | Next or previous colour FX |
 | `mixer.colorfx value=N` | button | Select a colour FX: 0 Filter, 1 Noise, 2 Dub Echo, 3 Pitch, 4 Crush, 5 Space |
@@ -114,7 +134,8 @@ LEDs are sent when their state changes, and all of them again when a new output 
 
 | State | Lit when |
 |---|---|
-| `deckN.playing` · `paused` | Playing, or loaded and paused |
+| `deckN.playing` · `paused` · `loaded` | Playing; loaded and paused; a track is loaded |
+| `deckN.pfl` | Headphone cue is on (as switched from the controller) |
 | `deckN.sync` · `keylock` · `slip` · `reverse` · `looping` · `master` | On |
 | `deckN.hotcue1`…`16` | The hot cue is set |
 | `deckN.sliproll` · `censor` | Held |
@@ -124,6 +145,17 @@ LEDs are sent when their state changes, and all of them again when a new output 
 | `sampler.padN` · `sampler.loadedN` | The pad is sounding, or has a sample loaded |
 | `macro.running` | A macro is running |
 | `shift` | SHIFT is held |
+
+## Header lines and raw messages
+
+| Line | Meaning |
+|---|---|
+| `name: <text>` | Display name |
+| `device: <text>` | Port names containing this text (case-insensitive) use this mapping; see `djn_midi_builtin_for_device`. Several lines are allowed |
+| `send <hex bytes>` | Sent once when the mapping loads and whenever a new output port opens: for example lighting buttons that stay lit |
+| `send every=<ms> <hex bytes>` | Repeated every 10–60000 ms, for controllers that need a keep-alive from the host. SysEx must run from `F0` to `F7` |
+
+In the browser, SysEx needs the Web MIDI SysEx permission. Without it, the page still sends everything else.
 
 ## MIDI Learn
 

@@ -105,6 +105,8 @@ bool Controller::load(const std::string& text, std::string& error) {
   LockGuard<Mutex> lock(mu_);
   mapping_ = std::move(m);
   ledSent_.assign(mapping_.leds.size(), -1);  // resend every LED
+  sendAt_.assign(mapping_.sends.size(), 0.0);
+  sendInit_ = true;
   for (auto& j : jogs_) j = Jog{};
   return true;
 }
@@ -135,6 +137,7 @@ bool Controller::learning() {
 void Controller::resendLeds() {
   LockGuard<Mutex> lock(mu_);
   std::fill(ledSent_.begin(), ledSent_.end(), -1);
+  sendInit_ = true;
 }
 
 int Controller::lastMessage(uint8_t out[3]) {
@@ -152,7 +155,13 @@ size_t Controller::readOutput(uint8_t* buf, size_t size) {
 }
 
 void Controller::send(const uint8_t* b, size_t n) {
-  if (out_.size() > 4096) out_.erase(out_.begin(), out_.begin() + 3 * 341);  // nobody is reading: drop the oldest messages
+  if (out_.size() > 4096) {
+    // Nobody is reading. Drop everything (never half a message) and send the
+    // full state again once someone does.
+    out_.clear();
+    std::fill(ledSent_.begin(), ledSent_.end(), -1);
+    sendInit_ = true;
+  }
   out_.insert(out_.end(), b, b + n);
 }
 
@@ -358,6 +367,7 @@ void Controller::apply(const Binding& b, double v, int delta, bool press, bool r
                                  : value >= 0.75 ? float((value - 0.75) / 0.25 * 6.0)
                                                  : float((value / 0.75 - 1.0) * 48.0));
       break;
+    case Act::CueMix: djn_mixer_set_cue_mix(e, float(value)); break;
     case Act::ColorParam: djn_mixer_set_color_param(e, float(value)); break;
     case Act::ColorFxNext:
     case Act::ColorFxPrev:
@@ -420,6 +430,7 @@ void Controller::service(double now) {
   LockGuard<Mutex> lock(mu_);
   const double dt = lastService_ < 0 ? 0.005 : std::min(0.1, std::max(0.001, now - lastService_));
   lastService_ = now;
+  lastDt_ = dt;
 
   for (int d = 0; d < 4; ++d) {
     Jog& j = jogs_[size_t(d)];
@@ -441,12 +452,29 @@ void Controller::service(double now) {
     }
   }
   sendLeds(false);
+
+  // Raw sends: one-shots after a load or a new output, repeats on their timer.
+  for (size_t i = 0; i < mapping_.sends.size(); ++i) {
+    const Send& snd = mapping_.sends[i];
+    const bool due = snd.everyMs ? now >= sendAt_[i] || sendInit_ : sendInit_;
+    if (!due) continue;
+    send(snd.bytes.data(), snd.bytes.size());
+    if (snd.everyMs) sendAt_[i] = now + snd.everyMs / 1000.0;
+  }
+  sendInit_ = false;
 }
 
 void Controller::sendLeds(bool force) {
   if (mapping_.leds.empty()) return;
   djn_engine_state st;
   djn_engine_peek_state(engine_, &st);
+  // Meter LEDs: peaks reset whenever the app reads the state, so hold them and
+  // fall back at 1.5 full scales per second, like a meter.
+  for (size_t d = 0; d < vu_.size(); ++d) {
+    const double pk = std::max(st.decks[d].peak_l, st.decks[d].peak_r);
+    const double now = pk > 1e-5 ? clamp01((20.0 * std::log10(pk) + 48.0) / 48.0) : 0.0;
+    vu_[d] = std::max(now, vu_[d] - 1.5 * lastDt_);
+  }
   for (size_t i = 0; i < mapping_.leds.size(); ++i) {
     const Led& l = mapping_.leds[i];
     const djn_deck_state& ds = st.decks[l.index < DJN_MAX_DECKS ? l.index : 0];
@@ -454,6 +482,8 @@ void Controller::sendLeds(bool force) {
     switch (l.state) {
       case LedState::Playing: level = ds.playing; break;
       case LedState::Paused: level = ds.loaded && !ds.playing; break;
+      case LedState::Loaded: level = ds.loaded; break;
+      case LedState::Pfl: level = pfl_[size_t(l.index)]; break;  // as toggled from the controller
       case LedState::Sync: level = ds.sync; break;
       case LedState::KeyLock: level = ds.key_lock; break;
       case LedState::Slip: level = ds.slip; break;
@@ -464,11 +494,7 @@ void Controller::sendLeds(bool force) {
       case LedState::HotCue: level = (ds.hot_cue_mask >> l.arg) & 1u; break;
       case LedState::SlipRoll: level = ds.slip_roll; break;
       case LedState::Censor: level = ds.censor; break;
-      case LedState::Vu: {
-        const double pk = std::max(ds.peak_l, ds.peak_r);
-        level = pk > 1e-5 ? clamp01((20.0 * std::log10(pk) + 48.0) / 48.0) : 0.0;
-        break;
-      }
+      case LedState::Vu: level = vu_[size_t(l.index)]; break;
       case LedState::FxOn: level = st.fx[l.index].on; break;
       case LedState::FxTail: level = st.fx[l.index].tail_active; break;
       case LedState::PadPlaying: level = double((st.sampler_playing >> l.index) & 1u); break;

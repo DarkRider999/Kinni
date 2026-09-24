@@ -1,0 +1,289 @@
+# Pioneer DJ DDJ-FLX4 for DJ Nexus Pro
+#
+# MIDI numbers as documented by the Mixxx community mapping for this
+# controller. Not yet checked on hardware by DJ Nexus. The controller sends
+# different notes when SHIFT is held, so shifted functions are ordinary bindings.
+# Pads: each pad mode sends its own notes, so hot cues, beat loops and the
+# sampler all work in their mode. Beat Jump, Keyboard, Key Shift and Pad FX
+# modes are not mapped yet.
+# If the tempo fader runs the wrong way on your unit, delete "invert".
+name: Pioneer DDJ-FLX4
+device: DDJ-FLX4
+
+# The FLX4 expects a host keep-alive (otherwise it drops back to its
+# stand-alone light show), and the loop buttons are lit while a host is connected.
+send every=200 F0 00 40 05 00 00 04 05 00 50 02 F7
+send 90 10 7F
+send 90 11 7F
+send 90 4C 7F
+send 90 4E 7F
+send 91 10 7F
+send 91 11 7F
+send 91 4C 7F
+send 91 4E 7F
+
+# ---------------------------------------------------------------- deck 1 (MIDI channel 1)
+note 1 0x0B -> deck1.play
+note 1 0x0C -> deck1.cue
+note 1 0x58 -> deck1.sync
+note 1 0x0E -> deck1.censor
+note 1 0x68 -> deck1.quantize
+note 1 0x36 -> deck1.jogtouch
+note 1 0x67 -> deck1.jogtouch novinyl
+cc 1 0x22 -> deck1.jog rel64 ticks=720
+cc 1 0x23 -> deck1.jog rel64 novinyl ticks=720
+cc 1 0x21 -> deck1.jog rel64 novinyl ticks=720
+cc 1 0x29 -> deck1.jog rel64 novinyl ticks=90
+cc14 1 0x00 0x20 -> deck1.pitch invert range=0.10
+note 1 0x10 -> deck1.loopin
+note 1 0x11 -> deck1.loopout
+note 1 0x4D -> deck1.loopexit
+note 1 0x50 -> deck1.loopexit
+note 1 0x4C -> deck1.loop beats=4
+note 1 0x51 -> deck1.loophalve
+note 1 0x53 -> deck1.loopdouble
+cc14 1 0x13 0x33 -> deck1.volume
+cc14 1 0x04 0x24 -> deck1.trim
+cc14 1 0x07 0x27 -> deck1.high
+cc14 1 0x0B 0x2B -> deck1.mid
+cc14 1 0x0F 0x2F -> deck1.low
+note 1 0x54 -> deck1.pfl
+note 1 0x3F -> shift
+cc14 7 0x17 0x37 -> deck1.color
+# pads (hot cue mode 8, with SHIFT 9)
+note 8 0x00 -> deck1.hotcue1
+note 9 0x00 -> deck1.clearhotcue1
+note 8 0x01 -> deck1.hotcue2
+note 9 0x01 -> deck1.clearhotcue2
+note 8 0x02 -> deck1.hotcue3
+note 9 0x02 -> deck1.clearhotcue3
+note 8 0x03 -> deck1.hotcue4
+note 9 0x03 -> deck1.clearhotcue4
+note 8 0x04 -> deck1.hotcue5
+note 9 0x04 -> deck1.clearhotcue5
+note 8 0x05 -> deck1.hotcue6
+note 9 0x05 -> deck1.clearhotcue6
+note 8 0x06 -> deck1.hotcue7
+note 9 0x06 -> deck1.clearhotcue7
+note 8 0x07 -> deck1.hotcue8
+note 9 0x07 -> deck1.clearhotcue8
+note 8 0x60 -> deck1.loop beats=1/4
+note 9 0x60 -> deck1.roll beats=1/4
+note 8 0x61 -> deck1.loop beats=1/2
+note 9 0x61 -> deck1.roll beats=1/2
+note 8 0x62 -> deck1.loop beats=1
+note 9 0x62 -> deck1.roll beats=1
+note 8 0x63 -> deck1.loop beats=2
+note 9 0x63 -> deck1.roll beats=2
+note 8 0x64 -> deck1.loop beats=4
+note 9 0x64 -> deck1.roll beats=4
+note 8 0x65 -> deck1.loop beats=8
+note 9 0x65 -> deck1.roll beats=8
+note 8 0x66 -> deck1.loop beats=16
+note 9 0x66 -> deck1.roll beats=16
+note 8 0x67 -> deck1.loop beats=32
+note 9 0x67 -> deck1.roll beats=32
+note 8 0x30 -> sampler.pad1
+note 9 0x30 -> sampler.stopall
+note 8 0x31 -> sampler.pad2
+note 9 0x31 -> sampler.stopall
+note 8 0x32 -> sampler.pad3
+note 9 0x32 -> sampler.stopall
+note 8 0x33 -> sampler.pad4
+note 9 0x33 -> sampler.stopall
+note 8 0x34 -> sampler.pad5
+note 9 0x34 -> sampler.stopall
+note 8 0x35 -> sampler.pad6
+note 9 0x35 -> sampler.stopall
+note 8 0x36 -> sampler.pad7
+note 9 0x36 -> sampler.stopall
+note 8 0x37 -> sampler.pad8
+note 9 0x37 -> sampler.stopall
+# LEDs
+led note 1 0x0B <- deck1.playing
+led note 1 0x47 <- deck1.playing
+led note 1 0x0C <- deck1.paused
+led note 1 0x48 <- deck1.paused
+led note 1 0x58 <- deck1.sync
+led note 1 0x54 <- deck1.pfl
+led note 1 0x4D <- deck1.looping
+led note 1 0x50 <- deck1.looping
+led cc 1 0x02 <- deck1.vu
+led note 16 0x00 <- deck1.loaded
+led note 8 0x00 <- deck1.hotcue1
+led note 9 0x00 <- deck1.hotcue1
+led note 8 0x01 <- deck1.hotcue2
+led note 9 0x01 <- deck1.hotcue2
+led note 8 0x02 <- deck1.hotcue3
+led note 9 0x02 <- deck1.hotcue3
+led note 8 0x03 <- deck1.hotcue4
+led note 9 0x03 <- deck1.hotcue4
+led note 8 0x04 <- deck1.hotcue5
+led note 9 0x04 <- deck1.hotcue5
+led note 8 0x05 <- deck1.hotcue6
+led note 9 0x05 <- deck1.hotcue6
+led note 8 0x06 <- deck1.hotcue7
+led note 9 0x06 <- deck1.hotcue7
+led note 8 0x07 <- deck1.hotcue8
+led note 9 0x07 <- deck1.hotcue8
+led note 8 0x30 <- sampler.pad1
+led note 9 0x30 <- sampler.pad1
+led note 8 0x31 <- sampler.pad2
+led note 9 0x31 <- sampler.pad2
+led note 8 0x32 <- sampler.pad3
+led note 9 0x32 <- sampler.pad3
+led note 8 0x33 <- sampler.pad4
+led note 9 0x33 <- sampler.pad4
+led note 8 0x34 <- sampler.pad5
+led note 9 0x34 <- sampler.pad5
+led note 8 0x35 <- sampler.pad6
+led note 9 0x35 <- sampler.pad6
+led note 8 0x36 <- sampler.pad7
+led note 9 0x36 <- sampler.pad7
+led note 8 0x37 <- sampler.pad8
+led note 9 0x37 <- sampler.pad8
+
+# ---------------------------------------------------------------- deck 2 (MIDI channel 2)
+note 2 0x0B -> deck2.play
+note 2 0x0C -> deck2.cue
+note 2 0x58 -> deck2.sync
+note 2 0x0E -> deck2.censor
+note 2 0x68 -> deck2.quantize
+note 2 0x36 -> deck2.jogtouch
+note 2 0x67 -> deck2.jogtouch novinyl
+cc 2 0x22 -> deck2.jog rel64 ticks=720
+cc 2 0x23 -> deck2.jog rel64 novinyl ticks=720
+cc 2 0x21 -> deck2.jog rel64 novinyl ticks=720
+cc 2 0x29 -> deck2.jog rel64 novinyl ticks=90
+cc14 2 0x00 0x20 -> deck2.pitch invert range=0.10
+note 2 0x10 -> deck2.loopin
+note 2 0x11 -> deck2.loopout
+note 2 0x4D -> deck2.loopexit
+note 2 0x50 -> deck2.loopexit
+note 2 0x4C -> deck2.loop beats=4
+note 2 0x51 -> deck2.loophalve
+note 2 0x53 -> deck2.loopdouble
+cc14 2 0x13 0x33 -> deck2.volume
+cc14 2 0x04 0x24 -> deck2.trim
+cc14 2 0x07 0x27 -> deck2.high
+cc14 2 0x0B 0x2B -> deck2.mid
+cc14 2 0x0F 0x2F -> deck2.low
+note 2 0x54 -> deck2.pfl
+note 2 0x3F -> shift
+cc14 7 0x18 0x38 -> deck2.color
+# pads (hot cue mode 10, with SHIFT 11)
+note 10 0x00 -> deck2.hotcue1
+note 11 0x00 -> deck2.clearhotcue1
+note 10 0x01 -> deck2.hotcue2
+note 11 0x01 -> deck2.clearhotcue2
+note 10 0x02 -> deck2.hotcue3
+note 11 0x02 -> deck2.clearhotcue3
+note 10 0x03 -> deck2.hotcue4
+note 11 0x03 -> deck2.clearhotcue4
+note 10 0x04 -> deck2.hotcue5
+note 11 0x04 -> deck2.clearhotcue5
+note 10 0x05 -> deck2.hotcue6
+note 11 0x05 -> deck2.clearhotcue6
+note 10 0x06 -> deck2.hotcue7
+note 11 0x06 -> deck2.clearhotcue7
+note 10 0x07 -> deck2.hotcue8
+note 11 0x07 -> deck2.clearhotcue8
+note 10 0x60 -> deck2.loop beats=1/4
+note 11 0x60 -> deck2.roll beats=1/4
+note 10 0x61 -> deck2.loop beats=1/2
+note 11 0x61 -> deck2.roll beats=1/2
+note 10 0x62 -> deck2.loop beats=1
+note 11 0x62 -> deck2.roll beats=1
+note 10 0x63 -> deck2.loop beats=2
+note 11 0x63 -> deck2.roll beats=2
+note 10 0x64 -> deck2.loop beats=4
+note 11 0x64 -> deck2.roll beats=4
+note 10 0x65 -> deck2.loop beats=8
+note 11 0x65 -> deck2.roll beats=8
+note 10 0x66 -> deck2.loop beats=16
+note 11 0x66 -> deck2.roll beats=16
+note 10 0x67 -> deck2.loop beats=32
+note 11 0x67 -> deck2.roll beats=32
+note 10 0x30 -> sampler.pad9
+note 11 0x30 -> sampler.stopall
+note 10 0x31 -> sampler.pad10
+note 11 0x31 -> sampler.stopall
+note 10 0x32 -> sampler.pad11
+note 11 0x32 -> sampler.stopall
+note 10 0x33 -> sampler.pad12
+note 11 0x33 -> sampler.stopall
+note 10 0x34 -> sampler.pad13
+note 11 0x34 -> sampler.stopall
+note 10 0x35 -> sampler.pad14
+note 11 0x35 -> sampler.stopall
+note 10 0x36 -> sampler.pad15
+note 11 0x36 -> sampler.stopall
+note 10 0x37 -> sampler.pad16
+note 11 0x37 -> sampler.stopall
+# LEDs
+led note 2 0x0B <- deck2.playing
+led note 2 0x47 <- deck2.playing
+led note 2 0x0C <- deck2.paused
+led note 2 0x48 <- deck2.paused
+led note 2 0x58 <- deck2.sync
+led note 2 0x54 <- deck2.pfl
+led note 2 0x4D <- deck2.looping
+led note 2 0x50 <- deck2.looping
+led cc 2 0x02 <- deck2.vu
+led note 16 0x01 <- deck2.loaded
+led note 10 0x00 <- deck2.hotcue1
+led note 11 0x00 <- deck2.hotcue1
+led note 10 0x01 <- deck2.hotcue2
+led note 11 0x01 <- deck2.hotcue2
+led note 10 0x02 <- deck2.hotcue3
+led note 11 0x02 <- deck2.hotcue3
+led note 10 0x03 <- deck2.hotcue4
+led note 11 0x03 <- deck2.hotcue4
+led note 10 0x04 <- deck2.hotcue5
+led note 11 0x04 <- deck2.hotcue5
+led note 10 0x05 <- deck2.hotcue6
+led note 11 0x05 <- deck2.hotcue6
+led note 10 0x06 <- deck2.hotcue7
+led note 11 0x06 <- deck2.hotcue7
+led note 10 0x07 <- deck2.hotcue8
+led note 11 0x07 <- deck2.hotcue8
+led note 10 0x30 <- sampler.pad9
+led note 11 0x30 <- sampler.pad9
+led note 10 0x31 <- sampler.pad10
+led note 11 0x31 <- sampler.pad10
+led note 10 0x32 <- sampler.pad11
+led note 11 0x32 <- sampler.pad11
+led note 10 0x33 <- sampler.pad12
+led note 11 0x33 <- sampler.pad12
+led note 10 0x34 <- sampler.pad13
+led note 11 0x34 <- sampler.pad13
+led note 10 0x35 <- sampler.pad14
+led note 11 0x35 <- sampler.pad14
+led note 10 0x36 <- sampler.pad15
+led note 11 0x36 <- sampler.pad15
+led note 10 0x37 <- sampler.pad16
+led note 11 0x37 <- sampler.pad16
+
+# ---------------------------------------------------------------- mixer (MIDI channel 7)
+cc14 7 0x1F 0x3F -> mixer.crossfader
+cc14 7 0x0C 0x2C -> mixer.cuemix
+
+# ---------------------------------------------------------------- beat FX (channels 5/6)
+# The ON/OFF button arrives on channel 5 or 6 depending on the CH SELECT switch,
+# so pressing it also routes the effect to that channel.
+note 5 0x47 -> fx1.target value=1
+note 5 0x47 -> fx1.on
+note 6 0x47 -> fx1.target value=2
+note 6 0x47 -> fx1.on
+note 5 0x43 -> fx1.on
+note 6 0x43 -> fx1.on
+note 5 0x10 -> fx1.target value=1
+note 6 0x11 -> fx1.target value=2
+note 5 0x63 -> fx1.type+
+note 5 0x64 -> fx1.type-
+note 5 0x4A -> fx1.beats-
+note 5 0x4B -> fx1.beats+
+cc14 5 0x02 0x22 -> fx1.wet
+cc14 5 0x02 0x22 -> fx1.depth
+led note 5 0x47 <- fx1.on
+led note 5 0x43 <- fx1.on

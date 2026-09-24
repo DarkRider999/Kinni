@@ -114,7 +114,7 @@ bool parseLedState(const std::string& text, Led& led, std::string& err) {
     if (gi < 1 || gi > 4) { err = "deck must be 1-4"; return false; }
     led.index = gi - 1;
     static const struct { const char* n; LedState s; } deckStates[] = {
-        {"playing", LedState::Playing}, {"paused", LedState::Paused}, {"sync", LedState::Sync},
+        {"playing", LedState::Playing}, {"paused", LedState::Paused}, {"loaded", LedState::Loaded}, {"pfl", LedState::Pfl}, {"sync", LedState::Sync},
         {"keylock", LedState::KeyLock}, {"slip", LedState::Slip}, {"reverse", LedState::Reverse},
         {"looping", LedState::Looping}, {"master", LedState::Master}, {"beat", LedState::Beat},
         {"sliproll", LedState::SlipRoll}, {"censor", LedState::Censor}, {"vu", LedState::Vu}};
@@ -243,7 +243,7 @@ bool parseAction(const std::string& text, Binding& b, std::string& err) {
     }
   } else if (group == "mixer") {
     static const struct { const char* n; Act a; } acts[] = {
-        {"crossfader", Act::Crossfader}, {"master", Act::Master}, {"colorparam", Act::ColorParam},
+        {"crossfader", Act::Crossfader}, {"master", Act::Master}, {"cuemix", Act::CueMix}, {"colorparam", Act::ColorParam},
         {"colorfx+", Act::ColorFxNext}, {"colorfx-", Act::ColorFxPrev}, {"colorfx", Act::ColorFxSet}};
     for (const auto& a : acts) {
       if (suffix == a.n) {
@@ -303,6 +303,42 @@ bool parseMapping(const std::string& text, Mapping& out, std::string& error) {
       m.name = line.substr(colon + 1);
       m.name.erase(0, m.name.find_first_not_of(" \t"));
       while (!m.name.empty() && std::isspace(static_cast<unsigned char>(m.name.back()))) m.name.pop_back();
+      continue;
+    }
+    if (lower(t[0]) == "device:") {
+      std::string d = line.substr(line.find(':') + 1);
+      d.erase(0, d.find_first_not_of(" \t"));
+      while (!d.empty() && std::isspace(static_cast<unsigned char>(d.back()))) d.pop_back();
+      m.devices.push_back(d);
+      continue;
+    }
+    if (lower(t[0]) == "send") {
+      Send snd;
+      for (size_t i = 1; i < t.size(); ++i) {
+        const std::string o = lower(t[i]);
+        int v = 0;
+        if (o.rfind("every=", 0) == 0) {
+          if (!parseInt(o.substr(6), v) || v < 10 || v > 60000) {
+            error = "line " + std::to_string(lineNo) + ": every= must be 10-60000 ms";
+            return false;
+          }
+          snd.everyMs = v;
+          continue;
+        }
+        const std::string h = o.rfind("0x", 0) == 0 ? o.substr(2) : o;
+        char* end = nullptr;
+        const long b = std::strtol(h.c_str(), &end, 16);
+        if (h.empty() || h.size() > 2 || *end || b < 0 || b > 255) {
+          error = "line " + std::to_string(lineNo) + ": bad byte '" + t[i] + "' (hex, e.g. F0)";
+          return false;
+        }
+        snd.bytes.push_back(uint8_t(b));
+      }
+      if (snd.bytes.empty() || snd.bytes[0] < 0x80 || (snd.bytes[0] == 0xF0) != (snd.bytes.back() == 0xF7)) {
+        error = "line " + std::to_string(lineNo) + ": send needs a whole MIDI message (SysEx F0 ... F7)";
+        return false;
+      }
+      m.sends.push_back(snd);
       continue;
     }
     size_t pos = 0;
@@ -366,6 +402,17 @@ bool parseMapping(const std::string& text, Mapping& out, std::string& error) {
 std::string serializeMapping(const Mapping& m) {
   std::string s = "# DJ Nexus MIDI mapping\n";
   if (!m.name.empty()) s += "name: " + m.name + "\n";
+  for (const auto& d : m.devices) s += "device: " + d + "\n";
+  for (const auto& snd : m.sends) {
+    s += "send";
+    if (snd.everyMs) s += " every=" + std::to_string(snd.everyMs);
+    char b[4];
+    for (uint8_t x : snd.bytes) {
+      std::snprintf(b, sizeof(b), " %02X", x);
+      s += b;
+    }
+    s += "\n";
+  }
   for (const auto& b : m.bindings) s += (b.shift ? "shift " : "") + controlText(b.control) + " -> " + b.actionText + "\n";
   for (const auto& l : m.leds) {
     s += "led " + controlText(l.control) + " <- " + l.stateText;

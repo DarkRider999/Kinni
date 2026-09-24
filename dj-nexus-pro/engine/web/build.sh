@@ -14,13 +14,17 @@ SOURCES=(src/core/track.cpp src/core/stretcher.cpp src/core/deck.cpp src/core/ch
          src/core/recorder.cpp src/core/engine.cpp src/core/fx.cpp src/core/sampler.cpp src/core/colorfx.cpp src/core/macro.cpp src/capi.cpp src/decode/decoder_none.cpp
          src/midi/midi_mapping.cpp src/midi/midi_controller.cpp src/midi/midi_capi.cpp src/midi/midi_ports_none.cpp
          src/hosts/host_none.cpp src/web/djnexus_web.cpp)
+# Controller mappings compiled in (same generator as the CMake build).
+GEN=$(mktemp -d)
+trap 'rm -rf "$GEN"' EXIT
+cmake -DSRC="$PWD" -DOUT="$GEN/djn_builtin_mappings.h" -P cmake/EmbedMappings.cmake
 # Export exactly the public C API (plus the web helpers, which export themselves).
 EXPORTS=()
 for fn in $(grep -o 'djn_[a-z_]*(' include/djnexus/djnexus.h | tr -d '(' | sort -u); do
   EXPORTS+=("-Wl,--export-if-defined=$fn")
 done
 "$CXX" --target=wasm32-wasi -std=c++17 -O3 -DNDEBUG -DDJN_NO_THREADS -fno-exceptions \
-  -fvisibility=hidden -Iinclude -Isrc -Isrc/core "${SOURCES[@]}" \
+  -fvisibility=hidden -Iinclude -Isrc -Isrc/core -Isrc/midi -I"$GEN" "${SOURCES[@]}" \
   -nostartfiles -Wl,--no-entry -Wl,--export=__wasm_call_ctors "${EXPORTS[@]}" \
   -Wl,--strip-all -Wl,-z,stack-size=1048576 -o "$OUT/djnexus.wasm"
 wasm-opt -O3 "$OUT/djnexus.wasm" -o "$OUT/djnexus.wasm"

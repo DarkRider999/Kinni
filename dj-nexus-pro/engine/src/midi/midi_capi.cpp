@@ -6,10 +6,12 @@
 // controller) can't deadlock against a port being closed. LED bytes always go
 // through the controller's queue and are flushed to the output port here.
 #include <algorithm>
+#include <cctype>
 #include <cstring>
 #include <memory>
 #include <new>
 #include <string>
+#include <vector>
 
 #if !defined(DJN_NO_THREADS)
 #include <atomic>
@@ -17,7 +19,9 @@
 #include <thread>
 #endif
 
+#include "djn_builtin_mappings.h"
 #include "djnexus/djnexus.h"
+#include "midi_mapping.h"
 #include "midi_controller.h"
 #include "midi_ports.h"
 
@@ -42,17 +46,98 @@ int copyString(const std::string& s, char* buf, int32_t size) {
   return DJN_OK;
 }
 
-// Service tick: jog physics and LEDs, then LED bytes out to the hardware port.
+// Length of the MIDI message starting at b[0] (whole SysEx up to F7), or 0
+// when the buffer ends mid-message.
+size_t messageLength(const uint8_t* b, size_t n) {
+  if (b[0] == 0xF0) {
+    for (size_t i = 1; i < n; ++i) {
+      if (b[i] == 0xF7) return i + 1;
+    }
+    return 0;
+  }
+  const uint8_t type = b[0] & 0xF0;
+  const size_t len = (type == 0xC0 || type == 0xD0) ? 2 : b[0] >= 0xF8 ? 1 : 3;
+  return len <= n ? len : 0;
+}
+
+// Service tick: jog physics and LEDs, then LED bytes out to the hardware port,
+// one message per call (WinMM takes one short message or one SysEx at a time).
 void serviceAndFlush(djn_midi* m, double now) {
   m->controller.service(now);
   djn::LockGuard<djn::Mutex> lock(m->portMu);
   if (!m->ports->outputOpen()) return;
-  uint8_t buf[768];
-  size_t n;
-  while ((n = m->controller.readOutput(buf, sizeof(buf))) > 0) m->ports->send(buf, n);
+  std::vector<uint8_t> bytes(8192);
+  bytes.resize(m->controller.readOutput(bytes.data(), bytes.size()));
+  for (size_t i = 0; i < bytes.size();) {
+    if (bytes[i] < 0x80) {  // stray data byte: skip to the next status
+      ++i;
+      continue;
+    }
+    const size_t len = messageLength(&bytes[i], bytes.size() - i);
+    if (!len) break;
+    m->ports->send(&bytes[i], len);
+    i += len;
+  }
+}
+
+struct Builtin {
+  std::string id, name, text;
+  std::vector<std::string> devices;  // lower case
+};
+
+std::string lowerCase(std::string s) {
+  for (auto& c : s) c = char(std::tolower(static_cast<unsigned char>(c)));
+  return s;
+}
+
+const std::vector<Builtin>& builtins() {
+  static const std::vector<Builtin> list = [] {
+    std::vector<Builtin> v;
+    v.push_back({"generic", "", djn::midi::defaultMappingText(), {}});
+    for (const auto& b : djn::midi::kBuiltinMappings) v.push_back({b.id, "", b.text, {}});
+    for (auto& b : v) {
+      djn::midi::Mapping m;
+      std::string err;
+      if (djn::midi::parseMapping(b.text, m, err)) {
+        b.name = m.name;
+        for (const auto& d : m.devices) b.devices.push_back(lowerCase(d));
+      }
+    }
+    return v;
+  }();
+  return list;
 }
 
 }  // namespace
+
+DJN_API int32_t djn_midi_builtin_count(void) { return int32_t(builtins().size()); }
+
+DJN_API const char* djn_midi_builtin_id(int32_t i) {
+  return i >= 0 && size_t(i) < builtins().size() ? builtins()[size_t(i)].id.c_str() : nullptr;
+}
+
+DJN_API const char* djn_midi_builtin_name(int32_t i) {
+  return i >= 0 && size_t(i) < builtins().size() ? builtins()[size_t(i)].name.c_str() : nullptr;
+}
+
+DJN_API const char* djn_midi_builtin_text(const char* id) {
+  if (!id) return nullptr;
+  for (const auto& b : builtins()) {
+    if (b.id == id) return b.text.c_str();
+  }
+  return nullptr;
+}
+
+DJN_API const char* djn_midi_builtin_for_device(const char* port_name) {
+  if (!port_name) return nullptr;
+  const std::string port = lowerCase(port_name);
+  for (const auto& b : builtins()) {
+    for (const auto& d : b.devices) {
+      if (!d.empty() && port.find(d) != std::string::npos) return b.id.c_str();
+    }
+  }
+  return nullptr;
+}
 
 DJN_API djn_midi* djn_midi_create(djn_engine* engine, int32_t flags) {
   if (!engine) return nullptr;

@@ -29,7 +29,7 @@ The real-time audio core of DJ Nexus Pro: decks, key lock, mixer, master bus and
 | Sampler | 64 slots, 16 voices; one-shot, gate, loop and toggle pads; choke groups; per-pad pitch and level; quantized triggers; loops follow the master tempo with key lock; routing to master or through a channel; **capture the last N beats from any deck** into a pad |
 | Recording | WAV 16-bit (TPDF dither) / 24-bit / 32-bit float, written off the audio thread |
 | Loading | Any PCM from the app (`djn_deck_load_pcm`), grid updates after load (`djn_deck_set_grid`) or WAV/FLAC/MP3 files (`djn_deck_load_file`); tracks are resampled to the device rate with a band-limited sinc resampler |
-| MIDI controllers | Text mappings ([docs/MIDI_MAPPING.md](docs/MIDI_MAPPING.md)) for notes, CCs, 14-bit CCs, pitch bend and relative encoders; SHIFT layer; MIDI Learn; jog wheels with vinyl scratch and pitch bend; LED feedback for 19 engine states. Ports: RtMidi 6.0 on Windows (WinMM), macOS/iOS (CoreMIDI) and Linux (ALSA); Android via `android.media.midi` ([DjnMidi.kt](android/com/djnexus/engine/DjnMidi.kt) + JNI); browsers via Web MIDI |
+| MIDI controllers | Text mappings ([docs/MIDI_MAPPING.md](docs/MIDI_MAPPING.md)) for notes, CCs, 14-bit CCs, pitch bend and relative encoders; SHIFT layer; MIDI Learn; jog wheels with vinyl scratch and pitch bend; LED feedback for 21 engine states; keep-alive and start-up messages; built-in mappings picked by port name (generic template, **Pioneer DDJ-FLX4**). Ports: RtMidi 6.0 on Windows (WinMM), macOS/iOS (CoreMIDI) and Linux (ALSA); Android via `android.media.midi` ([DjnMidi.kt](android/com/djnexus/engine/DjnMidi.kt) + JNI); browsers via Web MIDI |
 | Hosts | Desktop: miniaudio (WASAPI, CoreAudio, PulseAudio/ALSA/JACK). Android: Oboe (AAudio/OpenSL ES). iOS: RemoteIO + AVAudioSession |
 
 Real-time rules on the audio thread: no allocation, no locks, no file I/O, no logging. Denormals are flushed to zero on x86, ARM64 and ARMv7.
@@ -38,7 +38,7 @@ Real-time rules on the audio thread: no allocation, no locks, no file I/O, no lo
 
 | Check | Result |
 |---|---|
-| 75 unit/integration tests (x86-64 Linux) | pass |
+| 80 unit/integration tests (x86-64 Linux) | pass |
 | Same tests under ASan + UBSan | pass, no reports |
 | Multi-thread stress test (audio + UI + background loader + recorder) and the MIDI service thread under TSan | pass, no data races |
 | Same tests on **ARM64** and **ARMv7** (cross-compiled, run under QEMU) | pass |
@@ -211,7 +211,7 @@ On Android, open devices with [`DjnMidi`](android/com/djnexus/engine/DjnMidi.kt)
 - **Commercial time-stretcher.** The built-in WSOLA stretcher passes the pitch and level-stability tests and is fine for development. SPEC §10.1 plans a Rubber Band / Superpowered bake-off before launch; `Stretcher` is isolated behind a small interface for that swap.
 - **AAC/M4A/ALAC decoding.** Use the platform decoders (MediaCodec, AVAudioFile) and `djn_deck_load_pcm`.
 - A waveform/peaks API for the UI, and the Dart FFI bindings (generate them from `djnexus.h` with `ffigen`).
-- **Ready-made mappings for specific controllers** (Pioneer DDJ, Numark, Hercules, Traktor). The format and MIDI Learn are in place; each model needs its note/CC chart turned into a mapping file and a test on the hardware.
+- **More controller mappings** (Numark, Hercules, Traktor, other Pioneer DDJs). The Pioneer DDJ-FLX4 mapping is built in ([docs/DDJ_FLX4.md](docs/DDJ_FLX4.md)) but still needs a session on the real hardware.
 - **Very long recordings.** WAV files stop at 4 GB (about 6 h of 16-bit stereo at 48 kHz); RF64 is a follow-up.
 - **Latency on real devices** (target ≤ 20 ms from SPEC §2.3) still has to be measured on the device lab.
 
@@ -225,7 +225,8 @@ src/decode/                 file decoding (miniaudio)
 tests/                      tests (no external framework) + benchmark
 src/midi/                   MIDI mapping parser, controller (actions, jog, LEDs), ports, C API, Android JNI
 android/                    DjnMidi.kt: android.media.midi -> engine
-docs/MIDI_MAPPING.md        mapping format reference
+docs/MIDI_MAPPING.md        mapping format reference · docs/DDJ_FLX4.md
+mappings/                   controller mappings compiled into the engine (cmake/EmbedMappings.cmake)
 tools/                      djnexus_play (real time) · djnexus_render (offline mix)
 third_party/miniaudio/      miniaudio 0.11.22 (public domain / MIT-0)
 third_party/rtmidi/         RtMidi 6.0.0 (MIT-style licence)

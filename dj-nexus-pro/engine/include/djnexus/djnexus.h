@@ -428,6 +428,17 @@ DJN_API int     djn_midi_service(djn_midi* midi, double now_seconds);
 /* Last message received (for a MIDI monitor). Returns the number of bytes (0..3). */
 DJN_API int32_t djn_midi_last_message(djn_midi* midi, uint8_t out[3]);
 
+/* Mappings built into the engine: "generic" (the default template) plus one
+   per supported controller, e.g. "pioneer-ddj-flx4". Strings are static. */
+DJN_API int32_t     djn_midi_builtin_count(void);
+DJN_API const char* djn_midi_builtin_id(int32_t index);     /* NULL past the end */
+DJN_API const char* djn_midi_builtin_name(int32_t index);   /* e.g. "Pioneer DDJ-FLX4" */
+DJN_API const char* djn_midi_builtin_text(const char* id);  /* mapping text, or NULL */
+/* Id of the built-in mapping for a port name (matched case-insensitively
+   against each mapping's "device:" lines), or NULL. Pair it with
+   djn_midi_input_name() to pick the right mapping when a controller connects. */
+DJN_API const char* djn_midi_builtin_for_device(const char* port_name);
+
 /* ---------------------------------------------------------------- host */
 
 typedef struct djn_host djn_host;

@@ -2,8 +2,10 @@
 //
 //   # comment
 //   name: My Controller
+//   device: <text>          (port names containing it use this mapping)
 //   [shift] <control> -> <action> [options]
 //   led <control> <- <state> [on=127] [off=0]
+//   send [every=<ms>] <hex bytes>
 //
 //   control: note <ch> <n> | cc <ch> <n> | cc14 <ch> <msb> <lsb> | pb <ch>
 //            channels 1..16; numbers decimal or 0x hex
@@ -11,6 +13,7 @@
 // See docs/MIDI_MAPPING.md for every action, state and option.
 #pragma once
 
+#include <cstdint>
 #include <string>
 #include <vector>
 
@@ -38,7 +41,7 @@ enum class Act {
   // channel
   Volume, Trim, EqLow, EqMid, EqHigh, Color, Pfl,
   // mixer
-  Crossfader, Master, ColorParam, ColorFxNext, ColorFxPrev, ColorFxSet,
+  Crossfader, Master, CueMix, ColorParam, ColorFxNext, ColorFxPrev, ColorFxSet,
   // fx units
   FxOn, FxHold, FxWet, FxDepth, FxBeats, FxBeatsUp, FxBeatsDown, FxTypeNext, FxTypePrev, FxTarget,
   // sampler / macros / modifiers
@@ -67,7 +70,7 @@ struct Binding {
 };
 
 enum class LedState {
-  Playing, Paused, Sync, KeyLock, Slip, Reverse, Looping, Master, Beat, HotCue, SlipRoll, Censor, Vu,
+  Playing, Paused, Loaded, Pfl, Sync, KeyLock, Slip, Reverse, Looping, Master, Beat, HotCue, SlipRoll, Censor, Vu,
   FxOn, FxTail, PadPlaying, PadLoaded, MacroRunning, Shift,
 };
 
@@ -80,10 +83,19 @@ struct Led {
   int on = 127, off = 0;
 };
 
+// Raw bytes for the device: sent once when the mapping loads or an output
+// opens (everyMs = 0), or repeated (keep-alive messages some controllers need).
+struct Send {
+  std::vector<uint8_t> bytes;
+  int everyMs = 0;
+};
+
 struct Mapping {
   std::string name;
+  std::vector<std::string> devices;
   std::vector<Binding> bindings;
   std::vector<Led> leds;
+  std::vector<Send> sends;
 };
 
 // Parses a whole mapping. On failure `error` is "line N: reason".

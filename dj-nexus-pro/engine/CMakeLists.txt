@@ -73,6 +73,9 @@ if(DJN_NEEDS_MINIAUDIO)
   list(APPEND DJN_CORE_SOURCES src/miniaudio/ma_impl.c)
 endif()
 
+# Controller mappings (mappings/*.txt) compiled into the engine.
+include(cmake/EmbedMappings.cmake)
+
 # MIDI ports: RtMidi on desktop and iOS; Android apps feed bytes from android.media.midi.
 set(DJN_MIDI_API "")
 if(DJN_HOST STREQUAL "desktop" OR DJN_HOST STREQUAL "ios")
@@ -112,7 +115,8 @@ add_library(djnexus::engine ALIAS djnexus)
 target_include_directories(djnexus
   PUBLIC  ${CMAKE_CURRENT_SOURCE_DIR}/include
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/core
-          ${CMAKE_CURRENT_SOURCE_DIR}/third_party/miniaudio ${CMAKE_CURRENT_SOURCE_DIR}/third_party/rtmidi)
+          ${CMAKE_CURRENT_SOURCE_DIR}/third_party/miniaudio ${CMAKE_CURRENT_SOURCE_DIR}/third_party/rtmidi
+          ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
 if(DJN_HOST STREQUAL "desktop")
   target_compile_definitions(djnexus PRIVATE DJN_WITH_DEVICE_IO)
