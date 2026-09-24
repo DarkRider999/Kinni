@@ -1,0 +1,15 @@
+# python
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.venv/
+backend/data/
+*.part
+# web
+web/node_modules/
+web/dist/
+web/playwright-report/
+web/test-results/
+# local
+.env

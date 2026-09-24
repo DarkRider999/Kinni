@@ -1,0 +1,59 @@
+# Local production-like stack: Postgres + Redis + API + 2 workers + web app.
+#   docker compose up --build        →  web on http://localhost:5173, API docs on http://localhost:8000/docs
+x-backend-env: &backend-env
+  NF_ENV: compose
+  NF_DATABASE_URL: postgresql+psycopg://neonforge:neonforge@postgres:5432/neonforge
+  NF_REDIS_URL: redis://redis:6379/0
+  NF_STORAGE_DIR: /data/storage
+  NF_PUBLIC_BASE_URL: http://localhost:8000
+  NF_JWT_SECRET: change-me-in-production-please-32-bytes
+  NF_CORS_ORIGINS: '["http://localhost:5173"]'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: neonforge
+      POSTGRES_PASSWORD: neonforge
+      POSTGRES_DB: neonforge
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U neonforge"]
+      interval: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+
+  api:
+    build: ./backend
+    environment:
+      <<: *backend-env
+      NF_EMBEDDED_WORKER: "false"
+    ports: ["8000:8000"]
+    volumes: [media:/data]
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_started}
+
+  worker:
+    build: ./backend
+    command: ["neonforge-worker"]
+    environment:
+      <<: *backend-env
+      NF_WORKER_CONCURRENCY: "2"
+    volumes: [media:/data]
+    deploy: {replicas: 2}
+    depends_on: [api]
+
+  web:
+    build:
+      context: ./web
+      args:
+        VITE_API_URL: http://localhost:8000
+    ports: ["5173:80"]
+    depends_on: [api]
+
+volumes:
+  pgdata:
+  media:
