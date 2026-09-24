@@ -1,0 +1,98 @@
+name: DJ Nexus engine
+
+on:
+  push:
+    paths:
+      - "dj-nexus-pro/engine/**"
+      - ".github/workflows/dj-nexus-engine.yml"
+  pull_request:
+    paths:
+      - "dj-nexus-pro/engine/**"
+      - ".github/workflows/dj-nexus-engine.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: dj-nexus-pro/engine
+
+jobs:
+  desktop:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: "Linux (GCC)", os: ubuntu-24.04 }
+          - { name: "Windows (MSVC)", os: windows-2022 }
+          - { name: "macOS (Apple Silicon)", os: macos-14 }
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --config Release --parallel
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Benchmark
+        shell: bash
+        run: |
+          if [ -f build/Release/djnexus_bench.exe ]; then build/Release/djnexus_bench.exe; else build/djnexus_bench; fi
+
+  sanitizers:
+    name: Linux (ASan + UBSan, TSan)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: ASan + UBSan
+        run: |
+          cmake -S . -B asan -DCMAKE_BUILD_TYPE=Debug -DDJN_HOST=none \
+            -DCMAKE_CXX_FLAGS="-fsanitize=address,undefined -fno-sanitize-recover=undefined" \
+            -DCMAKE_C_FLAGS="-fsanitize=address,undefined" -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address,undefined"
+          cmake --build asan --parallel
+          ./asan/djnexus_tests
+      - name: TSan
+        run: |
+          cmake -S . -B tsan -DCMAKE_BUILD_TYPE=Debug -DDJN_HOST=none \
+            -DCMAKE_CXX_FLAGS="-fsanitize=thread -O1" -DCMAKE_C_FLAGS="-fsanitize=thread" \
+            -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=thread"
+          cmake --build tsan --parallel
+          ./tsan/djnexus_tests concurrent
+          ./tsan/djnexus_tests recorder
+
+  android:
+    name: Android NDK (${{ matrix.abi }})
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        abi: [arm64-v8a, armeabi-v7a, x86_64]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch Oboe
+        run: git clone --depth 1 --branch 1.9.3 https://github.com/google/oboe.git "$RUNNER_TEMP/oboe"
+      - name: Build shared library
+        run: |
+          cmake -S . -B build-android -G Ninja \
+            -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake" \
+            -DANDROID_ABI=${{ matrix.abi }} -DANDROID_PLATFORM=android-28 \
+            -DCMAKE_BUILD_TYPE=Release -DDJN_SHARED=ON -DDJN_OBOE_SOURCE_DIR="$RUNNER_TEMP/oboe"
+          cmake --build build-android --parallel
+      - name: Check exported symbols
+        run: |
+          "$ANDROID_NDK_LATEST_HOME"/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm -D --defined-only \
+            build-android/libdjnexus.so | grep -c " T djn_"
+
+  ios:
+    name: iOS (arm64)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build static library
+        run: |
+          cmake -S . -B build-ios -G Xcode -DCMAKE_SYSTEM_NAME=iOS \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=16.0 -DCMAKE_OSX_ARCHITECTURES=arm64
+          cmake --build build-ios --config Release -- -sdk iphoneos CODE_SIGNING_ALLOWED=NO

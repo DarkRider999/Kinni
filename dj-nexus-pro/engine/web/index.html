@@ -1,0 +1,1452 @@
+<title>DJ Nexus Deck Lab</title>
+<meta name="description" content="Try the DJ Nexus Pro audio engine in the browser: two decks, sync, key lock, loops, hot cues, EQ, colour FX, beat FX, riser/build-up/drop macros and a 16-pad sampler.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+  /* Single dark theme on purpose: this is a DJ booth UI. */
+  :root {
+    color-scheme: dark;
+    --void: #07060D; --deck: #12101E; --deck-2: #181529; --rail: #221E36; --rail-2: #2C2745;
+    --ink: #EDEBFA; --ink-dim: #8B86A8;
+    --a: #19F0FF; --b: #FF2BD6; --c: #FFB020; --d: #8A5CFF; --live: #FF3B5C; --ok: #3DFFA2;
+    --display: "Chakra Petch", "Rajdhani", "Segoe UI", sans-serif;
+    --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { background: var(--void); }
+  body { color: var(--ink); font: 14px/1.45 var(--body); padding-inline: 16px; padding-block: 18px 48px; margin: 0; }
+  .wrap { max-width: 1320px; margin: 0 auto; display: grid; gap: 16px; }
+  h1, h2, h3 { font-family: var(--display); margin: 0; text-wrap: balance; }
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+  .dim { color: var(--ink-dim); }
+  button, .btn { font: 700 11px/1 var(--display); letter-spacing: .06em; color: var(--ink); background: var(--void);
+    border: 1px solid var(--rail-2); border-radius: 8px; padding: 9px 8px; cursor: pointer; touch-action: manipulation;
+    user-select: none; -webkit-user-select: none; }
+  button:hover { border-color: var(--ink-dim); }
+  button:focus-visible, input:focus-visible, .knob:focus-visible, .jog:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  button[disabled] { opacity: .4; cursor: default; }
+
+  /* Header */
+  header.top { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; }
+  .brand { display: flex; gap: 12px; align-items: center; }
+  .brand svg { width: 42px; height: 42px; flex: none; }
+  .brand h1 { font-size: 22px; letter-spacing: .04em; }
+  .brand h1 span { color: var(--a); }
+  .brand p { margin: 0; font-size: 12px; color: var(--ink-dim); }
+  .status { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .chip { font: 600 11px/1 var(--mono); padding: 7px 9px; border-radius: 999px; border: 1px solid var(--rail-2); color: var(--ink-dim); white-space: nowrap; }
+  .chip b { color: var(--ink); font-weight: 700; }
+  .chip.ok { border-color: rgba(61,255,162,.5); } .chip.ok b { color: var(--ok); }
+  .chip.err { border-color: var(--live); color: var(--live); }
+
+  /* Waveform strip */
+  .waves { position: relative; background: var(--deck); border: 1px solid var(--rail); border-radius: 14px; padding: 6px; display: grid; gap: 4px; }
+  .waves canvas { width: 100%; height: 64px; display: block; border-radius: 6px; background: #0B0A14; }
+  .waves .centre { position: absolute; top: 6px; bottom: 6px; left: 50%; width: 2px; margin-left: -1px; background: var(--ink); box-shadow: 0 0 8px var(--ink); pointer-events: none; }
+  .zoom { position: absolute; right: 12px; top: 10px; display: flex; gap: 4px; }
+  .zoom button { padding: 5px 7px; font-size: 10px; background: rgba(7,6,13,.8); }
+
+  /* Console layout */
+  .console { display: grid; grid-template-columns: minmax(0, 1fr) 300px minmax(0, 1fr); gap: 12px; align-items: start; }
+  @media (max-width: 1040px) { .console { grid-template-columns: 1fr 1fr; } .mixer { grid-column: 1 / -1; order: 3; } }
+  @media (max-width: 680px) { .console { grid-template-columns: 1fr; } .mixer { order: 0; } }
+
+  .deck { background: var(--deck); border: 1px solid var(--rail); border-radius: 14px; padding: 12px; display: grid; gap: 10px; transition: box-shadow .25s; }
+  .deck.a.playing { box-shadow: 0 0 0 1px var(--a), 0 0 26px -8px var(--a); }
+  .deck.b.playing { box-shadow: 0 0 0 1px var(--b), 0 0 26px -8px var(--b); }
+  .deckhead { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+  .letter { font: 700 26px/1 var(--display); }
+  .a .letter { color: var(--a); } .b .letter { color: var(--b); }
+  .title { min-width: 0; }
+  .title b { display: block; font: 600 13px/1.3 var(--display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .title span { font-size: 11px; color: var(--ink-dim); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .loadbtn { position: relative; overflow: hidden; }
+  .loadbtn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .deck.dragover { outline: 2px dashed var(--ink-dim); outline-offset: -6px; }
+  .overview { width: 100%; height: 44px; display: block; border-radius: 6px; background: #0B0A14; cursor: pointer; }
+
+  .readout { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; }
+  .readout > div { background: var(--void); border-radius: 8px; padding: 7px 2px; display: grid; gap: 4px; min-width: 0; }
+  .readout b { font: 700 16px/1 var(--mono); font-variant-numeric: tabular-nums; }
+  .readout small { font: 500 9px/1 var(--body); color: var(--ink-dim); letter-spacing: .12em; text-transform: uppercase; }
+  .a .bpmv { color: var(--a); } .b .bpmv { color: var(--b); }
+  .beats { display: flex; gap: 3px; justify-content: center; }
+  .beats i { width: 9px; height: 9px; border-radius: 2px; background: var(--rail-2); }
+  .beats i.on { background: var(--c); box-shadow: 0 0 6px var(--c); }
+  .flags { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; min-height: 14px; }
+  .flags span { font: 700 8px/1 var(--mono); letter-spacing: .1em; padding: 3px 4px; border-radius: 3px; background: var(--rail); color: var(--ink-dim); }
+  .flags span.on { background: var(--ok); color: var(--void); }
+  .flags span.master.on { background: var(--c); }
+
+  .deckbody { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 12px; align-items: center; }
+  @media (max-width: 420px) { .deckbody { grid-template-columns: 1fr; } }
+  .jog { width: 100%; max-width: 150px; aspect-ratio: 1; justify-self: center; touch-action: none; cursor: grab; border-radius: 50%; }
+  .jog:active { cursor: grabbing; }
+  .col { display: grid; gap: 8px; min-width: 0; }
+  .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+  .row > * { flex: 1 1 0; min-width: 0; }
+  .pads { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+  .pad { aspect-ratio: 1.5; font: 700 11px/1 var(--mono); color: var(--ink-dim); padding: 0; }
+  .pad.set { color: var(--void); border-color: transparent; }
+  .pad.clearing { border-style: dashed; }
+  .loops { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+  .loops button { padding: 7px 0; font-family: var(--mono); font-size: 10px; }
+  .loops button.on { color: var(--c); border-color: var(--c); }
+  .transport { display: grid; grid-template-columns: 1fr 1.3fr repeat(4, 1fr); gap: 5px; }
+  .transport button { padding: 12px 0; }
+  .t-cue { color: var(--c) !important; border-color: var(--c) !important; }
+  .t-play.on { color: var(--ok); border-color: var(--ok); box-shadow: 0 0 12px -3px var(--ok); }
+  .toggle.on { color: var(--void); background: var(--ok); border-color: var(--ok); }
+  .toggle.on.amber { background: var(--c); border-color: var(--c); }
+  .pitch { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
+  .pitch input[type=range] { width: 100%; accent-color: var(--ink-dim); }
+  .pitch .num { font-size: 12px; min-width: 58px; text-align: right; }
+  .pitch select, .bpm-edit input { font: 600 11px/1 var(--mono); background: var(--void); color: var(--ink); border: 1px solid var(--rail-2); border-radius: 6px; padding: 5px 4px; }
+  .row > .bpm-edit { flex: 0 0 auto; }
+  .bpm-edit { display: flex; gap: 4px; align-items: center; }
+  .bpm-edit input { width: 68px; }
+  .bpm-edit button { padding: 6px 6px; font-size: 10px; }
+  .label { font: 600 9px/1 var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-dim); }
+
+  /* Mixer */
+  .mixer { background: var(--deck); border: 1px solid var(--rail); border-radius: 14px; padding: 12px; display: grid; gap: 10px; }
+  .mixhead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+  .seg { display: inline-flex; border: 1px solid var(--rail-2); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; padding: 7px 9px; font-size: 10px; background: transparent; color: var(--ink-dim); }
+  .seg button.on { background: var(--rail-2); color: var(--ink); }
+  .strips { display: grid; grid-template-columns: 1fr 36px 1fr; gap: 6px; }
+  .strip { display: grid; gap: 6px; justify-items: center; }
+  .knobwrap { display: grid; justify-items: center; gap: 3px; }
+  .knob { width: 40px; height: 40px; border-radius: 50%; position: relative; cursor: ns-resize; touch-action: none;
+    background: radial-gradient(circle at 40% 35%, #2A2545, #0B0A14 70%); border: 1px solid var(--rail-2); }
+  .knob::after { content: ""; position: absolute; left: 50%; top: 4px; width: 2px; height: 12px; margin-left: -1px; border-radius: 1px;
+    background: var(--ink); transform-origin: 50% 15px; transform: rotate(var(--r, 0deg)); }
+  .knob.a { box-shadow: 0 0 0 1px rgba(25,240,255,.35); } .knob.b { box-shadow: 0 0 0 1px rgba(255,43,214,.35); }
+  .knob.kill { box-shadow: 0 0 0 2px var(--live); }
+  .knobwrap span { font: 600 8px/1 var(--body); letter-spacing: .12em; color: var(--ink-dim); }
+  .meter { display: flex; gap: 3px; justify-content: center; height: 250px; padding-top: 4px; }
+  .meter canvas { width: 10px; height: 100%; border-radius: 2px; background: var(--rail); }
+  .fader { writing-mode: vertical-lr; direction: rtl; height: 110px; width: 26px; }
+  .fader.a { accent-color: var(--a); } .fader.b { accent-color: var(--b); }
+  .xf { width: 100%; accent-color: var(--d); }
+  .masterrow { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: center; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .stat { background: var(--void); border-radius: 8px; padding: 7px 8px; display: grid; gap: 3px; }
+  .stat b { font: 700 13px/1 var(--mono); }
+  .stat small { font: 500 9px/1 var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-dim); }
+
+  /* FX + sampler row */
+  .lower { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) minmax(0, 1.3fr); gap: 12px; align-items: start; }
+  @media (max-width: 1240px) { .lower { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 680px) { .lower { grid-template-columns: 1fr; } }
+  .panel { background: var(--deck); border: 1px solid var(--rail); border-radius: 14px; padding: 12px; display: grid; gap: 10px; }
+  .panel.fxon { box-shadow: 0 0 0 1px var(--d), 0 0 24px -8px var(--d); }
+  .fxtypes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+  .fxtypes button, .divs button { padding: 7px 0; font-size: 10px; }
+  .fxtypes button.on { color: var(--void); background: var(--d); border-color: var(--d); }
+  .divs { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 3px; }
+  .divs button { font-family: var(--mono); }
+  .divs button.on { color: var(--c); border-color: var(--c); }
+  .fxctl { display: grid; grid-template-columns: auto auto 1fr; gap: 12px; align-items: center; }
+  .fxbtns { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .fxon-btn { padding: 14px 0; font-size: 12px; }
+  .fxon-btn.on { color: var(--void); background: var(--d); border-color: var(--d); box-shadow: 0 0 14px -2px var(--d); }
+  .fxhold { padding: 14px 0; font-size: 12px; }
+  .fxinfo { font: 500 11px/1.3 var(--mono); color: var(--ink-dim); display: flex; justify-content: space-between; gap: 8px; }
+  .fxinfo b { color: var(--ink); }
+  .tailtag { color: var(--c); }
+  .spads { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  .spad span, .spad small { max-width: 100%; overflow-wrap: anywhere; }
+  .spad { aspect-ratio: 1.45; display: grid; align-content: space-between; justify-items: start; text-align: left; padding: 7px 8px;
+    font: 600 11px/1.15 var(--display); letter-spacing: .02em; border-radius: 10px; position: relative; touch-action: none; }
+  .spad small { font: 600 8px/1 var(--mono); letter-spacing: .1em; color: var(--ink-dim); }
+  .spad::before { content: ""; position: absolute; inset: 0; border-radius: 9px; border: 2px solid var(--pc, var(--rail-2)); opacity: .35; pointer-events: none; }
+  .spad.playing { background: var(--pc); color: var(--void); }
+  .spad.playing small { color: var(--void); }
+  .spad.sel::after { content: ""; position: absolute; right: 6px; top: 6px; width: 6px; height: 6px; border-radius: 50%; background: var(--ink); }
+  .spad.empty { color: var(--ink-dim); }
+  .sctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .sctl select, .padedit select { font: 600 11px/1 var(--mono); background: var(--void); color: var(--ink); border: 1px solid var(--rail-2); border-radius: 6px; padding: 6px 4px; }
+  .padedit { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; align-items: center; background: var(--void); border-radius: 10px; padding: 8px; }
+  .padedit label { display: grid; gap: 4px; font: 600 9px/1 var(--body); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-dim); }
+  .padedit input[type=range] { width: 100%; accent-color: var(--ink-dim); }
+  .capture { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+  .capture button { flex: 1 1 64px; }
+  .capture button.on { color: var(--c); border-color: var(--c); }
+  .capture .label { flex: 1 0 100%; }
+  .wrap > *, .lower > *, .console > * { min-width: 0; }
+
+  /* Colour FX + macros */
+  .colorrow { display: grid; gap: 6px; }
+  .colorfx { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+  .colorfx button { padding: 7px 0; font-size: 10px; }
+  .colorfx button.on { color: var(--void); background: var(--b); border-color: var(--b); }
+  .macro-go { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .macro-go button { padding: 16px 0; font-size: 12px; }
+  .macro-go button.run { color: var(--void); background: var(--c); border-color: var(--c); box-shadow: 0 0 16px -3px var(--c); }
+  .mopts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+  .progress { height: 8px; border-radius: 4px; background: var(--rail); overflow: hidden; }
+  .progress i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--d), var(--c)); }
+  .mstatus { font: 500 11px/1.3 var(--mono); color: var(--ink-dim); display: flex; justify-content: space-between; gap: 8px; }
+  .mstatus b { color: var(--ink); }
+
+  /* Start overlay */
+  .start { position: fixed; inset: 0; z-index: 10; display: grid; place-items: center; padding: 16px;
+    background: radial-gradient(circle at 50% 40%, rgba(26,21,48,.92), rgba(7,6,13,.96) 65%); }
+  .start .card { max-width: 520px; width: 100%; background: var(--deck); border: 1px solid var(--rail-2); border-radius: 18px; padding: 24px; display: grid; gap: 14px; text-align: center; }
+  .start h2 { font-size: 24px; }
+  .start p { margin: 0; color: var(--ink-dim); }
+  .start .go { font-size: 14px; padding: 14px; border: 0; color: var(--void); background: linear-gradient(90deg, var(--a), var(--d) 60%, var(--b)); border-radius: 12px; }
+  .start small { color: var(--ink-dim); font-size: 12px; }
+  .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 20; background: var(--deck-2); border: 1px solid var(--rail-2);
+    border-radius: 10px; padding: 10px 14px; font-size: 13px; max-width: calc(100% - 32px); }
+
+  .notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .notes section { background: var(--deck); border: 1px solid var(--rail); border-radius: 14px; padding: 14px 16px; }
+  .notes h3 { font-size: 15px; margin-bottom: 6px; }
+  .notes ul { margin: 0; padding-left: 18px; color: var(--ink-dim); display: grid; gap: 4px; }
+  .notes li b { color: var(--ink); font-weight: 600; }
+  kbd { font: 600 11px/1 var(--mono); border: 1px solid var(--rail-2); border-bottom-width: 2px; border-radius: 4px; padding: 2px 5px; color: var(--ink); }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <svg viewBox="0 0 1024 1024" aria-hidden="true"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#19F0FF"/><stop offset=".55" stop-color="#8A5CFF"/><stop offset="1" stop-color="#FF2BD6"/></linearGradient></defs><rect width="1024" height="1024" rx="224" fill="#12101E"/><circle cx="512" cy="512" r="330" fill="none" stroke="url(#lg)" stroke-width="44"/><path d="M392 650V374l240 276V374" fill="none" stroke="#EDEBFA" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div>
+        <h1>DJ NE<span>X</span>US PRO · Deck Lab</h1>
+        <p>The real C++ engine, running in your browser</p>
+      </div>
+    </div>
+    <div class="status" aria-live="polite">
+      <span class="chip" id="chip-mode">Engine: <b>not started</b></span>
+      <span class="chip" id="chip-rate">— Hz</span>
+      <span class="chip" id="chip-lat">latency —</span>
+      <span class="chip" id="chip-dsp">DSP —</span>
+    </div>
+  </header>
+
+  <div class="waves" id="waves">
+    <canvas id="wave0" aria-label="Deck A waveform around the playhead"></canvas>
+    <canvas id="wave1" aria-label="Deck B waveform around the playhead"></canvas>
+    <div class="centre"></div>
+    <div class="zoom"><button type="button" id="zoom-in" aria-label="Zoom in">+</button><button type="button" id="zoom-out" aria-label="Zoom out">−</button></div>
+  </div>
+
+  <div class="console" id="console"></div>
+
+  <div class="lower" id="lower"></div>
+
+  <div class="notes">
+    <section>
+      <h3>Try this</h3>
+      <ul>
+        <li>Press <b>PLAY</b> on A. On B, press <b>SYNC</b>, then <b>PLAY</b>: B locks to A's tempo and beat.</li>
+        <li>Turn B's <b>LOW</b> knob all the way down, raise the crossfader to the middle, then swap the bass.</li>
+        <li>Tap a <b>loop</b> size, then <b>SLIP</b> + loop exit to jump back where the track would be.</li>
+        <li>Drag a <b>jog wheel</b> to scratch. Hold <b>‹ ›</b> to nudge.</li>
+        <li>Pick an <b>FX</b>, a beat length and hold <b>HOLD</b>, or tap <b>ON</b>. Try Echo on 1/2 beat and let go: it rings out.</li>
+        <li>Switch <b>Color FX</b> to Dub Echo or Space and twist a <b>COLOR</b> knob, then let it go: the tail rings on.</li>
+        <li>Press <b>BUILD-UP</b> (4 bars) while a deck plays: it sweeps, rolls faster and faster, then drops on the bar line.</li>
+        <li>Hit the <b>sampler pads</b>. Pads 13–16 are loops that follow the tempo; <b>CAPTURE</b> grabs beats from a deck.</li>
+        <li><b>Load</b> your own MP3/WAV/FLAC or drop a file on a deck. The BPM is estimated; fix it in the BPM box.</li>
+      </ul>
+    </section>
+    <section>
+      <h3>What's running</h3>
+      <ul>
+        <li>The same C++ engine as the app, compiled to <b>WebAssembly</b> and run on the browser's audio thread.</li>
+        <li>Key lock (tempo without pitch change), phase-locked sync, loops, slip, hot cues, isolator EQ, filter, limiter.</li>
+        <li>12 beat FX timed from the master deck's beat grid, and a 16-voice sampler with quantized triggers and tempo-synced loops.</li>
+        <li>Six colour FX on the channel knobs and three bar-quantized macros: riser, build-up and drop.</li>
+        <li>Demo tracks are generated in your browser. Nothing is uploaded; your files stay on this device.</li>
+      </ul>
+    </section>
+    <section>
+      <h3>Browser preview limits</h3>
+      <ul>
+        <li>Recording and headphone cue need the native app.</li>
+        <li>Loading a track pauses the audio for a moment.</li>
+        <li>BPM detection here is a simple estimate; the app uses the trained analysis models.</li>
+        <li>Keys: <kbd>Z</kbd>/<kbd>M</kbd> play A/B, <kbd>X</kbd>/<kbd>N</kbd> cue, <kbd>S</kbd>/<kbd>J</kbd> sync, <kbd>1</kbd>–<kbd>8</kbd> pads, <kbd>F</kbd> hold FX 1.</li>
+      </ul>
+    </section>
+  </div>
+</div>
+
+<div class="start" id="start">
+  <div class="card">
+    <h2>Deck Lab</h2>
+    <p>Two decks, a mixer and two demo tracks, powered by the DJ Nexus Pro audio engine. Turn your volume down a little first.</p>
+    <button type="button" class="go" id="go">Start the engine</button>
+    <small id="start-msg">Sound starts only after you press the button.</small>
+  </div>
+</div>
+
+<script src="djnexus-runtime.js"></script>
+<script>
+(function () {
+  "use strict";
+  const $ = (s, el = document) => el.querySelector(s);
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  const DECK_COLORS = ["#19F0FF", "#FF2BD6"];
+  const BIN = 200;  // waveform bins per second
+
+  // ------------------------------------------------------------------ engine bridge
+  const Engine = {
+    ctx: null, node: null, rt: null, mode: "", thread: "", state: null, stateAt: 0, dspLoad: 0,
+    pending: new Map(), nextId: 1, sampleRate: 48000,
+
+    async start() {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: "interactive" });
+      this.ctx = ctx;
+      await ctx.resume();
+      this.sampleRate = ctx.sampleRate;
+      let bytes = null;
+      try {
+        const r = await fetch("djnexus.wasm");
+        if (r.ok) bytes = await r.arrayBuffer();
+      } catch (e) { bytes = null; }
+
+      if (ctx.audioWorklet && window.AudioWorkletNode) {
+        try {
+          await ctx.audioWorklet.addModule("djnexus-runtime.js");
+          await ctx.audioWorklet.addModule("djnexus-worklet.js");
+          const node = new AudioWorkletNode(ctx, "djnexus", { numberOfInputs: 0, outputChannelCount: [2] });
+          node.port.onmessage = (e) => this.onMessage(e.data);
+          node.connect(ctx.destination);
+          this.node = node;
+          let ready = null;
+          if (bytes) ready = await this.handshake({ type: "init-wasm", bytes: bytes.slice(0) });
+          if (!ready) {
+            await ctx.audioWorklet.addModule("djnexus-asm.js");
+            ready = await this.handshake({ type: "init-asm" });
+          }
+          if (ready) { this.mode = ready.mode; this.thread = "audio thread"; return; }
+          node.disconnect();
+          this.node = null;
+        } catch (e) {
+          console.warn("AudioWorklet unavailable, using the main thread", e);
+          if (this.node) { this.node.disconnect(); this.node = null; }
+        }
+      }
+      // Fallback: run on the main thread with a ScriptProcessorNode.
+      const rt = new DJNexusRuntime();
+      let ok = false;
+      if (bytes) { try { await rt.initWasm(bytes, ctx.sampleRate); ok = true; } catch (e) { console.warn(e); } }
+      if (!ok) {
+        await loadScript("djnexus-asm.js");
+        rt.initAsm(ctx.sampleRate);
+      }
+      this.rt = rt;
+      this.mode = rt.mode;
+      this.thread = "main thread";
+      const sp = ctx.createScriptProcessor(1024, 0, 2);
+      let busy = 0, windowStart = performance.now();
+      sp.onaudioprocess = (ev) => {
+        const t0 = performance.now();
+        const o = ev.outputBuffer;
+        rt.render(o.getChannelData(0), o.getChannelData(1), o.length);
+        busy += performance.now() - t0;
+        const now = performance.now();
+        if (now - windowStart > 1000) { this.dspLoad = busy / (now - windowStart); busy = 0; windowStart = now; }
+      };
+      sp.connect(ctx.destination);
+      this.sp = sp;
+    },
+
+    handshake(msg) {
+      return new Promise((resolve) => {
+        const timer = setTimeout(() => { this.waitReady = null; resolve(null); }, 6000);
+        this.waitReady = (m) => { clearTimeout(timer); this.waitReady = null; resolve(m.type === "ready" ? m : null); };
+        this.node.port.postMessage(msg);
+      });
+    },
+
+    onMessage(m) {
+      if (m.type === "state") {
+        this.state = DJNexusRuntime.unpack(m.state);
+        this.stateAt = performance.now();
+        this.dspLoad = m.dspLoad;
+      } else if ((m.type === "ready" || (m.type === "error" && (m.stage === "init-wasm" || m.stage === "init-asm"))) && this.waitReady) {
+        if (m.type === "error") console.warn("engine init failed:", m.message);
+        this.waitReady(m);
+      } else if (m.type === "result" || m.type === "error") {
+        const p = this.pending.get(m.id);
+        if (p) { this.pending.delete(m.id); m.type === "error" ? p.reject(new Error(m.message)) : p.resolve(m.result); }
+        else if (m.type === "error") console.warn("engine:", m.message);
+      }
+    },
+
+    call(fn, ...args) {
+      if (this.node) this.node.port.postMessage({ type: "call", fn, args });
+      else if (this.rt) this.rt.call(fn, args);
+    },
+
+    load(deck, left, right, bpm, firstBeat) {
+      if (this.rt) return Promise.resolve(this.rt.load(deck, left, right, this.sampleRate, bpm, firstBeat));
+      const id = this.nextId++;
+      return new Promise((resolve, reject) => {
+        this.pending.set(id, { resolve, reject });
+        this.node.port.postMessage({ type: "load", id, deck, left, right, sampleRate: this.sampleRate, bpm, firstBeat },
+          [left.buffer, right.buffer]);
+      });
+    },
+
+    loadSample(slot, left, right, bpm) {
+      if (this.rt) return Promise.resolve(this.rt.loadSample(slot, left, right, this.sampleRate, bpm));
+      const id = this.nextId++;
+      return new Promise((resolve, reject) => {
+        this.pending.set(id, { resolve, reject });
+        this.node.port.postMessage({ type: "loadSample", id, slot, left, right, sampleRate: this.sampleRate, bpm },
+          [left.buffer, right.buffer]);
+      });
+    },
+
+    poll() {
+      if (this.rt) { this.state = DJNexusRuntime.unpack(this.rt.state()); this.stateAt = performance.now(); }
+      return this.state;
+    }
+  };
+
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = src; s.onload = resolve; s.onerror = () => reject(new Error("could not load " + src));
+      document.head.appendChild(s);
+    });
+  }
+
+  // ------------------------------------------------------------------ analysis
+  // Waveform: per-bin peaks of low / mid / high bands, as in the app's waveforms.
+  function analyseWaveform(L, R, sr) {
+    const n = L.length, bins = Math.ceil(n / sr * BIN);
+    const low = new Float32Array(bins), mid = new Float32Array(bins), high = new Float32Array(bins);
+    const aLow = 1 - Math.exp(-2 * Math.PI * 200 / sr), aHigh = 1 - Math.exp(-2 * Math.PI * 2500 / sr);
+    let lp = 0, lp2 = 0;
+    const per = sr / BIN;
+    for (let i = 0; i < n; i++) {
+      const x = (L[i] + R[i]) * 0.5;
+      lp += aLow * (x - lp);
+      lp2 += aHigh * (x - lp2);
+      const b = (i / per) | 0;
+      const lo = Math.abs(lp), hi = Math.abs(x - lp2), mi = Math.abs(lp2 - lp);
+      if (lo > low[b]) low[b] = lo;
+      if (mi > mid[b]) mid[b] = mi;
+      if (hi > high[b]) high[b] = hi;
+    }
+    return { low, mid, high, bins };
+  }
+
+  // Tempo + first beat from an onset envelope: autocorrelation for the rough
+  // tempo, then a fine comb search so the grid holds over the whole analysis window.
+  function detectBeat(L, R, sr) {
+    const hop = Math.round(sr / 200), fps = sr / hop;
+    const n = L.length, frames = Math.floor(n / hop);
+    // Smoothed energy envelopes (a 5 ms frame is shorter than a bass cycle, so
+    // raw frame energy flickers): low band for kicks, full band for the rest.
+    const aLp = 1 - Math.exp(-2 * Math.PI * 150 / sr);
+    const aLowEnv = 1 - Math.exp(-1 / (0.012 * sr));
+    const aAllEnv = 1 - Math.exp(-1 / (0.006 * sr));
+    const env = new Float32Array(frames);
+    let lp = 0, lowEnv = 0, allEnv = 0;
+    const logLow = new Float32Array(frames), logAll = new Float32Array(frames), linLow = new Float32Array(frames);
+    for (let f = 0; f < frames; f++) {
+      for (let i = f * hop, e = i + hop; i < e; i++) {
+        const x = (L[i] + R[i]) * 0.5;
+        lp += aLp * (x - lp);
+        lowEnv += aLowEnv * (lp * lp - lowEnv);
+        allEnv += aAllEnv * (x * x - allEnv);
+      }
+      logLow[f] = Math.log1p(1000 * lowEnv);
+      linLow[f] = lowEnv;
+      logAll[f] = Math.log1p(1000 * allEnv);
+    }
+    // Onset strength for tempo: rise over 2 frames (10 ms), kicks weighted double.
+    // Kick strength for phase: linear low-band rise, where the kick dominates
+    // off-beat basslines and hats that look loud on a log scale.
+    const kick = new Float32Array(frames);
+    for (let f = 2; f < frames; f++) {
+      env[f] = Math.max(0, logLow[f] - logLow[f - 2]) * 2 + Math.max(0, logAll[f] - logAll[f - 2]);
+      kick[f] = Math.max(0, linLow[f] - linLow[f - 2]);
+    }
+    // Analyse up to 100 s from the middle of the track.
+    const winLen = Math.min(frames, Math.round(100 * fps));
+    const w0 = Math.max(0, Math.floor((frames - winLen) / 2));
+    const win = env.subarray(w0, w0 + winLen);
+    let mean = 0;
+    for (const v of win) mean += v;
+    mean /= Math.max(1, win.length);
+    const e = Float32Array.from(win, (v) => Math.max(0, v - mean));
+    const k = kick.subarray(w0, w0 + winLen);
+
+    let bestBpm = 0, bestScore = -1;
+    for (let lag = Math.floor(fps * 60 / 190); lag <= Math.ceil(fps * 60 / 70); lag++) {
+      let s = 0;
+      for (let i = 0; i + lag < e.length; i++) s += e[i] * e[i + lag];
+      const bpm = 60 * fps / lag;
+      const prior = Math.exp(-0.5 * Math.pow(Math.log2(bpm / 128) / 0.45, 2));
+      s *= prior;
+      if (s > bestScore) { bestScore = s; bestBpm = bpm; }
+    }
+    if (!(bestBpm > 0)) return { bpm: 0, firstBeat: 0 };
+
+    // Mean onset strength on a beat grid (normalised by the number of beats,
+    // so faster tempos don't win just by having more grid points).
+    function comb(bpm, sig = e) {
+      const period = fps * 60 / bpm;
+      let best = -1, bestPhase = 0;
+      for (let ph = 0; ph < period; ph += 0.5) {
+        let s = 0, count = 0;
+        for (let t = ph; t < sig.length - 2; t += period) {
+          const i = t | 0, fr = t - i;
+          s += sig[i] * (1 - fr) + sig[i + 1] * fr;
+          count++;
+        }
+        s /= Math.max(1, count);
+        if (s > best) { best = s; bestPhase = ph; }
+      }
+      return { score: best, phase: bestPhase };
+    }
+    let fine = { bpm: bestBpm, score: -1, phase: 0 };
+    for (let b = bestBpm - 1.5; b <= bestBpm + 1.5; b += 0.02) {
+      const c = comb(b);
+      if (c.score > fine.score) fine = { bpm: b, score: c.score, phase: c.phase };
+    }
+    // Most dance music is produced at whole (or half) BPMs: prefer them when they fit.
+    for (const cand of [Math.round(fine.bpm), Math.round(fine.bpm * 2) / 2]) {
+      const c = comb(cand);
+      if (c.score >= fine.score * 0.985) { fine = { bpm: cand, score: c.score, phase: c.phase }; break; }
+    }
+    const periodSec = 60 / fine.bpm;
+    // -4 ms: the smoothed envelopes rise slightly after the true attack.
+    const phaseSec = (w0 + comb(fine.bpm, k).phase) / fps - 0.004;
+    const firstBeat = ((phaseSec % periodSec) + periodSec) % periodSec;
+    return { bpm: Math.round(fine.bpm * 100) / 100, firstBeat };
+  }
+
+  // ------------------------------------------------------------------ demo tracks
+  // Two synthetic techno tracks with intro, groove, breakdown and drop.
+  function makeDemoTrack(bpm, seconds, sr, style) {
+    const n = Math.floor(seconds * sr), L = new Float32Array(n), R = new Float32Array(n);
+    const spb = 60 / bpm, twoPi = 2 * Math.PI;
+    const root = style === 0 ? 55 : 49;  // A1 or G1
+    const chord = style === 0 ? [1, 1.189, 1.498] : [1, 1.26, 1.682];
+    let seed = style === 0 ? 1234 : 4321;
+    const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff) * 2 - 1;
+    let kickPh = 0, bassPh = 0, padPh = [0, 0, 0], hp = 0;
+    for (let i = 0; i < n; i++) {
+      const t = i / sr, beat = t / spb, bar = Math.floor(beat / 4), inBeat = beat - Math.floor(beat);
+      const tb = inBeat * spb;  // seconds since the last beat
+      const breakdown = bar >= 32 && bar < 40, intro = bar < 8, outro = bar >= 64;
+      let v = 0;
+      if (!breakdown) {
+        const f = 45 + 110 * Math.exp(-tb * 32);
+        kickPh += twoPi * f / sr;
+        v += Math.sin(kickPh) * Math.exp(-tb * 7) * 0.62;
+      }
+      const off = ((beat + 0.5) % 1) * spb;
+      const noise = rnd();
+      hp += 0.6 * (noise - hp);
+      const hat = (noise - hp) * Math.exp(-off * 70) * (intro ? 0.10 : 0.16);
+      v += hat;
+      if (!intro && !breakdown) {
+        const clapT = (((beat + 1) % 2)) * spb;
+        v += noise * Math.exp(-clapT * 28) * 0.10 * (Math.floor(beat) % 2 === 1 ? 1 : 0);
+        const sixteenth = (beat * 4) % 1;
+        const bassEnv = style === 0 ? Math.exp(-sixteenth * spb * 18) * (inBeat > 0.2 ? 1 : 0.2)
+                                    : (inBeat >= 0.5 ? Math.exp(-(inBeat - 0.5) * spb * 6) : 0);
+        const note = style === 0 ? (bar % 4 === 3 ? 1.335 : 1) : (bar % 2 === 1 ? 1.122 : 1);
+        bassPh += twoPi * root * note / sr;
+        v += (Math.sin(bassPh) + 0.3 * Math.sin(bassPh * 2)) * bassEnv * 0.30;
+      }
+      if (breakdown || (!intro && bar % 8 >= 6) || outro) {
+        let p = 0;
+        for (let k = 0; k < 3; k++) { padPh[k] += twoPi * root * 4 * chord[k] / sr; p += Math.sin(padPh[k]) + 0.2 * Math.sin(padPh[k] * 3); }
+        const rise = breakdown ? 0.4 + 0.6 * ((bar - 32) + beat % 4 / 4) / 8 : 0.5;
+        v += p * 0.035 * rise;
+      }
+      if (breakdown && bar >= 38) v += noise * 0.05 * ((bar - 38) * 4 + beat % 4) / 8;  // riser
+      const s = Math.tanh(v * 1.1) * 0.8;
+      const pan = style === 0 ? 0.03 : -0.03;
+      L[i] = s * (1 - pan) + hat * 0.15;
+      R[i] = s * (1 + pan) - hat * 0.15;
+    }
+    return { L, R };
+  }
+
+  // ------------------------------------------------------------------ UI build
+  const decks = [0, 1].map((i) => ({
+    i, name: i === 0 ? "A" : "B", cls: i === 0 ? "a" : "b", color: DECK_COLORS[i],
+    title: "", sub: "", bpm: 0, firstBeat: 0, duration: 0, wave: null, overviewCache: null,
+    hot: new Array(8).fill(null), clearing: false, pitchRange: 0.08, jog: null, loading: false, keyLock: true
+  }));
+
+  function deckHtml(d) {
+    const loops = ["½", "1", "2", "4", "8", "16"].map((l, k) =>
+      `<button type="button" data-loop="${[0.5, 1, 2, 4, 8, 16][k]}" aria-label="${l} beat loop">${l}</button>`).join("");
+    const pads = Array.from({ length: 8 }, (_, k) =>
+      `<button type="button" class="pad" data-pad="${k}" aria-label="Hot cue ${k + 1}">${k + 1}</button>`).join("");
+    return `
+    <section class="deck ${d.cls}" id="deck${d.i}" aria-label="Deck ${d.name}">
+      <div class="deckhead">
+        <span class="letter">${d.name}</span>
+        <div class="title"><b id="title${d.i}">Waiting for engine…</b><span id="sub${d.i}">&nbsp;</span></div>
+        <label class="btn loadbtn">LOAD<input type="file" accept="audio/*,.mp3,.wav,.flac,.ogg,.m4a" id="file${d.i}" aria-label="Load a track onto deck ${d.name}"></label>
+      </div>
+      <canvas class="overview" id="ov${d.i}" aria-label="Track overview; click to jump"></canvas>
+      <div class="readout">
+        <div><b class="bpmv" id="bpm${d.i}">—</b><small>BPM</small></div>
+        <div><b id="pct${d.i}">0.00%</b><small>Tempo</small></div>
+        <div><b id="time${d.i}">-0:00.0</b><small>Remain</small></div>
+        <div><span class="beats" id="beats${d.i}"><i></i><i></i><i></i><i></i></span><span class="flags" id="flags${d.i}"><span class="master">MASTER</span><span class="lp">LOOP</span></span></div>
+      </div>
+      <div class="deckbody">
+        <canvas class="jog" id="jog${d.i}" tabindex="0" aria-label="Jog wheel for deck ${d.name}: drag to scratch"></canvas>
+        <div class="col">
+          <div class="pads" id="pads${d.i}">${pads}</div>
+          <div class="row"><button type="button" class="toggle" id="clr${d.i}">CLEAR CUE</button><button type="button" id="in${d.i}">IN</button><button type="button" id="out${d.i}">OUT</button><button type="button" id="exit${d.i}">EXIT</button></div>
+          <div class="loops" id="loops${d.i}">${loops}</div>
+          <div class="row"><button type="button" id="half${d.i}">LOOP ÷2</button><button type="button" id="dbl${d.i}">LOOP ×2</button></div>
+        </div>
+      </div>
+      <div class="pitch">
+        <span class="label">Tempo</span>
+        <input type="range" id="pitch${d.i}" min="-1" max="1" step="0.0005" value="0" aria-label="Tempo for deck ${d.name}">
+        <span class="num" id="pitchv${d.i}">+0.00%</span>
+        <select id="range${d.i}" aria-label="Tempo range"><option value="0.08">±8%</option><option value="0.16">±16%</option><option value="0.5">±50%</option></select>
+      </div>
+      <div class="row">
+        <div class="bpm-edit"><span class="label">Grid</span><input type="number" id="bpmin${d.i}" min="40" max="300" step="0.01" aria-label="Track BPM"><button type="button" id="bpmhalf${d.i}" aria-label="Halve BPM">÷2</button><button type="button" id="bpmdbl${d.i}" aria-label="Double BPM">×2</button></div>
+        <button type="button" id="nudgel${d.i}" aria-label="Nudge slower">‹</button>
+        <button type="button" id="nudger${d.i}" aria-label="Nudge faster">›</button>
+      </div>
+      <div class="transport">
+        <button type="button" class="t-cue" id="cue${d.i}">CUE</button>
+        <button type="button" class="t-play" id="play${d.i}">PLAY</button>
+        <button type="button" class="toggle" id="sync${d.i}">SYNC</button>
+        <button type="button" class="toggle on" id="key${d.i}">KEY</button>
+        <button type="button" class="toggle amber" id="slip${d.i}">SLIP</button>
+        <button type="button" class="toggle amber" id="rev${d.i}">REV</button>
+      </div>
+    </section>`;
+  }
+
+  function knobHtml(id, label, cls) {
+    return `<div class="knobwrap"><div class="knob ${cls}" id="${id}" role="slider" tabindex="0" aria-label="${label}" aria-valuemin="-1" aria-valuemax="1" aria-valuenow="0"></div><span>${label.split(" ").pop()}</span></div>`;
+  }
+
+  const mixerHtml = `
+    <section class="mixer" aria-label="Mixer">
+      <div class="mixhead"><span class="label">Mixer</span>
+        <span class="seg" role="group" aria-label="EQ type"><button type="button" class="on" id="eq-classic">CLASSIC EQ</button><button type="button" id="eq-iso">ISOLATOR</button></span>
+      </div>
+      <div class="strips">
+        <div class="strip">${knobHtml("trim0", "A TRIM", "a")}${knobHtml("hi0", "A HI", "a")}${knobHtml("mid0", "A MID", "a")}${knobHtml("low0", "A LOW", "a")}${knobHtml("flt0", "A COLOR", "a")}
+          <input type="range" class="fader a" id="fader0" min="0" max="1" step="0.001" value="1" aria-label="Channel A fader"></div>
+        <div class="meter" aria-hidden="true"><canvas id="meter0"></canvas><canvas id="meterM"></canvas><canvas id="meter1"></canvas></div>
+        <div class="strip">${knobHtml("trim1", "B TRIM", "b")}${knobHtml("hi1", "B HI", "b")}${knobHtml("mid1", "B MID", "b")}${knobHtml("low1", "B LOW", "b")}${knobHtml("flt1", "B COLOR", "b")}
+          <input type="range" class="fader b" id="fader1" min="0" max="1" step="0.001" value="1" aria-label="Channel B fader"></div>
+      </div>
+      <div class="colorrow"><div class="mixhead"><span class="label">Color FX</span>${knobHtml("cparam", "COLOR PARAM", "")}</div>
+        <div class="colorfx" id="colorfx" role="group" aria-label="Color FX type">
+          <button type="button" data-c="0" class="on">FILTER</button><button type="button" data-c="1">NOISE</button><button type="button" data-c="2">DUB ECHO</button>
+          <button type="button" data-c="3">PITCH</button><button type="button" data-c="4">CRUSH</button><button type="button" data-c="5">SPACE</button></div></div>
+      <div><div class="mixhead"><span class="label">Crossfader</span>
+        <span class="seg" role="group" aria-label="Crossfader curve"><button type="button" class="on" id="xf-smooth">SMOOTH</button><button type="button" id="xf-sharp">CUT</button></span></div>
+        <input type="range" class="xf" id="xf" min="0" max="1" step="0.001" value="0" aria-label="Crossfader"></div>
+      <div class="masterrow">${knobHtml("master", "MASTER", "")}<div class="stats">
+        <div class="stat"><b id="st-lim">0.0 dB</b><small>Limiter</small></div>
+        <div class="stat"><b id="st-master">—</b><small>Sync master</small></div></div></div>
+    </section>`;
+
+  $("#console").innerHTML = deckHtml(decks[0]) + mixerHtml + deckHtml(decks[1]);
+
+  // ------------------------------------------------------------------ knobs
+  function makeKnob(id, { value = 0, min = -1, max = 1, onChange, dflt = value }) {
+    const el = document.getElementById(id);
+    let v = value;
+    const set = (nv, fire = true) => {
+      v = clamp(nv, min, max);
+      const t = (v - min) / (max - min);
+      el.style.setProperty("--r", `${-135 + 270 * t}deg`);
+      el.setAttribute("aria-valuenow", v.toFixed(2));
+      if (fire) onChange(v);
+    };
+    let startY = 0, startV = 0, dragging = false;
+    el.addEventListener("pointerdown", (e) => { dragging = true; startY = e.clientY; startV = v; el.setPointerCapture(e.pointerId); e.preventDefault(); });
+    el.addEventListener("pointermove", (e) => { if (dragging) set(startV + (startY - e.clientY) / 180 * (max - min)); });
+    el.addEventListener("pointerup", () => { dragging = false; });
+    el.addEventListener("pointercancel", () => { dragging = false; });
+    el.addEventListener("dblclick", () => set(dflt));
+    el.addEventListener("wheel", (e) => { e.preventDefault(); set(v - Math.sign(e.deltaY) * (max - min) / 60); }, { passive: false });
+    el.addEventListener("keydown", (e) => {
+      const step = (max - min) / 40;
+      if (e.key === "ArrowUp" || e.key === "ArrowRight") { set(v + step); e.preventDefault(); }
+      if (e.key === "ArrowDown" || e.key === "ArrowLeft") { set(v - step); e.preventDefault(); }
+      if (e.key === "Home" || e.key === "0") set(dflt);
+    });
+    set(value, false);
+    return { set, get: () => v, el };
+  }
+
+  let isolator = false;
+  const eqKnobs = [[], []];
+  function eqDb(v) {
+    if (v >= 0) return v * 6;
+    if (isolator && v <= -0.97) return -80;  // full kill
+    return v * (isolator ? 40 : 26);
+  }
+  for (const d of decks) {
+    makeKnob(`trim${d.i}`, { onChange: (v) => Engine.call("djn_mixer_set_trim_db", d.i, v * 12) });
+    ["low", "mid", "hi"].forEach((band, b) => {
+      const k = makeKnob(`${band}${d.i}`, { onChange: (v) => {
+        Engine.call("djn_mixer_set_eq_db", d.i, b, eqDb(v));
+        k.el.classList.toggle("kill", isolator && v <= -0.97);
+      } });
+      eqKnobs[d.i][b] = k;
+    });
+    makeKnob(`flt${d.i}`, { onChange: (v) => Engine.call("djn_mixer_set_filter", d.i, v) });
+    $(`#fader${d.i}`).addEventListener("input", (e) => Engine.call("djn_mixer_set_fader", d.i, +e.target.value));
+  }
+  makeKnob("master", { value: 0, onChange: (v) => Engine.call("djn_mixer_set_master_db", v >= 0 ? v * 6 : v * 30) });
+  makeKnob("cparam", { value: 0.3, min: 0, max: 1, dflt: 0.3, onChange: (v) => Engine.call("djn_mixer_set_color_param", v) });
+  $("#colorfx").addEventListener("click", (e) => {
+    const b = e.target.closest("[data-c]"); if (!b) return;
+    Engine.call("djn_mixer_set_color_fx", +b.dataset.c);
+    $("#colorfx").querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b));
+  });
+
+  function setSeg(onId, offId) { $(onId).classList.add("on"); $(offId).classList.remove("on"); }
+  $("#eq-classic").onclick = () => { isolator = false; setSeg("#eq-classic", "#eq-iso"); Engine.call("djn_mixer_set_eq_mode", 0); refreshEq(); };
+  $("#eq-iso").onclick = () => { isolator = true; setSeg("#eq-iso", "#eq-classic"); Engine.call("djn_mixer_set_eq_mode", 1); refreshEq(); };
+  function refreshEq() { for (const d of decks) eqKnobs[d.i].forEach((k) => k.set(k.get())); }
+  $("#xf-smooth").onclick = () => { setSeg("#xf-smooth", "#xf-sharp"); Engine.call("djn_mixer_set_crossfader_curve", 0); };
+  $("#xf-sharp").onclick = () => { setSeg("#xf-sharp", "#xf-smooth"); Engine.call("djn_mixer_set_crossfader_curve", 1); };
+  $("#xf").addEventListener("input", (e) => Engine.call("djn_mixer_set_crossfader", +e.target.value));
+
+
+  // ------------------------------------------------------------------ beat FX
+  const FX_NAMES = ["ECHO", "DELAY", "PING PONG", "REVERB", "FLANGER", "PHASER", "ROLL", "STUTTER", "TRANS", "PITCH", "DIST", "CRUSH"];
+  const FX_DEPTH = ["Feedback", "Feedback", "Feedback", "Decay", "Feedback", "Feedback", "—", "—", "Cut depth", "Pitch", "Drive", "Crush"];
+  const DIVS = [[0.125, "1/8"], [0.25, "1/4"], [0.5, "1/2"], [0.75, "3/4"], [1, "1"], [2, "2"], [4, "4"], [8, "8"]];
+  const fxUnits = [0, 1].map((u) => ({ u, type: u === 0 ? 0 : 6, beats: u === 0 ? 0.5 : 0.25, latched: false, held: false, target: -1 }));
+
+  function fxHtml(f) {
+    const types = FX_NAMES.map((n, k) => `<button type="button" data-t="${k}">${n}</button>`).join("");
+    const divs = DIVS.map(([b, l]) => `<button type="button" data-b="${b}" aria-label="${l} beat">${l}</button>`).join("");
+    return `<section class="panel" id="fx${f.u}" aria-label="Beat FX ${f.u + 1}">
+      <div class="mixhead"><span class="label">Beat FX ${f.u + 1}</span>
+        <span class="seg" role="group" aria-label="FX ${f.u + 1} channel">
+          <button type="button" data-tg="0">A</button><button type="button" data-tg="1">B</button><button type="button" data-tg="-1" class="on">MASTER</button></span></div>
+      <div class="fxtypes" id="fxt${f.u}">${types}</div>
+      <div class="divs" id="fxd${f.u}">${divs}</div>
+      <div class="fxctl">
+        ${knobHtml(`fxdepth${f.u}`, `FX${f.u + 1} DEPTH`, "")}
+        ${knobHtml(`fxwet${f.u}`, `FX${f.u + 1} WET`, "")}
+        <div class="fxbtns"><button type="button" class="fxhold" id="fxhold${f.u}" aria-label="Hold for FX ${f.u + 1}">HOLD</button>
+          <button type="button" class="fxon-btn" id="fxon${f.u}">ON</button></div>
+      </div>
+      <div class="fxinfo"><span>Depth: <b id="fxdl${f.u}">—</b></span><span id="fxtail${f.u}"></span><span>Tempo <b id="fxbpm${f.u}">—</b></span></div>
+    </section>`;
+  }
+
+  // ------------------------------------------------------------------ sampler
+  const PADS = [
+    { name: "Air Horn", kind: "horn", color: "#FF3B5C" }, { name: "Siren", kind: "siren", color: "#FF3B5C" },
+    { name: "Riser 4 bars", kind: "riser", color: "#8A5CFF" }, { name: "Impact", kind: "impact", color: "#8A5CFF" },
+    { name: "Laser", kind: "laser", color: "#19F0FF" }, { name: "Rewind", kind: "rewind", color: "#19F0FF" },
+    { name: "Sub Drop", kind: "subdrop", color: "#FFB020" }, { name: "Snare Roll", kind: "roll", color: "#FFB020" },
+    { name: "Kick", kind: "kick", color: "#3DFFA2" }, { name: "Clap", kind: "clap", color: "#3DFFA2" },
+    { name: "Open Hat", kind: "ohat", color: "#3DFFA2", choke: 1 }, { name: "Closed Hat", kind: "chat", color: "#3DFFA2", choke: 1 },
+    { name: "Perc Loop", kind: "percloop", color: "#FF2BD6", mode: 3, bpm: 124 }, { name: "Bass Loop", kind: "bassloop", color: "#FF2BD6", mode: 3, bpm: 124 },
+    { name: "Top Loop", kind: "toploop", color: "#FF2BD6", mode: 3, bpm: 124 }, { name: "Stab Loop", kind: "stabloop", color: "#FF2BD6", mode: 3, bpm: 124 }
+  ].map((p, i) => Object.assign({ slot: i, mode: 0, choke: 0, bpm: 0, pitch: 0, gain: 0, loaded: false }, p));
+  let selectedPad = 0;
+  const MODE_NAMES = ["ONE SHOT", "GATE", "LOOP", "TOGGLE"];
+
+  const samplerHtml = `<section class="panel sampler" aria-label="Sampler">
+      <div class="mixhead"><span class="label">Sampler · 16 pads</span>
+        <div class="sctl">
+          <label class="label" for="squant">Quantize</label>
+          <select id="squant"><option value="0">Off</option><option value="0.25">1/4 beat</option><option value="0.5">1/2 beat</option><option value="1" selected>1 beat</option></select>
+          <label class="label" for="sout">Out</label>
+          <select id="sout"><option value="-1">Master</option><option value="0">Ch A</option><option value="1">Ch B</option></select>
+          <button type="button" id="sstop">STOP ALL</button>
+        </div></div>
+      <div class="spads" id="spads">${PADS.map((p) => `<button type="button" class="spad empty" data-s="${p.slot}" style="--pc:${p.color}" aria-label="Sample pad ${p.slot + 1}: ${p.name}"><span>${p.name}</span><small>${MODE_NAMES[p.mode]}${p.choke ? " · CHOKE" : ""}</small></button>`).join("")}</div>
+      <div class="capture"><span class="label">Capture into pad</span>
+        <button type="button" data-cb="1">1 beat</button><button type="button" data-cb="2">2 beats</button><button type="button" data-cb="4">4 beats</button>
+        <button type="button" data-cd="0" class="on">from A</button><button type="button" data-cd="1">from B</button></div>
+      <div class="padedit" id="padedit">
+        <label>Pad <b id="pe-name" style="font:600 12px var(--display);letter-spacing:0;text-transform:none;color:var(--ink)">—</b></label>
+        <label for="pe-mode">Mode<select id="pe-mode">${MODE_NAMES.map((m, k) => `<option value="${k}">${m}</option>`).join("")}</select></label>
+        <label for="pe-pitch">Pitch <span id="pe-pv">0 st</span><input type="range" id="pe-pitch" min="-12" max="12" step="1" value="0"></label>
+        <label for="pe-gain">Level <span id="pe-gv">0 dB</span><input type="range" id="pe-gain" min="-24" max="6" step="0.5" value="0"></label>
+        <label class="btn loadbtn" style="text-align:center;letter-spacing:.06em">LOAD SOUND<input type="file" accept="audio/*" id="pe-file" aria-label="Load a sound onto the selected pad"></label>
+      </div>
+    </section>`;
+
+  const macroHtml = `<section class="panel" id="macros" aria-label="Build and drop macros">
+      <div class="mixhead"><span class="label">Build &amp; Drop</span>
+        <span class="seg" role="group" aria-label="Macro target"><button type="button" data-mt="0">A</button><button type="button" data-mt="1">B</button><button type="button" data-mt="-1" class="on">MASTER</button></span></div>
+      <div class="macro-go"><button type="button" data-m="0">RISER</button><button type="button" data-m="1">BUILD-UP</button><button type="button" data-m="2">DROP</button></div>
+      <div class="mopts">
+        <span class="seg" role="group" aria-label="Macro length"><button type="button" data-mb="1">1 BAR</button><button type="button" data-mb="2">2</button><button type="button" data-mb="4" class="on">4</button><button type="button" data-mb="8">8</button></span>
+        <button type="button" class="toggle on amber" id="mimpact">IMPACT</button>
+        <button type="button" id="mcancel">CANCEL</button>
+      </div>
+      <div class="progress" aria-hidden="true"><i id="mprog"></i></div>
+      <div class="mstatus"><span id="mname">Ready</span><span>Bar line in <b id="mleft">—</b></span></div>
+    </section>`;
+  $("#lower").innerHTML = fxHtml(fxUnits[0]) + fxHtml(fxUnits[1]) + macroHtml + samplerHtml;
+
+  // Macros
+  const MACRO_NAMES = ["Riser", "Build-up", "Drop"];
+  const macro = { bars: 4, target: -1, impact: true };
+  const segPick = (sel, attr, set) => document.querySelectorAll(sel).forEach((b) => b.addEventListener("click", () => {
+    set(+b.dataset[attr]);
+    document.querySelectorAll(sel).forEach((x) => x.classList.toggle("on", x === b));
+  }));
+  segPick("[data-mb]", "mb", (v) => { macro.bars = v; });
+  segPick("[data-mt]", "mt", (v) => { macro.target = v; });
+  $("#mimpact").onclick = () => { macro.impact = !macro.impact; $("#mimpact").classList.toggle("on", macro.impact); };
+  $("#mcancel").onclick = () => Engine.call("djn_macro_cancel");
+  document.querySelectorAll("[data-m]").forEach((b) => b.addEventListener("click", () => {
+    const st = Engine.state;
+    if (st && !st.decks.some((d) => d.playing)) toast("Tip: play a deck first. Macros land on the next bar line of the playing music.");
+    Engine.call("djn_macro_start", +b.dataset.m, macro.bars, macro.target, macro.impact ? 1 : 0);
+  }));
+
+  // FX wiring
+  for (const f of fxUnits) {
+    const u = f.u, panel = $(`#fx${u}`);
+    const applyOn = () => Engine.call("djn_fx_set_on", u, f.latched || f.held ? 1 : 0);
+    const setType = (t) => {
+      f.type = t; Engine.call("djn_fx_set_type", u, t);
+      panel.querySelectorAll("[data-t]").forEach((b) => b.classList.toggle("on", +b.dataset.t === t));
+      $(`#fxdl${u}`).textContent = FX_DEPTH[t];
+    };
+    const setBeats = (b) => {
+      f.beats = b; Engine.call("djn_fx_set_beats", u, b);
+      panel.querySelectorAll("[data-b]").forEach((x) => x.classList.toggle("on", +x.dataset.b === b));
+    };
+    $(`#fxt${u}`).addEventListener("click", (e) => { const b = e.target.closest("[data-t]"); if (b) setType(+b.dataset.t); });
+    $(`#fxd${u}`).addEventListener("click", (e) => { const b = e.target.closest("[data-b]"); if (b) setBeats(+b.dataset.b); });
+    panel.querySelectorAll("[data-tg]").forEach((b) => b.addEventListener("click", () => {
+      f.target = +b.dataset.tg; Engine.call("djn_fx_set_target", u, f.target);
+      panel.querySelectorAll("[data-tg]").forEach((x) => x.classList.toggle("on", x === b));
+    }));
+    makeKnob(`fxdepth${u}`, { value: 0.5, min: 0, max: 1, dflt: 0.5, onChange: (v) => Engine.call("djn_fx_set_depth", u, v) });
+    makeKnob(`fxwet${u}`, { value: 0.6, min: 0, max: 1, dflt: 0.6, onChange: (v) => Engine.call("djn_fx_set_wet", u, v) });
+    $(`#fxon${u}`).onclick = () => { f.latched = !f.latched; applyOn(); };
+    bindHold($(`#fxhold${u}`), () => { f.held = true; applyOn(); }, () => { f.held = false; applyOn(); });
+    f.init = () => { setType(f.type); setBeats(f.beats); Engine.call("djn_fx_set_depth", u, 0.5); Engine.call("djn_fx_set_wet", u, 0.6); };
+    f.applyOn = applyOn;
+  }
+
+  // Sampler wiring
+  let captureDeck = 0;
+  const padEl = (slot) => $(`#spads [data-s="${slot}"]`);
+  function selectPad(slot) {
+    selectedPad = slot;
+    const p = PADS[slot];
+    document.querySelectorAll("#spads .spad").forEach((b) => b.classList.toggle("sel", +b.dataset.s === slot));
+    $("#pe-name").textContent = `${slot + 1} · ${p.name}`;
+    $("#pe-mode").value = p.mode;
+    $("#pe-pitch").value = p.pitch; $("#pe-pv").textContent = `${p.pitch > 0 ? "+" : ""}${p.pitch} st`;
+    $("#pe-gain").value = p.gain; $("#pe-gv").textContent = `${p.gain} dB`;
+  }
+  function renderPadLabel(p) {
+    const b = padEl(p.slot);
+    b.querySelector("span").textContent = p.name;
+    b.querySelector("small").textContent = MODE_NAMES[p.mode] + (p.choke ? " · CHOKE" : "") + (p.bpm ? " · SYNC" : "");
+    b.classList.toggle("empty", !p.loaded);
+  }
+  $("#spads").addEventListener("pointerdown", (e) => {
+    const b = e.target.closest(".spad"); if (!b) return;
+    const slot = +b.dataset.s;
+    b.setPointerCapture(e.pointerId);
+    selectPad(slot);
+    if (!PADS[slot].loaded) { toast("This pad is empty: load a sound or capture from a deck."); return; }
+    Engine.call("djn_sampler_trigger", slot, 0.9);
+  });
+  const releasePad = (e) => { const b = e.target.closest(".spad"); if (b) Engine.call("djn_sampler_release", +b.dataset.s); };
+  $("#spads").addEventListener("pointerup", releasePad);
+  $("#spads").addEventListener("pointercancel", releasePad);
+  $("#spads").addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const b = e.target.closest(".spad"); if (!b || e.repeat) return;
+    e.preventDefault(); selectPad(+b.dataset.s); Engine.call("djn_sampler_trigger", +b.dataset.s, 0.9);
+  });
+  $("#squant").addEventListener("change", (e) => Engine.call("djn_sampler_set_quantize", +e.target.value));
+  $("#sout").addEventListener("change", (e) => Engine.call("djn_sampler_set_output", +e.target.value));
+  $("#sstop").onclick = () => Engine.call("djn_sampler_stop_all");
+  $("#pe-mode").addEventListener("change", (e) => {
+    const p = PADS[selectedPad]; p.mode = +e.target.value;
+    Engine.call("djn_sampler_set_mode", p.slot, p.mode); renderPadLabel(p);
+  });
+  $("#pe-pitch").addEventListener("input", (e) => {
+    const p = PADS[selectedPad]; p.pitch = +e.target.value;
+    $("#pe-pv").textContent = `${p.pitch > 0 ? "+" : ""}${p.pitch} st`;
+    Engine.call("djn_sampler_set_pitch", p.slot, p.pitch);
+  });
+  $("#pe-gain").addEventListener("input", (e) => {
+    const p = PADS[selectedPad]; p.gain = +e.target.value;
+    $("#pe-gv").textContent = `${p.gain} dB`;
+    Engine.call("djn_sampler_set_gain_db", p.slot, p.gain);
+  });
+  $("#pe-file").addEventListener("change", async (e) => {
+    const file = e.target.files[0]; e.target.value = "";
+    if (!file || !Engine.ctx) return;
+    try {
+      const audio = await Engine.ctx.decodeAudioData(await file.arrayBuffer());
+      if (audio.duration > 60) throw new Error("Pad sounds can be up to 60 seconds long.");
+      const L = audio.getChannelData(0).slice(0), R = (audio.numberOfChannels > 1 ? audio.getChannelData(1) : audio.getChannelData(0)).slice(0);
+      const p = PADS[selectedPad];
+      const r = await Engine.loadSample(p.slot, L, R, 0);
+      if (r !== 0) throw new Error("The engine could not load this sound.");
+      Object.assign(p, { name: file.name.replace(/\.[^.]+$/, "").slice(0, 18), bpm: 0, loaded: true });
+      renderPadLabel(p); selectPad(p.slot);
+    } catch (err) { toast(err && err.message ? err.message : "Could not decode this file."); }
+  });
+  document.querySelectorAll("[data-cd]").forEach((b) => b.addEventListener("click", () => {
+    captureDeck = +b.dataset.cd;
+    document.querySelectorAll("[data-cd]").forEach((x) => x.classList.toggle("on", x === b));
+  }));
+  document.querySelectorAll("[data-cb]").forEach((b) => b.addEventListener("click", () => {
+    const s = Engine.state && Engine.state.decks[captureDeck];
+    if (!s || !s.playing) { toast(`Play deck ${captureDeck ? "B" : "A"} first, then capture.`); return; }
+    const p = PADS[selectedPad], beats = +b.dataset.cb;
+    Engine.call("djn_sampler_capture", p.slot, captureDeck, beats);
+    Object.assign(p, { name: `${captureDeck ? "B" : "A"} capture ${beats}b`, mode: 3, bpm: s.effectiveBpm, loaded: true, choke: 0 });
+    Engine.call("djn_sampler_set_mode", p.slot, 3);
+    Engine.call("djn_sampler_set_choke", p.slot, 0);
+    renderPadLabel(p); selectPad(p.slot);
+    toast(`Captured ${beats} beat${beats > 1 ? "s" : ""} into pad ${p.slot + 1}. Tap it to loop, tap again to stop.`);
+  }));
+
+  // Pad sounds, synthesised here so the demo needs no downloads.
+  function makePadSound(kind, sr) {
+    const spb = 60 / 124;
+    const len = { horn: 1.5, siren: 2.4, riser: 16 * spb, impact: 2.2, laser: 0.45, rewind: 1.3, subdrop: 1.6, roll: 8 * spb,
+      kick: 0.5, clap: 0.4, ohat: 0.6, chat: 0.12, percloop: 4 * spb, bassloop: 4 * spb, toploop: 4 * spb, stabloop: 4 * spb }[kind];
+    const n = Math.floor(len * sr), L = new Float32Array(n), R = new Float32Array(n);
+    let seed = 7 + kind.length * 131;
+    const rnd = () => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff) * 2 - 1;
+    const tau = 2 * Math.PI;
+    let ph = [0, 0, 0, 0], lp = 0, hp = 0, lp2 = 0;
+    for (let i = 0; i < n; i++) {
+      const t = i / sr, bt = t / spb;
+      let v = 0, pan = 0;
+      switch (kind) {
+        case "horn": {  // three blasts of a detuned brassy chord
+          const on = (t < 0.16) || (t > 0.38 && t < 0.52) || (t > 0.64);
+          const env = on ? Math.min(1, (t % 0.2) * 60) * (t > 0.64 ? Math.max(0, 1 - (t - 1.25) * 4) : 1) : 0;
+          for (let k = 0; k < 3; k++) { ph[k] += tau * [466, 554, 698][k] * (1 + 0.004 * Math.sin(tau * 5 * t)) / sr; v += ((ph[k] / tau) % 1 * 2 - 1) * 0.22; }
+          lp += 0.35 * (v - lp); v = Math.tanh(lp * 2.2) * 0.55 * env; break;
+        }
+        case "siren": { const f = 700 + 450 * Math.sin(tau * 1.6 * t); ph[0] += tau * f / sr; v = Math.sin(ph[0]) * 0.45 * Math.min(1, t * 20) * Math.min(1, (len - t) * 4); pan = 0.3 * Math.sin(tau * 0.8 * t); break; }
+        case "riser": {
+          const x = t / len, f = 200 * Math.pow(30, x);
+          const c = 1 - Math.exp(-tau * f / sr); const nz = rnd(); lp += c * (nz - lp); lp2 += c * (lp - lp2);
+          ph[0] += tau * (110 * Math.pow(8, x)) / sr;
+          v = ((lp - lp2) * 2.2 + Math.sin(ph[0]) * 0.18) * x * x * 0.8; pan = 0.2 * Math.sin(tau * 3 * t); break;
+        }
+        case "impact": { ph[0] += tau * (35 + 90 * Math.exp(-t * 9)) / sr; const nz = rnd(); lp += 0.08 * (nz - lp);
+          v = Math.sin(ph[0]) * Math.exp(-t * 2.2) * 0.85 + lp * Math.exp(-t * 3) * 1.6; v = Math.tanh(v * 1.4) * 0.8; break; }
+        case "laser": { ph[0] += tau * (3200 * Math.exp(-t * 9) + 180) / sr; v = Math.sign(Math.sin(ph[0])) * 0.25 * Math.exp(-t * 5); lp += 0.4 * (v - lp); v = lp; break; }
+        case "rewind": { const x = t / len; ph[0] += tau * (900 * (1 - x) + 80) * (1 + 0.5 * Math.sin(tau * 18 * t)) / sr; const nz = rnd(); lp += 0.2 * (nz - lp);
+          v = (Math.sin(ph[0]) * 0.35 + lp * 0.5) * Math.min(1, t * 10) * (1 - x); break; }
+        case "subdrop": { ph[0] += tau * (30 + 120 * Math.exp(-t * 2.5)) / sr; v = Math.tanh(Math.sin(ph[0]) * 1.6) * 0.75 * Math.min(1, t * 200) * Math.exp(-t * 1.1); break; }
+        case "roll": {  // snare hits speeding up: 1/4 -> 1/8 -> 1/16 -> 1/32
+          const bar = Math.floor(bt / 2), step = [1, 0.5, 0.25, 0.125][Math.min(3, bar)];
+          const since = (bt % step) * spb; const nz = rnd(); hp += 0.5 * (nz - hp);
+          ph[0] += tau * 190 / sr;
+          v = ((nz - hp) * 0.6 + Math.sin(ph[0]) * 0.3) * Math.exp(-since * 28) * (0.35 + 0.65 * bt / 8); break;
+        }
+        case "kick": { ph[0] += tau * (48 + 130 * Math.exp(-t * 30)) / sr; v = Math.sin(ph[0]) * Math.exp(-t * 7) * 0.9; break; }
+        case "clap": { const nz = rnd(); hp += 0.45 * (nz - hp); const burst = [0, 0.011, 0.022].reduce((a, o) => a + (t >= o ? Math.exp(-(t - o) * 90) : 0), 0);
+          v = (nz - hp) * (burst * 0.35 + Math.exp(-t * 14) * 0.45); break; }
+        case "ohat": case "chat": { const nz = rnd(); hp += 0.7 * (nz - hp); v = (nz - hp) * Math.exp(-t * (kind === "ohat" ? 6 : 45)) * 0.45; pan = 0.15; break; }
+        case "percloop": {  // conga-ish pattern
+          const pos16 = Math.floor(bt * 4), s16 = (bt * 4 % 1) * spb / 4;
+          const hit = [1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 0, 1][pos16 % 16];
+          const f = [0, 3, 5, 8, 10, 13].includes(pos16 % 16) ? 280 : 200;
+          ph[0] += tau * f * (1 + 0.6 * Math.exp(-s16 * 60)) / sr;
+          v = hit ? Math.sin(ph[0]) * Math.exp(-s16 * 22) * 0.55 : 0; pan = pos16 % 2 ? 0.25 : -0.25; break;
+        }
+        case "bassloop": {
+          const step = Math.floor(bt * 4) % 16, s16 = (bt * 4 % 1);
+          const notes = [0, 0, 12, 0, 0, 7, 0, 12, 0, 0, 12, 0, 3, 0, 7, 12];
+          ph[0] += tau * 55 * Math.pow(2, notes[step] / 12) / sr;
+          const saw = (ph[0] / tau) % 1 * 2 - 1; const c = 0.02 + 0.2 * Math.exp(-s16 * 6); lp += c * (saw - lp);
+          v = Math.tanh(lp * 2.5) * 0.45 * (s16 < 0.85 ? 1 : 0.3); break;
+        }
+        case "toploop": {
+          const s16 = (bt * 4 % 1) * spb / 4, pos = Math.floor(bt * 4) % 16; const nz = rnd(); hp += 0.75 * (nz - hp);
+          const accent = pos % 4 === 2 ? 1 : 0.45;
+          v = (nz - hp) * Math.exp(-s16 * (pos % 4 === 2 ? 18 : 60)) * 0.4 * accent; pan = pos % 2 ? 0.3 : -0.3; break;
+        }
+        case "stabloop": {
+          const s8 = (bt * 2 % 1) * spb / 2, pos = Math.floor(bt * 2) % 8; const on = [0, 0, 1, 0, 0, 1, 0, 1][pos];
+          let c = 0; for (let k = 0; k < 4; k++) { ph[k] += tau * 220 * [1, 1.19, 1.5, 1.78][k] / sr; c += ((ph[k] / tau) % 1 * 2 - 1); }
+          lp += (0.05 + 0.3 * Math.exp(-s8 * 18)) * (c - lp); v = on ? lp * 0.16 * Math.exp(-s8 * 6) : 0; pan = 0.2; break;
+        }
+      }
+      L[i] = v * (1 - pan); R[i] = v * (1 + pan);
+    }
+    return { L, R };
+  }
+
+  async function loadPadSounds() {
+    for (const p of PADS) {
+      const snd = makePadSound(p.kind, Engine.sampleRate);
+      const r = await Engine.loadSample(p.slot, snd.L, snd.R, p.bpm);
+      if (r !== 0) continue;
+      p.loaded = true;
+      Engine.call("djn_sampler_set_mode", p.slot, p.mode);
+      if (p.choke) Engine.call("djn_sampler_set_choke", p.slot, p.choke);
+      renderPadLabel(p);
+    }
+    Engine.call("djn_sampler_set_quantize", 1);
+    selectPad(0);
+  }
+
+  // ------------------------------------------------------------------ deck controls
+  function toast(msg) {
+    let t = $(".toast");
+    if (!t) { t = document.createElement("div"); t.className = "toast"; t.setAttribute("role", "status"); document.body.appendChild(t); }
+    t.textContent = msg;
+    clearTimeout(t._h);
+    t._h = setTimeout(() => t.remove(), 3800);
+  }
+
+  function deckPos(d) {
+    const s = Engine.state && Engine.state.decks[d.i];
+    if (!s || !s.loaded) return 0;
+    const dt = Math.min(0.12, (performance.now() - Engine.stateAt) / 1000);
+    return clamp(s.position + (s.playing || s.rate ? s.rate * dt : 0), 0, s.duration);
+  }
+
+  function snapped(d, pos) {
+    if (!d.bpm) return pos;
+    const p = 60 / d.bpm;
+    return d.firstBeat + Math.round((pos - d.firstBeat) / p) * p;
+  }
+
+  function bindHold(el, down, up) {
+    el.addEventListener("pointerdown", (e) => { el.setPointerCapture(e.pointerId); down(); });
+    el.addEventListener("pointerup", up);
+    el.addEventListener("pointercancel", up);
+  }
+
+  for (const d of decks) {
+    const i = d.i;
+    $(`#play${i}`).onclick = () => Engine.call("djn_deck_toggle_play", i);
+    $(`#cue${i}`).onclick = () => Engine.call("djn_deck_cue", i);
+    $(`#sync${i}`).onclick = () => {
+      const s = Engine.state && Engine.state.decks[i];
+      if (!d.bpm) { toast(`Deck ${d.name} has no beat grid yet: set its BPM first.`); return; }
+      Engine.call("djn_deck_set_sync", i, s && s.sync ? 0 : 1);
+    };
+    $(`#key${i}`).onclick = () => { d.keyLock = !d.keyLock; Engine.call("djn_deck_set_key_lock", i, d.keyLock ? 1 : 0); };
+    $(`#slip${i}`).onclick = () => { const s = Engine.state.decks[i]; Engine.call("djn_deck_set_slip", i, s.slip ? 0 : 1); };
+    $(`#rev${i}`).onclick = () => { const s = Engine.state.decks[i]; Engine.call("djn_deck_set_reverse", i, s.reverse ? 0 : 1); };
+    $(`#in${i}`).onclick = () => Engine.call("djn_deck_loop_in", i);
+    $(`#out${i}`).onclick = () => Engine.call("djn_deck_loop_out", i);
+    $(`#exit${i}`).onclick = () => Engine.call("djn_deck_loop_exit", i);
+    $(`#half${i}`).onclick = () => Engine.call("djn_deck_loop_halve", i);
+    $(`#dbl${i}`).onclick = () => Engine.call("djn_deck_loop_double", i);
+    $(`#loops${i}`).addEventListener("click", (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      if (!d.bpm) { toast("Beat loops need a BPM."); return; }
+      Engine.call("djn_deck_loop_beats", i, +b.dataset.loop);
+    });
+    $(`#clr${i}`).onclick = () => { d.clearing = !d.clearing; $(`#clr${i}`).classList.toggle("on", d.clearing); renderPads(d); };
+    $(`#pads${i}`).addEventListener("click", (e) => {
+      const b = e.target.closest(".pad"); if (!b) return;
+      const k = +b.dataset.pad;
+      if (d.clearing) {
+        d.hot[k] = null; Engine.call("djn_deck_hot_cue_clear", i, k);
+        d.clearing = false; $(`#clr${i}`).classList.remove("on");
+      } else if (d.hot[k] == null) {
+        const at = snapped(d, deckPos(d));
+        d.hot[k] = at; Engine.call("djn_deck_hot_cue_set_at", i, k, at);
+      } else {
+        Engine.call("djn_deck_hot_cue_trigger", i, k);
+      }
+      renderPads(d);
+    });
+    const pitch = $(`#pitch${i}`), pitchv = $(`#pitchv${i}`);
+    const applyPitch = () => {
+      const p = +pitch.value * d.pitchRange;
+      pitchv.textContent = (p >= 0 ? "+" : "") + (p * 100).toFixed(2) + "%";
+      Engine.call("djn_deck_set_pitch", i, p);
+    };
+    pitch.addEventListener("input", applyPitch);
+    pitch.addEventListener("dblclick", () => { pitch.value = 0; applyPitch(); });
+    $(`#range${i}`).addEventListener("change", (e) => {
+      const p = +pitch.value * d.pitchRange;
+      d.pitchRange = +e.target.value;
+      pitch.value = clamp(p / d.pitchRange, -1, 1);
+      applyPitch();
+    });
+    bindHold($(`#nudgel${i}`), () => Engine.call("djn_deck_jog", i, 0, -0.04), () => Engine.call("djn_deck_jog", i, 0, 0));
+    bindHold($(`#nudger${i}`), () => Engine.call("djn_deck_jog", i, 0, 0.04), () => Engine.call("djn_deck_jog", i, 0, 0));
+
+    const bpmIn = $(`#bpmin${i}`);
+    const setGrid = (bpm) => {
+      if (!(bpm >= 40 && bpm <= 300)) { bpmIn.value = d.bpm ? d.bpm.toFixed(2) : ""; return; }
+      d.bpm = bpm; bpmIn.value = bpm.toFixed(2);
+      Engine.call("djn_deck_set_grid", i, bpm, d.firstBeat);
+      renderSub(d);
+    };
+    bpmIn.addEventListener("change", () => setGrid(+bpmIn.value));
+    $(`#bpmhalf${i}`).onclick = () => d.bpm && setGrid(d.bpm / 2);
+    $(`#bpmdbl${i}`).onclick = () => d.bpm && setGrid(d.bpm * 2);
+
+    $(`#ov${i}`).addEventListener("click", (e) => {
+      if (!d.duration) return;
+      const r = e.currentTarget.getBoundingClientRect();
+      Engine.call("djn_deck_seek", i, clamp((e.clientX - r.left) / r.width, 0, 1) * d.duration);
+    });
+
+    // File loading: button or drag and drop.
+    $(`#file${i}`).addEventListener("change", (e) => { const f = e.target.files[0]; if (f) loadFile(d, f); e.target.value = ""; });
+    const el = $(`#deck${i}`);
+    el.addEventListener("dragover", (e) => { e.preventDefault(); el.classList.add("dragover"); });
+    el.addEventListener("dragleave", () => el.classList.remove("dragover"));
+    el.addEventListener("drop", (e) => {
+      e.preventDefault(); el.classList.remove("dragover");
+      const f = e.dataTransfer.files[0]; if (f) loadFile(d, f);
+    });
+
+    setupJog(d);
+  }
+
+  document.addEventListener("keydown", (e) => {
+    if (e.target.closest("input, select, textarea") || e.metaKey || e.ctrlKey || e.altKey) return;
+    const map = { z: ["djn_deck_toggle_play", 0], m: ["djn_deck_toggle_play", 1], x: ["djn_deck_cue", 0], n: ["djn_deck_cue", 1] };
+    const k = e.key.toLowerCase();
+    if (map[k]) { Engine.call(map[k][0], map[k][1]); e.preventDefault(); }
+    if (k === "s") $("#sync0").click();
+    if (k === "j") $("#sync1").click();
+    if (/^[1-8]$/.test(k) && !e.repeat) { const slot = +k - 1; selectPad(slot); if (PADS[slot].loaded) Engine.call("djn_sampler_trigger", slot, 0.9); }
+    if (k === "f" && !e.repeat) { fxUnits[0].held = true; fxUnits[0].applyOn(); }
+  });
+  document.addEventListener("keyup", (e) => {
+    const k = e.key.toLowerCase();
+    if (/^[1-8]$/.test(k)) Engine.call("djn_sampler_release", +k - 1);
+    if (k === "f") { fxUnits[0].held = false; fxUnits[0].applyOn(); }
+  });
+
+  function renderPads(d) {
+    $(`#pads${d.i}`).querySelectorAll(".pad").forEach((p, k) => {
+      const set = d.hot[k] != null;
+      p.classList.toggle("set", set);
+      p.classList.toggle("clearing", d.clearing && set);
+      p.style.background = set ? ["#3DFFA2", "#19F0FF", "#FFB020", "#FF3B5C", "#8A5CFF", "#FF2BD6", "#19F0FF", "#FFB020"][k] : "";
+    });
+  }
+
+  function renderSub(d) {
+    $(`#title${d.i}`).textContent = d.title;
+    $(`#sub${d.i}`).textContent = d.sub + (d.bpm ? ` · ${d.bpm.toFixed(2)} BPM` : " · no grid");
+    $(`#bpmin${d.i}`).value = d.bpm ? d.bpm.toFixed(2) : "";
+  }
+
+  // ------------------------------------------------------------------ jog wheel
+  function setupJog(d) {
+    const c = $(`#jog${d.i}`);
+    let active = false, lastAngle = 0, accum = 0, lastT = 0, rate = 0;
+    const angleOf = (e) => { const r = c.getBoundingClientRect(); return Math.atan2(e.clientY - (r.top + r.height / 2), e.clientX - (r.left + r.width / 2)); };
+    c.addEventListener("pointerdown", (e) => {
+      active = true; c.setPointerCapture(e.pointerId); lastAngle = angleOf(e); accum = 0; lastT = performance.now();
+      Engine.call("djn_deck_jog", d.i, 1, 0);
+    });
+    c.addEventListener("pointermove", (e) => {
+      if (!active) return;
+      const a = angleOf(e);
+      let da = a - lastAngle;
+      if (da > Math.PI) da -= 2 * Math.PI;
+      if (da < -Math.PI) da += 2 * Math.PI;
+      lastAngle = a; accum += da;
+    });
+    const release = () => { if (!active) return; active = false; Engine.call("djn_deck_jog", d.i, 0, 0); };
+    c.addEventListener("pointerup", release);
+    c.addEventListener("pointercancel", release);
+    // One platter turn at 33⅓ rpm = normal speed.
+    d.jog = {
+      canvas: c,
+      tick(now) {
+        if (!active) return;
+        const dt = Math.max(1, now - lastT) / 1000;
+        const target = (accum / (2 * Math.PI)) / dt / (100 / 3 / 60);
+        rate += (target - rate) * 0.6;
+        accum = 0; lastT = now;
+        Engine.call("djn_deck_jog", d.i, 1, clamp(rate, -8, 8));
+      }
+    };
+  }
+
+  // ------------------------------------------------------------------ loading
+  async function loadFile(d, file) {
+    if (!Engine.ctx) { toast("Start the engine first."); return; }
+    if (d.loading) return;
+    d.loading = true;
+    $(`#title${d.i}`).textContent = file.name;
+    $(`#sub${d.i}`).textContent = "Decoding…";
+    try {
+      const buf = await file.arrayBuffer();
+      const audio = await Engine.ctx.decodeAudioData(buf);
+      if (audio.duration > 15 * 60) throw new Error("Tracks up to 15 minutes work best in the browser preview.");
+      const L = audio.getChannelData(0).slice(0);
+      const R = (audio.numberOfChannels > 1 ? audio.getChannelData(1) : audio.getChannelData(0)).slice(0);
+      $(`#sub${d.i}`).textContent = "Finding the beat…";
+      await new Promise((r) => setTimeout(r, 20));
+      const beat = detectBeat(L, R, audio.sampleRate);
+      await loadPcm(d, L, R, beat.bpm, beat.firstBeat, file.name.replace(/\.[^.]+$/, ""), `${formatTime(audio.duration)} · BPM estimated`);
+    } catch (err) {
+      $(`#sub${d.i}`).textContent = "Could not load this file";
+      toast(err && err.message ? err.message : "Could not decode this file. Try MP3, WAV or FLAC.");
+    } finally {
+      d.loading = false;
+    }
+  }
+
+  async function loadPcm(d, L, R, bpm, firstBeat, title, sub) {
+    d.wave = analyseWaveform(L, R, Engine.sampleRate);
+    d.overviewCache = null;
+    d.duration = L.length / Engine.sampleRate;
+    d.bpm = bpm; d.firstBeat = firstBeat; d.title = title; d.sub = sub;
+    d.hot.fill(null); renderPads(d);
+    const r = await Engine.load(d.i, L, R, bpm, firstBeat);
+    if (r !== 0) throw new Error("The engine could not load this track (error " + r + ").");
+    Engine.call("djn_deck_set_key_lock", d.i, d.keyLock ? 1 : 0);
+    renderSub(d);
+  }
+
+  function formatTime(s) {
+    s = Math.max(0, s);
+    const m = Math.floor(s / 60), r = s - m * 60;
+    return `${m}:${r.toFixed(1).padStart(4, "0")}`;
+  }
+
+  // ------------------------------------------------------------------ drawing
+  let span = 6;  // seconds visible in the scrolling waveforms
+  $("#zoom-in").onclick = () => { span = Math.max(1.5, span / 2); };
+  $("#zoom-out").onclick = () => { span = Math.min(24, span * 2); };
+
+  function fitCanvas(c) {
+    const dpr = window.devicePixelRatio || 1, w = Math.round(c.clientWidth * dpr), h = Math.round(c.clientHeight * dpr);
+    if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+    return { ctx: c.getContext("2d"), w, h, dpr };
+  }
+
+  function drawBars(ctx, wave, x, from, to, mid, h, color) {
+    let lo = 0, mi = 0, hi = 0;
+    for (let b = Math.max(0, from); b < Math.min(wave.bins, to); b++) {
+      if (wave.low[b] > lo) lo = wave.low[b];
+      if (wave.mid[b] > mi) mi = wave.mid[b];
+      if (wave.high[b] > hi) hi = wave.high[b];
+    }
+    const s = h * 0.95;
+    ctx.fillStyle = "#4B35C8"; ctx.fillRect(x, mid - lo * s, 1, lo * s * 2);
+    ctx.fillStyle = color; ctx.fillRect(x, mid - mi * s * 0.9, 1, mi * s * 1.8);
+    ctx.fillStyle = "#EDEBFA"; ctx.fillRect(x, mid - hi * s * 0.6, 1, hi * s * 1.2);
+  }
+
+  function drawDetail(d, pos, s) {
+    const { ctx, w, h, dpr } = fitCanvas($(`#wave${d.i}`));
+    ctx.clearRect(0, 0, w, h);
+    if (!d.wave) return;
+    const t0 = pos - span / 2, perPx = span / w, mid = h / 2;
+    if (s && s.looping) {
+      const x1 = (s.loopStart - t0) / perPx, x2 = (s.loopEnd - t0) / perPx;
+      ctx.fillStyle = "rgba(255,176,32,0.14)"; ctx.fillRect(x1, 0, x2 - x1, h);
+    }
+    for (let x = 0; x < w; x++) {
+      const ta = t0 + x * perPx;
+      drawBars(ctx, d.wave, x, Math.floor(ta * BIN), Math.floor((ta + perPx) * BIN) + 1, mid, mid, d.color);
+    }
+    if (d.bpm) {
+      const p = 60 / d.bpm;
+      let k = Math.ceil((t0 - d.firstBeat) / p);
+      for (let t = d.firstBeat + k * p; t < t0 + span; t += p, k++) {
+        const x = Math.round((t - t0) / perPx) + 0.5;
+        const bar = ((k % 4) + 4) % 4 === 0;
+        ctx.fillStyle = bar ? "rgba(237,235,250,0.55)" : "rgba(237,235,250,0.18)";
+        ctx.fillRect(x, 0, bar ? 2 * dpr : dpr, bar ? h : h * 0.25);
+      }
+    }
+    if (s) {
+      const cx = (s.cue - t0) / perPx;
+      ctx.fillStyle = "#FFB020"; ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx + 6 * dpr, 0); ctx.lineTo(cx, 8 * dpr); ctx.fill();
+    }
+    d.hot.forEach((t, k) => {
+      if (t == null) return;
+      const x = (t - t0) / perPx;
+      if (x < -20 || x > w + 20) return;
+      ctx.fillStyle = "#3DFFA2"; ctx.fillRect(x, h - 12 * dpr, 12 * dpr, 12 * dpr);
+      ctx.fillStyle = "#07060D"; ctx.font = `${9 * dpr}px JetBrains Mono, monospace`; ctx.fillText(String(k + 1), x + 3 * dpr, h - 3 * dpr);
+    });
+  }
+
+  function drawOverview(d, pos, s) {
+    const { ctx, w, h } = fitCanvas($(`#ov${d.i}`));
+    if (!d.wave) { ctx.clearRect(0, 0, w, h); return; }
+    if (!d.overviewCache || d.overviewCache.width !== w || d.overviewCache.height !== h) {
+      const oc = document.createElement("canvas"); oc.width = w; oc.height = h;
+      const octx = oc.getContext("2d");
+      const perPx = d.wave.bins / w;
+      for (let x = 0; x < w; x++) drawBars(octx, d.wave, x, Math.floor(x * perPx), Math.floor((x + 1) * perPx) + 1, h / 2, h / 2, d.color);
+      d.overviewCache = oc;
+    }
+    ctx.clearRect(0, 0, w, h);
+    ctx.drawImage(d.overviewCache, 0, 0);
+    const px = (t) => (t / d.duration) * w;
+    ctx.fillStyle = "rgba(7,6,13,0.55)"; ctx.fillRect(0, 0, px(pos), h);
+    if (s && s.looping) { ctx.fillStyle = "rgba(255,176,32,0.3)"; ctx.fillRect(px(s.loopStart), 0, Math.max(2, px(s.loopEnd) - px(s.loopStart)), h); }
+    d.hot.forEach((t) => { if (t != null) { ctx.fillStyle = "#3DFFA2"; ctx.fillRect(px(t) - 1, 0, 2, h * 0.35); } });
+    ctx.fillStyle = "#EDEBFA"; ctx.fillRect(px(pos) - 1, 0, 2, h);
+  }
+
+  function drawJog(d, pos, s) {
+    const { ctx, w, h } = fitCanvas(d.jog.canvas);
+    const r = Math.min(w, h) / 2, cx = w / 2, cy = h / 2;
+    ctx.clearRect(0, 0, w, h);
+    const g = ctx.createConicGradient ? ctx.createConicGradient(0, cx, cy) : null;
+    if (g) { g.addColorStop(0, "#19F0FF"); g.addColorStop(0.5, "#FF2BD6"); g.addColorStop(1, "#19F0FF"); }
+    ctx.lineWidth = r * 0.1;
+    ctx.strokeStyle = s && s.playing ? (g || d.color) : "#2C2745";
+    ctx.beginPath(); ctx.arc(cx, cy, r * 0.93, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = "#1A1730"; ctx.beginPath(); ctx.arc(cx, cy, r * 0.84, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = "#0B0A14"; ctx.beginPath(); ctx.arc(cx, cy, r * 0.42, 0, Math.PI * 2); ctx.fill();
+    const a = pos * (100 / 3 / 60) * Math.PI * 2 - Math.PI / 2;
+    ctx.strokeStyle = "#EDEBFA"; ctx.lineWidth = r * 0.06; ctx.lineCap = "round";
+    ctx.beginPath(); ctx.moveTo(cx + Math.cos(a) * r * 0.5, cy + Math.sin(a) * r * 0.5); ctx.lineTo(cx + Math.cos(a) * r * 0.78, cy + Math.sin(a) * r * 0.78); ctx.stroke();
+    // Beat phase ring
+    if (s && d.bpm && s.beatPhase >= 0) {
+      ctx.strokeStyle = d.color; ctx.lineWidth = r * 0.04;
+      ctx.beginPath(); ctx.arc(cx, cy, r * 0.34, -Math.PI / 2, -Math.PI / 2 + s.beatPhase * Math.PI * 2); ctx.stroke();
+    }
+  }
+
+  const meterLevels = { m0: 0, m1: 0, mM: 0 };
+  function drawMeter(id, level, color) {
+    const { ctx, w, h } = fitCanvas($(id));
+    ctx.clearRect(0, 0, w, h);
+    const db = 20 * Math.log10(Math.max(level, 1e-5));
+    const t = clamp((db + 48) / 48, 0, 1);
+    const segs = 24;
+    for (let k = 0; k < segs; k++) {
+      const y = h - (k + 1) * (h / segs);
+      const lit = k < Math.round(t * segs);
+      ctx.fillStyle = !lit ? "#221E36" : k >= segs - 2 ? "#FF3B5C" : k >= segs - 6 ? "#FFB020" : color;
+      ctx.fillRect(0, y + 1, w, h / segs - 2);
+    }
+  }
+
+  let lastReadout = 0;
+  function frame(now) {
+    const st = Engine.poll();
+    for (const d of decks) {
+      const s = st && st.decks[d.i];
+      const pos = deckPos(d);
+      if (d.jog) { d.jog.tick(now); drawJog(d, pos, s); }
+      drawDetail(d, pos, s);
+      drawOverview(d, pos, s);
+      if (s) {
+        $(`#deck${d.i}`).classList.toggle("playing", !!s.playing);
+        const ml = Math.max(s.peakL, s.peakR);
+        meterLevels["m" + d.i] = Math.max(ml, meterLevels["m" + d.i] * 0.9);
+      }
+    }
+    if (st) meterLevels.mM = Math.max(Math.max(st.masterPeakL, st.masterPeakR), meterLevels.mM * 0.9);
+    drawMeter("#meter0", meterLevels.m0, "#19F0FF");
+    drawMeter("#meterM", meterLevels.mM, "#3DFFA2");
+    drawMeter("#meter1", meterLevels.m1, "#FF2BD6");
+
+    if (st && now - lastReadout > 66) {
+      lastReadout = now;
+      for (const d of decks) {
+        const s = st.decks[d.i];
+        const pos = deckPos(d);
+        $(`#bpm${d.i}`).textContent = s.trackBpm ? s.effectiveBpm.toFixed(2) : "—";
+        const pct = s.trackBpm ? (s.effectiveBpm / s.trackBpm - 1) * 100 : 0;
+        $(`#pct${d.i}`).textContent = (pct >= 0 ? "+" : "") + pct.toFixed(2) + "%";
+        $(`#time${d.i}`).textContent = "-" + formatTime(s.duration - pos);
+        $(`#play${d.i}`).classList.toggle("on", !!s.playing);
+        $(`#play${d.i}`).textContent = s.playing ? "PAUSE" : "PLAY";
+        $(`#sync${d.i}`).classList.toggle("on", !!s.sync);
+        $(`#key${d.i}`).classList.toggle("on", !!s.keyLock);
+        $(`#slip${d.i}`).classList.toggle("on", !!s.slip);
+        $(`#rev${d.i}`).classList.toggle("on", !!s.reverse);
+        const flags = $(`#flags${d.i}`).children;
+        flags[0].classList.toggle("on", st.masterDeck === d.i);
+        flags[1].classList.toggle("on", !!s.looping);
+        const beatsEl = $(`#beats${d.i}`).children;
+        const beatIdx = d.bpm ? Math.floor((pos - d.firstBeat) / (60 / d.bpm)) : -1;
+        for (let k = 0; k < 4; k++) beatsEl[k].classList.toggle("on", beatIdx >= 0 && ((beatIdx % 4) + 4) % 4 === k);
+        const loopLen = s.looping && d.bpm ? (s.loopEnd - s.loopStart) / (60 / d.bpm) : 0;
+        $(`#loops${d.i}`).querySelectorAll("button").forEach((b) => b.classList.toggle("on", s.looping && Math.abs(+b.dataset.loop - loopLen) < 0.01));
+      }
+      for (const f of fxUnits) {
+        const fs = st.fx[f.u];
+        $(`#fx${f.u}`).classList.toggle("fxon", !!fs.on);
+        $(`#fxon${f.u}`).classList.toggle("on", f.latched);
+        $(`#fxtail${f.u}`).innerHTML = fs.tail ? '<span class="tailtag">ringing out…</span>' : "";
+        $(`#fxbpm${f.u}`).textContent = st.clockBpm ? st.clockBpm.toFixed(1) : "—";
+      }
+      for (const p of PADS) padEl(p.slot).classList.toggle("playing", !!st.samplerPlaying(p.slot));
+      document.querySelectorAll("[data-m]").forEach((b) => b.classList.toggle("run", st.macro === +b.dataset.m));
+      $("#mprog").style.width = st.macro >= 0 ? `${(st.macroProgress * 100).toFixed(1)}%` : "0%";
+      $("#mname").textContent = st.macro >= 0 ? `${MACRO_NAMES[st.macro]} on ${st.macroTarget >= 0 ? "deck " + "AB"[st.macroTarget] : "master"}` : "Ready";
+      $("#mleft").textContent = st.macro >= 0 ? `${st.macroBeatsLeft.toFixed(1)} beats` : "—";
+      $("#st-lim").textContent = st.limiterDb > 0.05 ? `-${st.limiterDb.toFixed(1)} dB` : "0.0 dB";
+      $("#st-master").textContent = st.masterDeck >= 0 ? decks[st.masterDeck].name : "—";
+      // Only the main-thread fallback has a fine clock; the worklet's is too coarse to be honest.
+      if (!Engine.node) $("#chip-dsp").innerHTML = `DSP <b>${(Engine.dspLoad * 100).toFixed(1)}%</b>`;
+    }
+  }
+  (function loop(now) { frame(now || performance.now()); requestAnimationFrame(loop); })();
+
+  // ------------------------------------------------------------------ start
+  $("#go").onclick = async () => {
+    const btn = $("#go"), msg = $("#start-msg");
+    btn.disabled = true; btn.textContent = "Starting…";
+    try {
+      await Engine.start();
+      $("#chip-mode").className = "chip ok";
+      $("#chip-mode").innerHTML = `Engine: <b>${Engine.mode}</b> · ${Engine.thread}`;
+      $("#chip-rate").innerHTML = `<b>${Engine.sampleRate}</b> Hz`;
+      if (Engine.node) $("#chip-dsp").remove();
+      const lat = ((Engine.ctx.baseLatency || 0) + (Engine.ctx.outputLatency || 0)) * 1000;
+      $("#chip-lat").innerHTML = lat > 0 ? `latency <b>${lat.toFixed(0)} ms</b>` : "latency n/a";
+      btn.textContent = "Making demo tracks…";
+      msg.textContent = "Generating two techno tracks in your browser…";
+      await new Promise((r) => setTimeout(r, 30));
+      const sr = Engine.sampleRate;
+      const a = makeDemoTrack(124, 150, sr, 0);
+      await loadPcm(decks[0], a.L, a.R, 124, 0, "Solar Drift (demo)", "2:30 · A minor · demo");
+      const b = makeDemoTrack(128, 150, sr, 1);
+      await loadPcm(decks[1], b.L, b.R, 128, 0, "Hollow Signal (demo)", "2:30 · G minor · demo");
+      Engine.call("djn_mixer_set_crossfader", 0);
+      msg.textContent = "Building 16 sampler pads…";
+      for (const f of fxUnits) f.init();
+      await loadPadSounds();
+      $("#start").remove();
+    } catch (err) {
+      console.error(err);
+      $("#chip-mode").className = "chip err";
+      $("#chip-mode").textContent = "Engine failed to start";
+      btn.disabled = false; btn.textContent = "Try again";
+      msg.textContent = "The engine could not start in this browser: " + (err && err.message ? err.message : err);
+    }
+  };
+})();
+</script>
