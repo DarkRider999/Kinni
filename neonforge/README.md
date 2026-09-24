@@ -7,6 +7,7 @@ This directory holds the first working slice: spec milestones **M0 to M3** (foun
 neonforge/
 ├─ backend/   FastAPI API · priority job queue · media engine (Python)
 ├─ web/       React + TypeScript web app (Vite)
+├─ mobile/    Flutter app for Android and iOS
 └─ docker-compose.yml   Postgres + Redis + API + workers + web
 ```
 
@@ -23,13 +24,14 @@ neonforge/
 | Batch | One recipe applied to N files, plan-based concurrency, pause, resume, cancel, retry failed, live per-file progress (WebSocket, with SSE fallback), ZIP download |
 | Credits and plans | Free, Pro and Studio limits from spec §11. Credits are reserved at submit and refunded on failure or cancel. Free-tier watermark |
 | Export | SD, HD, Full HD, 4K, 8K or original (downscale only, capped by plan). JPG, PNG, WEBP, MP4, MOV, GIF. AI-edit provenance (XMP / IPTC digital source type). Signed download URLs |
+| Mobile app | Flutter (Android and iOS): the same flows as the web app, plus save-to-gallery and share for exports and batch ZIPs |
 | Web app | Login, Home, Upload (multi-file and folder), Editor (before/after slider, tool panels, edit stack, live preview), Export, Recipe builder, Batch manager, Settings. Dark neon theme, light theme, mobile layout |
 
 ### Not in this slice (next milestones)
 
 - **Face swap (M4)** and **dress swap / AI backgrounds (M5)**. The API rejects these ops, and the UI shows them as "coming soon" with the consent rules. They need GPU diffusion workers, a commercially licensed swapper model, liveness-checked consent and an NSFW classifier deployed first (spec §0, §15).
 - **GFPGAN** face restoration and **BiRefNet** / **Depth Anything** matting on GPU. The adapters in `engine/adapters` are the extension points.
-- **Flutter mobile app**, tus resumable uploads, cloud-storage export, Stripe / StoreKit / Play billing, C2PA signing with a real certificate, and the storage janitor for retention.
+- Tus resumable uploads, cloud-storage export, Stripe / StoreKit / Play billing, C2PA signing with a real certificate, and the storage janitor for retention.
 
 ## Run it locally
 
@@ -58,6 +60,8 @@ NF_TEST_DATABASE_URL=postgresql+psycopg://… NF_TEST_REDIS_URL=redis://… pyte
 
 cd neonforge/web && npm run typecheck && npm test    # unit
 npx playwright test                                  # E2E against a running stack
+
+cd neonforge/mobile && flutter analyze && flutter test
 ```
 
 CI (`.github/workflows/neonforge.yml`) runs all of these. The backend suite runs twice: once on SQLite without models, and once on Postgres and Redis with models.
