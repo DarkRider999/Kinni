@@ -25,6 +25,7 @@ struct SyncRef {
 struct DeckTelemetry {
   std::atomic<int> loaded{0}, playing{0}, keyLock{0}, sync{0}, slip{0}, reverse{0}, looping{0};
   std::atomic<int> slipRoll{0}, censor{0};
+  std::atomic<uint32_t> hotCueMask{0};
   std::atomic<double> position{0}, duration{0}, slipPosition{0}, trackBpm{0}, effectiveBpm{0}, rate{0};
   std::atomic<double> beatPhase{-1}, loopStart{0}, loopEnd{0}, cue{0};
   std::atomic<int64_t> beatIndex{0};

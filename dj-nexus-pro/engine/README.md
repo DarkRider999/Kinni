@@ -29,6 +29,7 @@ The real-time audio core of DJ Nexus Pro: decks, key lock, mixer, master bus and
 | Sampler | 64 slots, 16 voices; one-shot, gate, loop and toggle pads; choke groups; per-pad pitch and level; quantized triggers; loops follow the master tempo with key lock; routing to master or through a channel; **capture the last N beats from any deck** into a pad |
 | Recording | WAV 16-bit (TPDF dither) / 24-bit / 32-bit float, written off the audio thread |
 | Loading | Any PCM from the app (`djn_deck_load_pcm`), grid updates after load (`djn_deck_set_grid`) or WAV/FLAC/MP3 files (`djn_deck_load_file`); tracks are resampled to the device rate with a band-limited sinc resampler |
+| MIDI controllers | Text mappings ([docs/MIDI_MAPPING.md](docs/MIDI_MAPPING.md)) for notes, CCs, 14-bit CCs, pitch bend and relative encoders; SHIFT layer; MIDI Learn; jog wheels with vinyl scratch and pitch bend; LED feedback for 19 engine states. Ports: RtMidi 6.0 on Windows (WinMM), macOS/iOS (CoreMIDI) and Linux (ALSA); Android via `android.media.midi` ([DjnMidi.kt](android/com/djnexus/engine/DjnMidi.kt) + JNI); browsers via Web MIDI |
 | Hosts | Desktop: miniaudio (WASAPI, CoreAudio, PulseAudio/ALSA/JACK). Android: Oboe (AAudio/OpenSL ES). iOS: RemoteIO + AVAudioSession |
 
 Real-time rules on the audio thread: no allocation, no locks, no file I/O, no logging. Denormals are flushed to zero on x86, ARM64 and ARMv7.
@@ -37,11 +38,11 @@ Real-time rules on the audio thread: no allocation, no locks, no file I/O, no lo
 
 | Check | Result |
 |---|---|
-| 65 unit/integration tests (x86-64 Linux) | pass |
+| 75 unit/integration tests (x86-64 Linux) | pass |
 | Same tests under ASan + UBSan | pass, no reports |
-| Multi-thread stress test (audio + UI + background loader + recorder) under TSan | pass, no data races |
+| Multi-thread stress test (audio + UI + background loader + recorder) and the MIDI service thread under TSan | pass, no data races |
 | Same tests on **ARM64** and **ARMv7** (cross-compiled, run under QEMU) | pass |
-| Same tests on **Windows** (MinGW cross-build, run under Wine), incl. Unicode file paths | pass |
+| Same tests on **Windows** (MinGW cross-build with WinMM MIDI, run under Wine), incl. Unicode file paths | pass |
 | Desktop host in real time (miniaudio null device) with two synced decks | 0.4% DSP load, beat phases locked |
 | Android host against Oboe 1.9.3 headers | type-checks clean |
 | iOS host | **not compiled here** (needs Xcode); the CI workflow builds it on macOS |
@@ -72,6 +73,8 @@ cmake --build build --config Release
 ctest --test-dir build -C Release          # run the tests
 build/djnexus_bench                        # CPU benchmark
 ```
+
+On Linux, install `libasound2-dev` first for MIDI ports (without it the build still works; apps can feed MIDI bytes with `djn_midi_feed`).
 
 For Flutter desktop, build the shared library with `-DDJN_SHARED=ON` (produces `djnexus.dll`, `libdjnexus.dylib` or `libdjnexus.so`).
 
@@ -175,6 +178,29 @@ djn_engine_collect_garbage(e);       // frees tracks the audio thread released
 
 BPM and first-beat values come from the Smart DJ Bot's analysis models (AI blueprint A1/A3). Without them (`bpm = 0`), everything except sync, quantize and beat loops still works.
 
+### MIDI controllers
+
+```c
+djn_midi* midi = djn_midi_create(e, 0);        /* starts a 200 Hz thread for jog timing and LEDs */
+char name[128];
+for (int i = 0; i < djn_midi_input_count(midi); ++i) {
+  djn_midi_input_name(midi, i, name, sizeof name);
+  printf("%d: %s\n", i, name);
+}
+djn_midi_open_input(midi, 0);
+djn_midi_open_output(midi, 0);                 /* LED feedback */
+
+char err[128];
+if (djn_midi_load_mapping(midi, mapping_text, err, sizeof err) != DJN_OK)
+  printf("mapping: %s\n", err);               /* e.g. "line 12: bad channel (1-16)" */
+
+djn_midi_learn(midi, "deck1.play");            /* the next control moved becomes deck 1's play button */
+...
+djn_midi_destroy(midi);                        /* before djn_engine_destroy */
+```
+
+On Android, open devices with [`DjnMidi`](android/com/djnexus/engine/DjnMidi.kt) and pass it the `djn_midi*` from Dart. The mapping format is in [docs/MIDI_MAPPING.md](docs/MIDI_MAPPING.md).
+
 ## Browser preview
 
 [`web/`](web/) builds the same engine to WebAssembly and wraps it in a two-deck console ("Deck Lab") so the engine can be heard without installing anything. See [web/README.md](web/README.md).
@@ -184,7 +210,8 @@ BPM and first-beat values come from the Smart DJ Bot's analysis models (AI bluep
 - **Stems playback** (4-stem decks fed by the AI Stem Splitter).
 - **Commercial time-stretcher.** The built-in WSOLA stretcher passes the pitch and level-stability tests and is fine for development. SPEC §10.1 plans a Rubber Band / Superpowered bake-off before launch; `Stretcher` is isolated behind a small interface for that swap.
 - **AAC/M4A/ALAC decoding.** Use the platform decoders (MediaCodec, AVAudioFile) and `djn_deck_load_pcm`.
-- **MIDI controllers**, a waveform/peaks API for the UI, and the Dart FFI bindings (generate them from `djnexus.h` with `ffigen`).
+- A waveform/peaks API for the UI, and the Dart FFI bindings (generate them from `djnexus.h` with `ffigen`).
+- **Ready-made mappings for specific controllers** (Pioneer DDJ, Numark, Hercules, Traktor). The format and MIDI Learn are in place; each model needs its note/CC chart turned into a mapping file and a test on the hardware.
 - **Very long recordings.** WAV files stop at 4 GB (about 6 h of 16-bit stereo at 48 kHz); RF64 is a follow-up.
 - **Latency on real devices** (target ≤ 20 ms from SPEC §2.3) still has to be measured on the device lab.
 
@@ -196,6 +223,10 @@ src/core/                   engine, deck, stretcher, channel strip, DSP, recorde
 src/hosts/                  host_desktop.cpp · host_android.cpp · host_ios.mm · host_none.cpp
 src/decode/                 file decoding (miniaudio)
 tests/                      tests (no external framework) + benchmark
+src/midi/                   MIDI mapping parser, controller (actions, jog, LEDs), ports, C API, Android JNI
+android/                    DjnMidi.kt: android.media.midi -> engine
+docs/MIDI_MAPPING.md        mapping format reference
 tools/                      djnexus_play (real time) · djnexus_render (offline mix)
 third_party/miniaudio/      miniaudio 0.11.22 (public domain / MIT-0)
+third_party/rtmidi/         RtMidi 6.0.0 (MIT-style licence)
 ```

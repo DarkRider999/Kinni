@@ -442,6 +442,11 @@ void Deck::publish(DeckTelemetry& t) const {
   t.reverse.store(reverse_ ? 1 : 0, std::memory_order_relaxed);
   t.looping.store(looping_ ? 1 : 0, std::memory_order_relaxed);
   t.slipRoll.store(slipRoll_ ? 1 : 0, std::memory_order_relaxed);
+  uint32_t mask = 0;
+  for (size_t k = 0; k < hotCueSet_.size(); ++k) {
+    if (track_ && hotCueSet_[k]) mask |= 1u << k;
+  }
+  t.hotCueMask.store(mask, std::memory_order_relaxed);
   t.censor.store(censor_ ? 1 : 0, std::memory_order_relaxed);
   t.position.store(pos_ / sr, std::memory_order_relaxed);
   t.duration.store(track_ ? double(track_->frames) / sr : 0.0, std::memory_order_relaxed);

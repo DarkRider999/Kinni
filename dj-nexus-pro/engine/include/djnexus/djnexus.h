@@ -306,6 +306,7 @@ typedef struct djn_deck_state {
   int32_t is_master;
   int32_t slip_roll;       /* slip roll held */
   int32_t censor;          /* censor held */
+  uint32_t hot_cue_mask;   /* bit n = hot cue n is set */
   double  position_sec;    /* playhead */
   double  duration_sec;
   double  slip_position_sec;
@@ -357,6 +358,8 @@ typedef struct djn_engine_state {
 
 /* Snapshot of the engine; peaks reset on read. Call at UI rate. */
 DJN_API int djn_engine_get_state(djn_engine* engine, djn_engine_state* out);
+/* Same snapshot without resetting the peak meters (for secondary readers such as MIDI feedback). */
+DJN_API int djn_engine_peek_state(djn_engine* engine, djn_engine_state* out);
 
 /* ---------------------------------------------------------------- recording */
 
@@ -369,6 +372,61 @@ typedef enum djn_rec_format {
 /* Records the master output (post-limiter) to a WAV file on a background thread. */
 DJN_API int djn_record_start(djn_engine* engine, const char* utf8_path, djn_rec_format format);
 DJN_API int djn_record_stop(djn_engine* engine);
+
+/* ---------------------------------------------------------------- MIDI controllers */
+
+/*
+ * MIDI controller support: a mapping turns incoming notes, CCs, 14-bit CCs,
+ * pitch bend and relative encoders (jog wheels) into engine actions, and turns
+ * engine state into LED feedback. Mappings are plain text (see
+ * docs/MIDI_MAPPING.md), so each controller model is a data file; MIDI Learn
+ * binds controls without editing text.
+ *
+ * Ports: desktop and iOS open hardware ports directly. On Android and in the
+ * browser the app receives MIDI itself and passes the bytes to
+ * djn_midi_feed(), and sends LED bytes from djn_midi_read_output().
+ *
+ * Threading: all djn_midi_* functions are safe from any non-audio thread.
+ */
+typedef struct djn_midi djn_midi;
+
+#define DJN_MIDI_MANUAL_SERVICE 1  /* no internal thread: call djn_midi_service() ~100x per second */
+
+DJN_API djn_midi* djn_midi_create(djn_engine* engine, int32_t flags);
+DJN_API void      djn_midi_destroy(djn_midi* midi);
+
+/* Hardware ports (desktop, iOS). Counts are 0 where the app feeds bytes itself. */
+DJN_API int32_t djn_midi_input_count(djn_midi* midi);
+DJN_API int32_t djn_midi_output_count(djn_midi* midi);
+DJN_API int     djn_midi_input_name(djn_midi* midi, int32_t index, char* buf, int32_t size);
+DJN_API int     djn_midi_output_name(djn_midi* midi, int32_t index, char* buf, int32_t size);
+DJN_API int     djn_midi_open_input(djn_midi* midi, int32_t index);
+DJN_API int     djn_midi_open_output(djn_midi* midi, int32_t index);
+DJN_API int     djn_midi_close_ports(djn_midi* midi);
+
+/* Raw MIDI bytes from any source (running status and SysEx handled). */
+DJN_API int     djn_midi_feed(djn_midi* midi, const uint8_t* bytes, int32_t length);
+/* LED feedback bytes waiting to be sent when no output port is open.
+   Returns the number of bytes copied. */
+DJN_API int32_t djn_midi_read_output(djn_midi* midi, uint8_t* buf, int32_t size);
+
+/* Replace the mapping. On error returns DJN_ERR_INVALID_ARG and writes
+   "line N: reason" to `error` (may be NULL); the old mapping stays active. */
+DJN_API int     djn_midi_load_mapping(djn_midi* midi, const char* text, char* error, int32_t error_size);
+/* Current mapping as text (including learned bindings). Returns the length
+   needed (excluding the terminator); copies up to size-1 bytes. */
+DJN_API int32_t djn_midi_get_mapping(djn_midi* midi, char* buf, int32_t size);
+/* MIDI Learn: the next control moved is bound to `action` (for example
+   "deck1.play" or "deck1.jog rel2c ticks=720"); held SHIFT learns into the
+   shift layer. NULL cancels. djn_midi_learning() returns 1 while waiting. */
+DJN_API int     djn_midi_learn(djn_midi* midi, const char* action);
+DJN_API int32_t djn_midi_learning(djn_midi* midi);
+
+/* Jog timing and LED feedback. Runs automatically unless created with
+   DJN_MIDI_MANUAL_SERVICE; `now_seconds` is any monotonic clock. */
+DJN_API int     djn_midi_service(djn_midi* midi, double now_seconds);
+/* Last message received (for a MIDI monitor). Returns the number of bytes (0..3). */
+DJN_API int32_t djn_midi_last_message(djn_midi* midi, uint8_t out[3]);
 
 /* ---------------------------------------------------------------- host */
 

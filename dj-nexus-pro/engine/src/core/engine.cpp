@@ -390,13 +390,13 @@ int Engine::process(float* out, int frames, int outChannels) {
   return DJN_OK;
 }
 
-void Engine::fillState(djn_engine_state* s) {
+void Engine::fillState(djn_engine_state* s, bool consumePeaks) {
   *s = djn_engine_state{};
   s->sample_rate = sampleRate_;
   s->num_decks = numDecks_;
   s->master_deck = masterDeck_.load(std::memory_order_relaxed);
-  s->master_peak_l = masterPeakL_.exchange(0.0f, std::memory_order_relaxed);
-  s->master_peak_r = masterPeakR_.exchange(0.0f, std::memory_order_relaxed);
+  s->master_peak_l = consumePeaks ? masterPeakL_.exchange(0.0f, std::memory_order_relaxed) : masterPeakL_.load(std::memory_order_relaxed);
+  s->master_peak_r = consumePeaks ? masterPeakR_.exchange(0.0f, std::memory_order_relaxed) : masterPeakR_.load(std::memory_order_relaxed);
   s->limiter_gain_reduction_db = limiterGr_.load(std::memory_order_relaxed);
   s->recording = recorder.recording() ? 1 : 0;
   s->recorded_sec = double(recorder.framesWritten()) / sampleRate_;
@@ -447,8 +447,11 @@ void Engine::fillState(djn_engine_state* s) {
     o.loop_start_sec = t.loopStart.load(std::memory_order_relaxed);
     o.loop_end_sec = t.loopEnd.load(std::memory_order_relaxed);
     o.cue_sec = t.cue.load(std::memory_order_relaxed);
-    o.peak_l = channels[size_t(d)].peakL.exchange(0.0f, std::memory_order_relaxed);
-    o.peak_r = channels[size_t(d)].peakR.exchange(0.0f, std::memory_order_relaxed);
+    o.peak_l = consumePeaks ? channels[size_t(d)].peakL.exchange(0.0f, std::memory_order_relaxed)
+                            : channels[size_t(d)].peakL.load(std::memory_order_relaxed);
+    o.peak_r = consumePeaks ? channels[size_t(d)].peakR.exchange(0.0f, std::memory_order_relaxed)
+                            : channels[size_t(d)].peakR.load(std::memory_order_relaxed);
+    o.hot_cue_mask = t.hotCueMask.load(std::memory_order_relaxed);
   }
 }
 

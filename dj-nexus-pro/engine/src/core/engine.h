@@ -61,7 +61,7 @@ class Engine {
     return commands_.push(c);
   }
   void collectGarbage();
-  void fillState(djn_engine_state* out);
+  void fillState(djn_engine_state* out, bool consumePeaks = true);
 
   int sampleRate() const { return sampleRate_; }
   int maxBlock() const { return maxBlock_; }

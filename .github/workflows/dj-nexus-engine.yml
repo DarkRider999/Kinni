@@ -31,6 +31,9 @@ jobs:
           - { name: "macOS (Apple Silicon)", os: macos-14 }
     steps:
       - uses: actions/checkout@v4
+      - name: MIDI headers (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
       - name: Build
@@ -62,6 +65,7 @@ jobs:
           cmake --build tsan --parallel
           ./tsan/djnexus_tests concurrent
           ./tsan/djnexus_tests recorder
+          ./tsan/djnexus_tests midi
 
   android:
     name: Android NDK (${{ matrix.abi }})
@@ -85,6 +89,9 @@ jobs:
         run: |
           "$ANDROID_NDK_LATEST_HOME"/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm -D --defined-only \
             build-android/libdjnexus.so | grep -c " T djn_"
+          # JNI entry points for android/com/djnexus/engine/DjnMidi.kt
+          test "$("$ANDROID_NDK_LATEST_HOME"/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm -D --defined-only \
+            build-android/libdjnexus.so | grep -cE "Java_com_djnexus_engine_DjnMidi_native(Feed|ReadOutput)$")" = 2
 
   ios:
     name: iOS (arm64)

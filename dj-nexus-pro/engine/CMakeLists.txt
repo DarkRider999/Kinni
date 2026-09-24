@@ -42,6 +42,9 @@ set(DJN_CORE_SOURCES
   src/core/colorfx.cpp
   src/core/macro.cpp
   src/capi.cpp
+  src/midi/midi_mapping.cpp
+  src/midi/midi_controller.cpp
+  src/midi/midi_capi.cpp
 )
 
 set(DJN_NEEDS_MINIAUDIO OFF)
@@ -70,6 +73,32 @@ if(DJN_NEEDS_MINIAUDIO)
   list(APPEND DJN_CORE_SOURCES src/miniaudio/ma_impl.c)
 endif()
 
+# MIDI ports: RtMidi on desktop and iOS; Android apps feed bytes from android.media.midi.
+set(DJN_MIDI_API "")
+if(DJN_HOST STREQUAL "desktop" OR DJN_HOST STREQUAL "ios")
+  if(WIN32)
+    set(DJN_MIDI_API "__WINDOWS_MM__")
+  elseif(APPLE)
+    set(DJN_MIDI_API "__MACOSX_CORE__")
+  elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_package(ALSA QUIET)
+    if(ALSA_FOUND)
+      set(DJN_MIDI_API "__LINUX_ALSA__")
+    else()
+      message(WARNING "ALSA headers not found (libasound2-dev): MIDI ports disabled, djn_midi_feed still works")
+    endif()
+  endif()
+endif()
+if(DJN_MIDI_API)
+  list(APPEND DJN_CORE_SOURCES src/midi/midi_ports_rtmidi.cpp third_party/rtmidi/RtMidi.cpp)
+else()
+  list(APPEND DJN_CORE_SOURCES src/midi/midi_ports_none.cpp)
+endif()
+if(DJN_HOST STREQUAL "android")
+  list(APPEND DJN_CORE_SOURCES src/midi/midi_jni.cpp)  # for android/com/djnexus/engine/DjnMidi.kt
+endif()
+message(STATUS "DJ Nexus engine: MIDI ports=${DJN_MIDI_API}")
+
 if(DJN_SHARED)
   add_library(djnexus SHARED ${DJN_CORE_SOURCES})
   target_compile_definitions(djnexus PRIVATE DJN_BUILD_SHARED)
@@ -83,7 +112,7 @@ add_library(djnexus::engine ALIAS djnexus)
 target_include_directories(djnexus
   PUBLIC  ${CMAKE_CURRENT_SOURCE_DIR}/include
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/core
-          ${CMAKE_CURRENT_SOURCE_DIR}/third_party/miniaudio)
+          ${CMAKE_CURRENT_SOURCE_DIR}/third_party/miniaudio ${CMAKE_CURRENT_SOURCE_DIR}/third_party/rtmidi)
 
 if(DJN_HOST STREQUAL "desktop")
   target_compile_definitions(djnexus PRIVATE DJN_WITH_DEVICE_IO)
@@ -96,9 +125,20 @@ else()
     $<$<COMPILE_LANGUAGE:CXX,OBJCXX>:-Wall -Wextra -Wno-unused-parameter>
     -fno-math-errno)
 endif()
-# miniaudio is third-party: keep its warnings out of our build output.
+# miniaudio and RtMidi are third-party: keep their warnings out of our build output.
 if(DJN_NEEDS_MINIAUDIO AND NOT MSVC)
   set_source_files_properties(src/miniaudio/ma_impl.c PROPERTIES COMPILE_OPTIONS "-w")
+endif()
+if(DJN_MIDI_API)
+  set_source_files_properties(third_party/rtmidi/RtMidi.cpp PROPERTIES COMPILE_DEFINITIONS "${DJN_MIDI_API}"
+                              COMPILE_OPTIONS "$<IF:$<CXX_COMPILER_ID:MSVC>,/w,-w>")
+  if(WIN32)
+    target_link_libraries(djnexus PRIVATE winmm)
+  elseif(APPLE)
+    target_link_libraries(djnexus PRIVATE "-framework CoreMIDI" "-framework CoreFoundation")
+  elseif(ALSA_FOUND)
+    target_link_libraries(djnexus PRIVATE ALSA::ALSA)
+  endif()
 endif()
 
 # ---------------------------------------------------------------- platform libs
@@ -147,7 +187,7 @@ endif()
 # Tests reach into internal classes, so they need the static library.
 if(DJN_BUILD_TESTS AND NOT DJN_SHARED AND NOT DJN_HOST STREQUAL "android" AND NOT DJN_HOST STREQUAL "ios")
   enable_testing()
-  add_executable(djnexus_tests tests/test_main.cpp tests/test_engine.cpp tests/test_dsp.cpp tests/test_fx_sampler.cpp tests/test_color_macro.cpp)
+  add_executable(djnexus_tests tests/test_main.cpp tests/test_engine.cpp tests/test_dsp.cpp tests/test_fx_sampler.cpp tests/test_color_macro.cpp tests/test_midi.cpp)
   target_include_directories(djnexus_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/core)
   target_link_libraries(djnexus_tests PRIVATE djnexus)
   add_test(NAME djnexus_tests COMMAND djnexus_tests)

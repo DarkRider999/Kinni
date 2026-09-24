@@ -429,6 +429,12 @@ DJN_API int djn_engine_get_state(djn_engine* e, djn_engine_state* out) {
   return DJN_OK;
 }
 
+DJN_API int djn_engine_peek_state(djn_engine* e, djn_engine_state* out) {
+  if (!e || !out) return DJN_ERR_INVALID_ARG;
+  e->impl.fillState(out, false);
+  return DJN_OK;
+}
+
 DJN_API int djn_record_start(djn_engine* e, const char* path, djn_rec_format format) {
   if (!e || !path || format < DJN_REC_WAV16 || format > DJN_REC_WAV_FLOAT) return DJN_ERR_INVALID_ARG;
   if (e->impl.recorder.recording()) return DJN_ERR_STATE;

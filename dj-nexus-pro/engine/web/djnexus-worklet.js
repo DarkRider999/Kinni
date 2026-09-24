@@ -29,6 +29,9 @@ class DJNexusProcessor extends AudioWorkletProcessor {
       } else if (m.type === "loadSample") {
         const result = this.rt.loadSample(m.slot, m.left, m.right, m.sampleRate, m.bpm);
         this.port.postMessage({ type: "result", id: m.id, result });
+      } else if (m.type === "midi") {
+        const result = this.rt.midi(m.op, m.arg);
+        if (m.id) this.port.postMessage({ type: "result", id: m.id, result });
       } else if (m.type === "load") {
         const result = this.rt.load(m.deck, m.left, m.right, m.sampleRate, m.bpm, m.firstBeat);
         this.port.postMessage({ type: "result", id: m.id, result });
@@ -57,6 +60,11 @@ class DJNexusProcessor extends AudioWorkletProcessor {
       this.dspLoad = this.busyMs / (now - this.windowStart);
       this.busyMs = 0;
       this.windowStart = now;
+    }
+    // MIDI jog timing and LED feedback, every other block (~5 ms).
+    if (this.blocks % 2 === 0) {
+      const leds = this.rt.midiService(currentTime);
+      if (leds) this.port.postMessage({ type: "midiOut", bytes: leds }, [leds.buffer]);
     }
     if (++this.blocks % 6 === 0) {
       const s = this.rt.state();

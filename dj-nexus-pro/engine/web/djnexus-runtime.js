@@ -19,6 +19,8 @@
     this.memory = null;
     this.engine = 0;
     this.mode = "";
+    this.midiPtr = 0;
+    this.midiBuf = 0;
     this.stateSize = DECKS * DECK_FIELDS.length + ENGINE_FIELDS.length + FX_UNITS * FX_FIELDS.length;
   }
 
@@ -130,6 +132,112 @@
       }
       done += n;
     }
+  };
+
+  // ---------------------------------------------------------------- MIDI
+  // The web build has no MIDI ports of its own: the page receives Web MIDI
+  // messages and passes the bytes in; LED bytes come back from midiService().
+  // Strings cross the boundary as UTF-8 (TextEncoder isn't available inside
+  // an AudioWorklet, hence the small codec).
+  function utf8Encode(str) {
+    var out = [];
+    for (var i = 0; i < str.length; i++) {
+      var c = str.codePointAt(i);
+      if (c > 0xffff) i++;
+      if (c < 0x80) out.push(c);
+      else if (c < 0x800) out.push(0xc0 | (c >> 6), 0x80 | (c & 63));
+      else if (c < 0x10000) out.push(0xe0 | (c >> 12), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+      else out.push(0xf0 | (c >> 18), 0x80 | ((c >> 12) & 63), 0x80 | ((c >> 6) & 63), 0x80 | (c & 63));
+    }
+    return out;
+  }
+
+  function utf8Decode(bytes) {
+    var s = "";
+    for (var i = 0; i < bytes.length;) {
+      var b = bytes[i++], c;
+      if (b < 0x80) c = b;
+      else if (b < 0xe0) c = ((b & 31) << 6) | (bytes[i++] & 63);
+      else if (b < 0xf0) { c = ((b & 15) << 12) | ((bytes[i] & 63) << 6) | (bytes[i + 1] & 63); i += 2; }
+      else { c = ((b & 7) << 18) | ((bytes[i] & 63) << 12) | ((bytes[i + 1] & 63) << 6) | (bytes[i + 2] & 63); i += 3; }
+      s += String.fromCodePoint(c);
+    }
+    return s;
+  }
+
+  // Copies bytes (plus a terminator when `cstring`) into engine memory.
+  Runtime.prototype._bytesIn = function (bytes, cstring) {
+    var ptr = this.exports.djnw_malloc(bytes.length + 1);
+    if (!ptr) throw new Error("out of memory");
+    var m = new Uint8Array(this.memory.buffer, ptr, bytes.length + 1);
+    m.set(bytes);
+    m[bytes.length] = 0;
+    return ptr;
+  };
+
+  Runtime.prototype._midiHandle = function () {
+    if (!this.midiPtr) {
+      this.midiPtr = this.exports.djn_midi_create(this.engine, 1);  // DJN_MIDI_MANUAL_SERVICE
+      if (!this.midiPtr) throw new Error("MIDI create failed");
+      this.midiBuf = this.exports.djnw_malloc(1024);
+    }
+    return this.midiPtr;
+  };
+
+  // One entry point for every MIDI operation, so the page can post the same
+  // request to a worklet or call it directly: op = feed | load | get | learn | info.
+  Runtime.prototype.midi = function (op, arg) {
+    var ex = this.exports, m = this._midiHandle(), ptr, r;
+    if (op === "feed") {
+      ptr = this._bytesIn(arg, false);
+      r = ex.djn_midi_feed(m, ptr, arg.length);
+      ex.djnw_free(ptr);
+      return r;
+    }
+    if (op === "load") {  // returns "" or the error message
+      ptr = this._bytesIn(utf8Encode(arg), true);
+      var err = ex.djnw_malloc(256);
+      r = ex.djn_midi_load_mapping(m, ptr, err, 256);
+      var msg = r === 0 ? "" : utf8Decode(this._cstring(err));
+      ex.djnw_free(err);
+      ex.djnw_free(ptr);
+      return msg;
+    }
+    if (op === "get") {
+      var n = ex.djn_midi_get_mapping(m, 0, 0);
+      ptr = ex.djnw_malloc(n + 1);
+      ex.djn_midi_get_mapping(m, ptr, n + 1);
+      var text = utf8Decode(new Uint8Array(this.memory.buffer, ptr, n));
+      ex.djnw_free(ptr);
+      return text;
+    }
+    if (op === "learn") {  // arg: action text, or null to cancel
+      if (arg == null) return ex.djn_midi_learn(m, 0);
+      ptr = this._bytesIn(utf8Encode(arg), true);
+      r = ex.djn_midi_learn(m, ptr);
+      ex.djnw_free(ptr);
+      return r;
+    }
+    if (op === "info") {  // learning flag and the last message received
+      var len = ex.djn_midi_last_message(m, this.midiBuf);
+      return { learning: ex.djn_midi_learning(m), last: Array.from(new Uint8Array(this.memory.buffer, this.midiBuf, len)) };
+    }
+    throw new Error("unknown MIDI op " + op);
+  };
+
+  Runtime.prototype._cstring = function (ptr) {
+    var m = new Uint8Array(this.memory.buffer), end = ptr;
+    while (m[end]) end++;
+    return m.subarray(ptr, end);
+  };
+
+  // Jog timing and LED feedback; returns the LED bytes to send (or null).
+  // Call every few milliseconds with a monotonic time in seconds.
+  Runtime.prototype.midiService = function (seconds) {
+    if (!this.midiPtr) return null;
+    this.exports.djn_midi_service(this.midiPtr, seconds);
+    var n = this.exports.djn_midi_read_output(this.midiPtr, this.midiBuf, 1024);
+    return n > 0 ? new Uint8Array(this.memory.buffer.slice(this.midiBuf, this.midiBuf + n)) : null;
   };
 
   // Packs the current engine state into a Float64Array (see unpack()).
