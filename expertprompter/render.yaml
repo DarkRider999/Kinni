@@ -1,0 +1,21 @@
+# Render Blueprint for the API + database. The frontend deploys to Vercel.
+services:
+  - type: web
+    name: expertprompter-api
+    runtime: node
+    rootDir: expertprompter/backend
+    buildCommand: npm ci --include=dev && npm run build && npx prisma migrate deploy && npm run db:seed
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase: { name: expertprompter-db, property: connectionString }
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false # set to your Vercel URL, e.g. https://expertprompter.vercel.app
+databases:
+  - name: expertprompter-db
+    plan: free
