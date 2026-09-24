@@ -129,8 +129,9 @@ TEST(pitch_fx_shifts_an_octave) {
   djn_fx_set_on(e, 0, 1);
   djn_deck_play(e, 0);
   const auto out = render(e, 1.5);
-  std::vector<float> win(out.begin() + int(0.5 * kRate), out.end());
-  CHECK_NEAR(frequency(win, 0), 1000.0, 15.0);
+  const size_t a = size_t(0.5 * kRate);
+  CHECK(db(toneLevel(out, 1000.0, a, out.size()) / toneLevel(out, 500.0, a, out.size())) > 15);
+  CHECK(toneLevel(out, 1000.0, a, out.size()) > 0.25);  // near full level: no grain cancellation
 }
 
 TEST(fx_on_a_channel_leaves_other_channels_alone) {

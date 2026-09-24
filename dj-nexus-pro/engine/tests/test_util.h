@@ -102,6 +102,21 @@ inline double frequency(const std::vector<float>& x, size_t from) {
   return (count - 1) / ((last - first) / kRate);
 }
 
+// Level (RMS-equivalent amplitude) of one frequency in x[from, to), via Goertzel.
+inline double toneLevel(const std::vector<float>& x, double freq, size_t from, size_t to) {
+  to = std::min(to, x.size());
+  const double w = 2.0 * kPi * freq / kRate, c = 2.0 * std::cos(w);
+  double s1 = 0, s2 = 0;
+  for (size_t i = from; i < to; ++i) {
+    const double s0 = x[i] + c * s1 - s2;
+    s2 = s1;
+    s1 = s0;
+  }
+  const double power = s1 * s1 + s2 * s2 - c * s1 * s2;
+  // |X| = N*A/2 for a sine of amplitude A; return the RMS A/sqrt(2).
+  return 2.0 * std::sqrt(std::max(0.0, power)) / double(to - from) / std::sqrt(2.0);
+}
+
 inline djn_deck_state deckState(djn_engine* e, int d) {
   djn_engine_state s;
   djn_engine_get_state(e, &s);

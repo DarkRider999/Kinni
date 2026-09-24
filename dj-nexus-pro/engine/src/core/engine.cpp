@@ -28,6 +28,7 @@ Engine::Engine(int sampleRate, int maxBlock, int numDecks)
   sampR_.assign(n, 0.0f);
   for (auto& u : fxUnits_) u.setup(sampleRate, maxBlock);
   sampler_.setup(sampleRate, maxBlock);
+  macro_.setup(sampleRate);
   size_t hist = 1;
   while (hist < size_t(historySeconds() * sampleRate) + size_t(maxBlock)) hist <<= 1;
   histMask_ = hist - 1;
@@ -67,7 +68,7 @@ void Engine::capture(int deck, Track* into) {
   }
 }
 
-void Engine::dispatchSampler(const Command& c) {
+void Engine::dispatchGlobal(const Command& c) {
   Track* old = nullptr;
   switch (c.type) {
     case Cmd::SamplerLoad: old = sampler_.load(c.slot, c.track); break;
@@ -95,6 +96,16 @@ void Engine::dispatchSampler(const Command& c) {
     case Cmd::SamplerGain: sampler_.setGainDb(c.slot, float(c.value)); break;
     case Cmd::SamplerPitch: sampler_.setPitch(c.slot, float(c.value)); break;
     case Cmd::SamplerSync: sampler_.setSync(c.slot, c.value != 0.0); break;
+    case Cmd::MacroStart: {
+      BeatClock clk;  // the beat clock projected to this block's start
+      clk.bpm = lastClockBpm_;
+      clk.beat = internalBeat_;
+      clk.beatsPerSample = clk.bpm / 60.0 / sampleRate_;
+      macroTarget_ = (c.deck >= 0 && c.deck < numDecks_) ? c.deck : -1;
+      macro_.start(c.slot, int(c.value), c.value2 != 0.0, clk);
+      break;
+    }
+    case Cmd::MacroCancel: macro_.cancel(); break;
     default: break;
   }
   if (old && !garbage_.push(old)) {
@@ -104,7 +115,7 @@ void Engine::dispatchSampler(const Command& c) {
 
 void Engine::dispatch(const Command& c) {
   if (c.type >= Cmd::SamplerLoad) {
-    dispatchSampler(c);
+    dispatchGlobal(c);
     return;
   }
   if (c.deck < 0 || c.deck >= numDecks_) {
@@ -139,7 +150,7 @@ void Engine::dispatch(const Command& c) {
     case Cmd::Sync: d.setSync(c.slot != 0); break;
     case Cmd::Jog: d.jog(c.slot != 0, c.value); break;
     case Cmd::SetGrid: d.setGrid(c.value, c.value2); break;
-    default: break;  // sampler commands are handled in dispatchSampler()
+    default: break;  // sampler commands are handled in dispatchGlobal()
   }
   if (old && !garbage_.push(old)) {
     // Garbage queue full (control thread never collects): leak rather than
@@ -196,6 +207,7 @@ int Engine::process(float* out, int frames, int outChannels) {
 
   // ---- snapshot parameters
   const int mode = eqMode.load(std::memory_order_relaxed);
+  const int colorType = colorFx.load(std::memory_order_relaxed);
   const float res = resonance.load(std::memory_order_relaxed);
   float xa, xb;
   crossfaderGains(crossfader.load(std::memory_order_relaxed), crossfaderCurve.load(std::memory_order_relaxed), xa, xb);
@@ -275,6 +287,8 @@ int Engine::process(float* out, int frames, int outChannels) {
     p.fader = ca.fader.load(std::memory_order_relaxed);
     p.eqMode = mode;
     p.resonance = res;
+    p.colorType = colorType;
+    p.bpm = clock.bpm;
     const bool cueOn = ca.cue.load(std::memory_order_relaxed) != 0;
     strips_[size_t(d)].process(deckL_.data(), deckR_.data(), frames, p,
                                cueOn ? cueL_.data() : nullptr, cueOn ? cueR_.data() : nullptr);
@@ -284,6 +298,7 @@ int Engine::process(float* out, int frames, int outChannels) {
     for (int u = 0; u < 2; ++u) {
       if (fxTarget[u] == d) fxUnits_[size_t(u)].process(deckL_.data(), deckR_.data(), frames, fxp[u], clock);
     }
+    if (macroTarget_ == d) macro_.process(deckL_.data(), deckR_.data(), frames, clock);
 
     const float pl = strips_[size_t(d)].blockPeakL(), pr = strips_[size_t(d)].blockPeakR();
     if (pl > ca.peakL.load(std::memory_order_relaxed)) ca.peakL.store(pl, std::memory_order_relaxed);
@@ -317,6 +332,11 @@ int Engine::process(float* out, int frames, int outChannels) {
     }
     fx[size_t(u)].tail.store(fxUnits_[size_t(u)].tailActive() ? 1 : 0, std::memory_order_relaxed);
   }
+  if (macroTarget_ < 0 || macroTarget_ >= numDecks_) macro_.process(mixL_.data(), mixR_.data(), frames, clock);
+  macroType_.store(macro_.type(), std::memory_order_relaxed);
+  macroTargetT_.store(macroTarget_, std::memory_order_relaxed);
+  macroProgress_.store(macro_.progress(), std::memory_order_relaxed);
+  macroBeatsLeft_.store(macro_.beatsLeft(), std::memory_order_relaxed);
   samplerLoaded_.store(sampler_.loadedMask(), std::memory_order_relaxed);
   samplerPlaying_.store(sampler_.playingMask(), std::memory_order_relaxed);
 
@@ -385,6 +405,12 @@ void Engine::fillState(djn_engine_state* s) {
   s->clock_beat = clockBeat_.load(std::memory_order_relaxed);
   s->sampler_loaded = samplerLoaded_.load(std::memory_order_relaxed);
   s->sampler_playing = samplerPlaying_.load(std::memory_order_relaxed);
+  s->color_fx = colorFx.load(std::memory_order_relaxed);
+  s->color_param = resonance.load(std::memory_order_relaxed);
+  s->macro = macroType_.load(std::memory_order_relaxed);
+  s->macro_target = macroTargetT_.load(std::memory_order_relaxed);
+  s->macro_progress = macroProgress_.load(std::memory_order_relaxed);
+  s->macro_beats_left = macroBeatsLeft_.load(std::memory_order_relaxed);
   for (int u = 0; u < 2; ++u) {
     djn_fx_state& f = s->fx[u];
     f.on = fx[size_t(u)].on.load(std::memory_order_relaxed);

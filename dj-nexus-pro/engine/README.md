@@ -23,6 +23,8 @@ The real-time audio core of DJ Nexus Pro: decks, key lock, mixer, master bus and
 | Mixer | Trim, 3-band EQ (classic −26/+6 dB or isolator with full kill), bipolar LPF/HPF filter with resonance, channel faders, crossfader (smooth / sharp curves), A/B/THRU assign |
 | Master | Master gain, look-ahead peak limiter, peak meters, headphone cue mix on 4-channel interfaces |
 | Beat FX | 2 FX units, each on any channel (post-fader) or the master: Echo, Delay, Ping-Pong, Reverb, Flanger, Phaser, Roll, Stutter, Trans, Pitch, Distortion, Crush. Timed from the sync master's beat grid (divisions 1/16–16 beats); echoes and reverb ring out after switching off; rolls start on the last beat line |
+| Colour FX | Club-mixer style: one type for the whole mixer, played on each channel by its colour knob (two flavours left/right) plus a shared colour parameter: Filter, Noise, Dub Echo (3/4-beat, rings out), Pitch (±1 octave), Crush, Space (reverb, rings out) |
+| Macros | Riser (noise sweep + rising tone), Build-up (high-pass sweep, reverb wash, riser, roll accelerating 1 → 1/8 beat in the last bar) and Drop (cut until the next bar line). All land exactly on a bar line, on the master or one channel, with an optional impact on the drop |
 | Sampler | 64 slots, 16 voices; one-shot, gate, loop and toggle pads; choke groups; per-pad pitch and level; quantized triggers; loops follow the master tempo with key lock; routing to master or through a channel; **capture the last N beats from any deck** into a pad |
 | Recording | WAV 16-bit (TPDF dither) / 24-bit / 32-bit float, written off the audio thread |
 | Loading | Any PCM from the app (`djn_deck_load_pcm`), grid updates after load (`djn_deck_set_grid`) or WAV/FLAC/MP3 files (`djn_deck_load_file`); tracks are resampled to the device rate with a band-limited sinc resampler |
@@ -34,7 +36,7 @@ Real-time rules on the audio thread: no allocation, no locks, no file I/O, no lo
 
 | Check | Result |
 |---|---|
-| 47 unit/integration tests (x86-64 Linux) | pass |
+| 61 unit/integration tests (x86-64 Linux) | pass |
 | Same tests under ASan + UBSan | pass, no reports |
 | Multi-thread stress test (audio + UI + background loader + recorder) under TSan | pass, no data races |
 | Same tests on **ARM64** and **ARMv7** (cross-compiled, run under QEMU) | pass |
@@ -53,7 +55,7 @@ The GitHub Actions workflow [`.github/workflows/dj-nexus-engine.yml`](../../.git
 | 2 decks, key lock | ~178 |
 | 4 decks, key lock, isolator EQ, filters (256-frame blocks) | ~70 |
 | 4 decks, key lock, isolator EQ, filters (64-frame blocks) | ~60 |
-| Same + reverb and echo running + 8 sampler voices (4 key-locked loops) | ~47 |
+| Same + reverb and echo running + 8 sampler voices (4 key-locked loops) | ~49 |
 
 70× real time means a 4-deck key-locked mix uses about 1.4% of one core. Expect phones to be roughly 3–6× slower; run `djnexus_bench` on the reference devices from SPEC §16.1 to get real figures.
 
@@ -157,6 +159,13 @@ djn_sampler_capture(e, 1, 0, 4.0);
 djn_sampler_set_mode(e, 1, DJN_PAD_TOGGLE);
 djn_sampler_set_quantize(e, 1.0);    // pads start on the next beat
 
+// Colour FX: dub echo on every channel's colour knob; turn deck B's knob right
+djn_mixer_set_color_fx(e, DJN_COLOR_DUB_ECHO);
+djn_mixer_set_filter(e, 1, 0.6f);
+
+// 8-bar build-up on the master that drops on the bar line with an impact
+djn_macro_start(e, DJN_MACRO_BUILD_UP, 8, DJN_FX_TARGET_MASTER, 1);
+
 // Once per UI frame:
 djn_engine_state s;
 djn_engine_get_state(e, &s);         // positions, BPM, beat phase, loop, meters, DSP load
@@ -171,7 +180,6 @@ BPM and first-beat values come from the Smart DJ Bot's analysis models (AI bluep
 
 ## Not in this milestone yet
 
-- **Colour FX** variants beyond the filter (noise, dub echo, crush on the channel knob) and the build tools (riser / build-up / drop macros).
 - **Slip roll** as a deck feature: today a slip + beat loop gives the same result; the app can map its Slip Roll button to that.
 - **Stems playback** (4-stem decks fed by the AI Stem Splitter).
 - **Commercial time-stretcher.** The built-in WSOLA stretcher passes the pitch and level-stability tests and is fine for development. SPEC §10.1 plans a Rubber Band / Superpowered bake-off before launch; `Stretcher` is isolated behind a small interface for that swap.

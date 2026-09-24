@@ -232,6 +232,33 @@ DJN_API int djn_mixer_set_headphone_db(djn_engine* e, float db) {
   return DJN_OK;
 }
 
+DJN_API int djn_mixer_set_color_fx(djn_engine* e, djn_color_fx type) {
+  if (!e || type < DJN_COLOR_FILTER || type > DJN_COLOR_SPACE) return DJN_ERR_INVALID_ARG;
+  e->impl.colorFx.store(int(type));
+  return DJN_OK;
+}
+DJN_API int djn_mixer_set_color_param(djn_engine* e, float value) {
+  if (!e || !std::isfinite(value)) return DJN_ERR_INVALID_ARG;
+  e->impl.resonance.store(djn::clampv(value, 0.0f, 1.0f));
+  return DJN_OK;
+}
+
+// ---------------------------------------------------------------- macros
+
+DJN_API int djn_macro_start(djn_engine* e, djn_macro macro, int32_t bars, int32_t target, int32_t impact) {
+  if (!e || macro < DJN_MACRO_RISER || macro > DJN_MACRO_DROP || bars < 1 || bars > 16 ||
+      target < DJN_FX_TARGET_MASTER || target >= e->impl.numDecks()) {
+    return DJN_ERR_INVALID_ARG;
+  }
+  Command c{Cmd::MacroStart, int8_t(target), int32_t(macro), double(bars), impact ? 1.0 : 0.0, nullptr};
+  return e->impl.send(c) ? DJN_OK : DJN_ERR_QUEUE_FULL;
+}
+DJN_API int djn_macro_cancel(djn_engine* e) {
+  if (!e) return DJN_ERR_INVALID_ARG;
+  Command c{Cmd::MacroCancel, -1, 0, 0.0, 0.0, nullptr};
+  return e->impl.send(c) ? DJN_OK : DJN_ERR_QUEUE_FULL;
+}
+
 // ---------------------------------------------------------------- beat FX
 
 namespace {

@@ -9,7 +9,8 @@
     "position", "duration", "trackBpm", "effectiveBpm", "rate", "beatPhase", "loopStart", "loopEnd",
     "cue", "peakL", "peakR"];
   var ENGINE_FIELDS = ["masterPeakL", "masterPeakR", "limiterDb", "dspLoad", "masterDeck", "clockBpm",
-    "samplerLoadedLo", "samplerLoadedHi", "samplerPlayingLo", "samplerPlayingHi"];
+    "samplerLoadedLo", "samplerLoadedHi", "samplerPlayingLo", "samplerPlayingHi",
+    "colorFx", "colorParam", "macro", "macroTarget", "macroProgress", "macroBeatsLeft"];
   var FX_FIELDS = ["on", "type", "target", "tail", "beats", "depth", "wet"];
   var DECKS = 2, FX_UNITS = 2;
 

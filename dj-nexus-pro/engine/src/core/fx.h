@@ -60,6 +60,46 @@ class DelayLine {
   int64_t validFrom_ = 0;
 };
 
+// Real-time pitch shifter: overlapping Hann grains read the input at `ratio`
+// speed. Each new grain starts where its waveform best matches the grain it
+// overlaps (a streaming WSOLA search), so grains never cancel each other.
+class PitchShifter {
+ public:
+  void setup(int sampleRate);
+  void reset();
+  inline void process(float inL, float inR, double ratio, float& outL, float& outR) {
+    hist_[0].push(inL);
+    hist_[1].push(inR);
+    if (counter_ == 0) startGrain(ratio);
+    counter_ = (counter_ + 1) % hop_;
+    float yl = 0.0f, yr = 0.0f;
+    for (auto& g : grains_) {
+      if (g.age >= grain_) continue;
+      const float w = window_[size_t(g.age)];
+      yl += hist_[0].read(g.delay) * w;
+      yr += hist_[1].read(g.delay) * w;
+      g.delay += 1.0 - ratio;
+      ++g.age;
+    }
+    outL = yl;
+    outR = yr;
+  }
+
+ private:
+  struct Grain {
+    double delay = 0.0;
+    int age = 1 << 30;  // >= grain length: inactive
+  };
+  void startGrain(double ratio);
+
+  DelayLine hist_[2];
+  std::vector<float> window_;
+  std::array<Grain, 2> grains_{};
+  int grain_ = 1920, hop_ = 960, search_ = 576, corr_ = 288;
+  int counter_ = 0;
+  int next_ = 0;
+};
+
 class FxUnit {
  public:
   void setup(int sampleRate, int maxBlock);
@@ -124,7 +164,7 @@ class FxUnit {
   float transGain_ = 1.0f;
 
   // Pitch shifter
-  double pitchPhase_ = 0.0;
+  PitchShifter shifter_;
 
   // Distortion / crush
   float toneLp_[2] = {0, 0};

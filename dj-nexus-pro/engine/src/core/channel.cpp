@@ -16,6 +16,7 @@ void ChannelStrip::setup(double fs) {
   isoHp2_.setHighPass(fs, kIsoHighHz);
   isoApLp_.setLowPass(fs, kIsoHighHz);
   isoApHp_.setHighPass(fs, kIsoHighHz);
+  color_.setup(int(fs));
   reset();
 }
 
@@ -82,7 +83,9 @@ void ChannelStrip::process(float* l, float* r, int n, const ChannelParams& p, fl
     // amount fades in over the first 5% of travel so the centre detent and the
     // LPF/HPF switch-over are click-free.
     const float amount = std::fabs(filt);
-    const float wet = clampv(amount / 0.05f, 0.0f, 1.0f);
+    // With a colour FX selected the knob plays that effect instead of the filter.
+    const bool filterMode = p.colorType == 0;
+    const float wet = filterMode ? clampv(amount / 0.05f, 0.0f, 1.0f) : 0.0f;
     const bool lowPass = filt < 0.0f;
     if (wet > 0.0f && (filt != lastFilter_ || p.resonance != lastRes_)) {
       const double cutoff = lowPass ? 20000.0 * std::pow(60.0 / 20000.0, double(amount))
@@ -115,6 +118,10 @@ void ChannelStrip::process(float* l, float* r, int n, const ChannelParams& p, fl
         if (ch == 0) L[i] = x; else R[i] = x;
       }
     }
+
+    // Always called: in filter mode it only notes the type change (so an old dub
+    // echo tail can't resume later) and returns.
+    color_.process(L, R, m, p.colorType, filt, p.resonance, p.bpm);
 
     // Pre-fader cue tap, then the fader (ramped across the sub-block).
     if (cueL) {

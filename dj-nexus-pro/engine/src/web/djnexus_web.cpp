@@ -79,7 +79,9 @@ WEB_EXPORT(djnw_deck) double djnw_deck(int d, int field) {
 }
 
 // Engine fields: 0 master peak L, 1 master peak R, 2 limiter GR dB, 3 dsp load, 4 master deck,
-// 5 clock bpm, 6/7 sampler loaded mask (low/high 32 bits), 8/9 sampler playing mask.
+// 5 clock bpm, 6/7 sampler loaded mask (low/high 32 bits), 8/9 sampler playing mask,
+// 10 colour FX type, 11 colour parameter, 12 macro (-1 none), 13 macro target,
+// 14 macro progress, 15 macro beats left.
 WEB_EXPORT(djnw_engine) double djnw_engine(int field) {
   switch (field) {
     case 0: return g_state.master_peak_l;
@@ -92,6 +94,12 @@ WEB_EXPORT(djnw_engine) double djnw_engine(int field) {
     case 7: return double(uint32_t(g_state.sampler_loaded >> 32));
     case 8: return double(uint32_t(g_state.sampler_playing));
     case 9: return double(uint32_t(g_state.sampler_playing >> 32));
+    case 10: return g_state.color_fx;
+    case 11: return g_state.color_param;
+    case 12: return g_state.macro;
+    case 13: return g_state.macro_target;
+    case 14: return g_state.macro_progress;
+    case 15: return g_state.macro_beats_left;
   }
   return 0;
 }

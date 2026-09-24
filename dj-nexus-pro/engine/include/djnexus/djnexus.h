@@ -161,8 +161,25 @@ typedef enum djn_xfader_curve {
 DJN_API int djn_mixer_set_trim_db(djn_engine* engine, int32_t channel, float db);    /* -24..+12 */
 DJN_API int djn_mixer_set_eq_db(djn_engine* engine, int32_t channel, int32_t band, float db); /* band 0=low 1=mid 2=high */
 DJN_API int djn_mixer_set_eq_mode(djn_engine* engine, djn_eq_mode mode);
-DJN_API int djn_mixer_set_filter(djn_engine* engine, int32_t channel, float value);  /* -1 LPF .. 0 off .. +1 HPF */
-DJN_API int djn_mixer_set_filter_resonance(djn_engine* engine, float resonance);      /* 0..1 */
+DJN_API int djn_mixer_set_filter(djn_engine* engine, int32_t channel, float value);  /* colour knob: -1 .. 0 off .. +1 */
+DJN_API int djn_mixer_set_filter_resonance(djn_engine* engine, float resonance);      /* 0..1 (same as the colour parameter) */
+
+/*
+ * Colour FX, as on a club mixer: one type for the whole mixer, played on each
+ * channel by that channel's colour knob (djn_mixer_set_filter). Left and right
+ * of centre give two flavours; the colour parameter shapes the sound.
+ */
+typedef enum djn_color_fx {
+  DJN_COLOR_FILTER = 0,    /* left low-pass, right high-pass. param = resonance */
+  DJN_COLOR_NOISE = 1,     /* filtered white noise: left rumble, right hiss. param = level */
+  DJN_COLOR_DUB_ECHO = 2,  /* 3/4-beat echo send with filtered repeats; rings out. param = feedback */
+  DJN_COLOR_PITCH = 3,     /* left pitches down, right up, up to an octave */
+  DJN_COLOR_CRUSH = 4,     /* bit crusher with low-/high-pass */
+  DJN_COLOR_SPACE = 5      /* reverb send with filtered return; rings out. param = decay */
+} djn_color_fx;
+
+DJN_API int djn_mixer_set_color_fx(djn_engine* engine, djn_color_fx type);
+DJN_API int djn_mixer_set_color_param(djn_engine* engine, float value);               /* 0..1 */
 DJN_API int djn_mixer_set_fader(djn_engine* engine, int32_t channel, float value);   /* 0..1 */
 DJN_API int djn_mixer_set_xfader_assign(djn_engine* engine, int32_t channel, djn_xfader_assign assign);
 DJN_API int djn_mixer_set_cue(djn_engine* engine, int32_t channel, int32_t enabled); /* headphone PFL */
@@ -247,6 +264,23 @@ DJN_API int djn_sampler_set_volume_db(djn_engine* engine, float db);
    0..3 so it goes through that channel's EQ, filter, fader and FX. */
 DJN_API int djn_sampler_set_output(djn_engine* engine, int32_t target);
 
+/* ---------------------------------------------------------------- macros */
+
+/*
+ * Performance macros. Each one lands on a bar line (bars counted in 4 beats
+ * from the grid's first beat) using the FX/sampler beat clock.
+ */
+typedef enum djn_macro {
+  DJN_MACRO_RISER = 0,     /* noise sweep and rising tone over `bars` bars */
+  DJN_MACRO_BUILD_UP = 1,  /* high-pass sweep + reverb wash + riser, accelerating roll in the last bar */
+  DJN_MACRO_DROP = 2       /* cut the audio until the next bar line, then back in */
+} djn_macro;
+
+/* Start a macro (replacing any running one). `target` is a channel 0..3 or
+   DJN_FX_TARGET_MASTER. `impact` = 1 adds a sub boom on the drop (build-up and drop). */
+DJN_API int djn_macro_start(djn_engine* engine, djn_macro macro, int32_t bars, int32_t target, int32_t impact);
+DJN_API int djn_macro_cancel(djn_engine* engine);
+
 /* ---------------------------------------------------------------- state */
 
 typedef struct djn_deck_state {
@@ -299,6 +333,12 @@ typedef struct djn_engine_state {
   double   clock_beat;       /* beat position of that clock */
   uint64_t sampler_loaded;   /* bit n = slot n has a sample */
   uint64_t sampler_playing;  /* bit n = slot n is sounding */
+  int32_t  color_fx;         /* djn_color_fx */
+  float    color_param;
+  int32_t  macro;            /* running djn_macro, or -1 */
+  int32_t  macro_target;
+  double   macro_progress;   /* 0..1 */
+  double   macro_beats_left;
 } djn_engine_state;
 
 /* Snapshot of the engine; peaks reset on read. Call at UI rate. */

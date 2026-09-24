@@ -1,6 +1,6 @@
 # Deck Lab (browser preview)
 
-A two-deck DJ console with beat FX and a 16-pad sampler, running the real DJ Nexus engine
+A two-deck DJ console with colour FX, beat FX, build/drop macros and a 16-pad sampler, running the real DJ Nexus engine
 compiled to WebAssembly. It exists so anyone can hear and test the engine
 without installing the app.
 

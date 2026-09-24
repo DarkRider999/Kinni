@@ -39,6 +39,8 @@ set(DJN_CORE_SOURCES
   src/core/engine.cpp
   src/core/fx.cpp
   src/core/sampler.cpp
+  src/core/colorfx.cpp
+  src/core/macro.cpp
   src/capi.cpp
 )
 
@@ -145,7 +147,7 @@ endif()
 # Tests reach into internal classes, so they need the static library.
 if(DJN_BUILD_TESTS AND NOT DJN_SHARED AND NOT DJN_HOST STREQUAL "android" AND NOT DJN_HOST STREQUAL "ios")
   enable_testing()
-  add_executable(djnexus_tests tests/test_main.cpp tests/test_engine.cpp tests/test_dsp.cpp tests/test_fx_sampler.cpp)
+  add_executable(djnexus_tests tests/test_main.cpp tests/test_engine.cpp tests/test_dsp.cpp tests/test_fx_sampler.cpp tests/test_color_macro.cpp)
   target_include_directories(djnexus_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/core)
   target_link_libraries(djnexus_tests PRIVATE djnexus)
   add_test(NAME djnexus_tests COMMAND djnexus_tests)

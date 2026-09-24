@@ -13,6 +13,7 @@
 #include "deck.h"
 #include "dsp.h"
 #include "fx.h"
+#include "macro.h"
 #include "platform.h"
 #include "sampler.h"
 #include "recorder.h"
@@ -31,6 +32,8 @@ enum class Cmd : uint8_t {
   // Sampler (deck = -1 except SamplerCapture, which names the source deck)
   SamplerLoad, SamplerCapture, SamplerTrigger, SamplerRelease, SamplerStopAll,
   SamplerMode, SamplerChoke, SamplerGain, SamplerPitch, SamplerSync,
+  // Macros (deck = target channel, -1 = master)
+  MacroStart, MacroCancel,
 };
 
 struct Command {
@@ -96,6 +99,7 @@ class Engine {
   std::atomic<double> samplerQuantize{0.0};
   std::atomic<float> samplerVolumeDb{0.0f};
   std::atomic<int> samplerOutput{-1};
+  std::atomic<int> colorFx{0};
 
   // Telemetry used by the control side (capture needs the deck tempo).
   double deckEffectiveBpm(int d) const { return telemetry_[size_t(d)].effectiveBpm.load(std::memory_order_relaxed); }
@@ -107,7 +111,7 @@ class Engine {
 
  private:
   void dispatch(const Command& c);
-  void dispatchSampler(const Command& c);
+  void dispatchGlobal(const Command& c);  // sampler and macro commands
   int chooseMasterDeck() const;
   BeatClock makeClock(int master, const SyncRef& ref, int frames);
   void capture(int deck, Track* into);
@@ -122,6 +126,8 @@ class Engine {
   Limiter limiter_;
   std::array<FxUnit, 2> fxUnits_;
   Sampler sampler_;
+  MacroFx macro_;
+  int macroTarget_ = -1;
   double internalBeat_ = 0.0;
   double lastClockBpm_ = 120.0;
 
@@ -147,6 +153,8 @@ class Engine {
   std::atomic<double> dspLoad_{0.0};
   std::atomic<double> clockBpm_{120.0}, clockBeat_{0.0};
   std::atomic<uint64_t> samplerLoaded_{0}, samplerPlaying_{0};
+  std::atomic<int> macroType_{-1}, macroTargetT_{-1};
+  std::atomic<double> macroProgress_{0.0}, macroBeatsLeft_{0.0};
 };
 
 }  // namespace djn

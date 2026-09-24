@@ -2,6 +2,7 @@
 // Also taps the pre-fader signal for the headphone cue bus.
 #pragma once
 
+#include "colorfx.h"
 #include "dsp.h"
 
 namespace djn {
@@ -12,7 +13,9 @@ struct ChannelParams {
   float filter = 0.0f;                 // -1 (LPF) .. 0 (off) .. +1 (HPF)
   float fader = 1.0f;                  // 0..1
   int eqMode = 0;                      // 0 classic, 1 isolator
-  float resonance = 0.3f;              // 0..1
+  float resonance = 0.3f;              // 0..1, the colour parameter
+  int colorType = 0;                   // ColorType: 0 = filter, else the knob plays that colour FX
+  double bpm = 120.0;                  // beat clock tempo (dub echo timing)
 };
 
 class ChannelStrip {
@@ -52,6 +55,7 @@ class ChannelStrip {
   LR4 isoLp1_, isoHp1_, isoLp2_, isoHp2_, isoApLp_, isoApHp_;
 
   Svf svf_;
+  ColorFx color_;
   float lastFilter_ = 1e9f, lastRes_ = -1.0f;
   float peakL_ = 0.0f, peakR_ = 0.0f;
   bool first_ = true;  // the first block starts at the target values, no glide

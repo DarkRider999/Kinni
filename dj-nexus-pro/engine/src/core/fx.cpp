@@ -30,10 +30,63 @@ void DelayLine::setup(size_t minSize) {
   validFrom_ = 0;
 }
 
+void PitchShifter::setup(int sampleRate) {
+  grain_ = int(0.040 * sampleRate);
+  grain_ += grain_ & 1;
+  hop_ = grain_ / 2;
+  search_ = int(0.012 * sampleRate);
+  corr_ = int(0.006 * sampleRate);
+  window_.resize(size_t(grain_));
+  for (int i = 0; i < grain_; ++i) window_[size_t(i)] = float(0.5 - 0.5 * std::cos(2.0 * kPi * i / grain_));
+  for (auto& h : hist_) h.setup(size_t(0.5 * sampleRate) + 16);
+  reset();
+}
+
+void PitchShifter::reset() {
+  for (auto& h : hist_) h.clear();
+  for (auto& g : grains_) g.age = 1 << 30;
+  counter_ = 0;
+  next_ = 0;
+}
+
+void PitchShifter::startGrain(double ratio) {
+  ratio = clampv(ratio, 0.25, 4.0);
+  // The grain's delay moves by (1 - ratio) per sample: when pitching up it
+  // shrinks, so it must start far enough back to stay behind the write head.
+  const double nominal = (ratio > 1.0 ? (ratio - 1.0) * grain_ : 0.0) + ratio * corr_ + search_ + 4.0;
+  double best = nominal;
+  const Grain& old = grains_[size_t(1 - next_)];
+  if (old.age < grain_) {
+    // Match the input the old grain is about to read with each candidate.
+    double bestScore = -1e30;
+    for (int d = -search_; d <= search_; d += 2) {
+      const double cand = nominal + d;
+      if (cand < 2.0) continue;
+      float dot = 0.0f, energy = 1e-9f;
+      for (int k = 0; k < corr_; k += 3) {
+        const double adv = ratio * k;
+        const float a = hist_[0].read(old.delay - adv) + hist_[1].read(old.delay - adv);
+        const float c = hist_[0].read(cand - adv) + hist_[1].read(cand - adv);
+        dot += a * c;
+        energy += c * c;
+      }
+      const double score = dot / std::sqrt(energy);
+      if (score > bestScore) {
+        bestScore = score;
+        best = cand;
+      }
+    }
+  }
+  grains_[size_t(next_)].delay = best;
+  grains_[size_t(next_)].age = 0;
+  next_ = 1 - next_;
+}
+
 void FxUnit::setup(int sampleRate, int /*maxBlock*/) {
   sr_ = sampleRate;
   // 16 s of history: echo times up to 8 s, and room for long rolls.
   for (auto& d : dl_) d.setup(size_t(16.0 * sampleRate) + 16);
+  shifter_.setup(sampleRate);
   for (int k = 0; k < kLines; ++k) {
     rvLen_[size_t(k)] = kReverbMs[k] * 0.001 * sampleRate;
     rvLine_[size_t(k)].setup(size_t(rvLen_[size_t(k)]) + 8);
@@ -55,7 +108,7 @@ void FxUnit::resetEffect(int type) {
   phFb_[0] = phFb_[1] = 0.0f;
   rolling_ = false;
   transGain_ = 1.0f;
-  pitchPhase_ = 0.0;
+  shifter_.reset();
   toneLp_[0] = toneLp_[1] = 0.0f;
   crushHold_[0] = crushHold_[1] = 0.0f;
   crushCount_ = 0;
@@ -184,7 +237,6 @@ void FxUnit::process(float* l, float* r, int n, const FxParams& p, const BeatClo
   const float fbDelay = 0.6f * depth;
   const int semis = int(std::lround((depth - 0.5f) * 24.0f));
   const double pitchRatio = std::pow(2.0, semis / 12.0);
-  const double pitchWin = 0.06 * sr_;
   const float drive = 1.0f + depth * 30.0f;
   const float driveNorm = 1.0f / std::tanh(drive);
   const float toneC = float(1.0 - std::exp(-2.0 * kPi * 6500.0 / sr_));
@@ -281,15 +333,7 @@ void FxUnit::process(float* l, float* r, int n, const FxParams& p, const BeatClo
         break;
       }
       case FxType::Pitch: {
-        dl_[0].push(xl);
-        dl_[1].push(xr);
-        // Two crossfading read heads sweep a 60 ms window at the pitch ratio.
-        pitchPhase_ = frac(pitchPhase_ + (1.0 - pitchRatio) / pitchWin);
-        const double p2 = frac(pitchPhase_ + 0.5);
-        const double d1 = 2.0 + pitchPhase_ * pitchWin, d2 = 2.0 + p2 * pitchWin;
-        const float g1 = float(1.0 - std::fabs(2.0 * pitchPhase_ - 1.0)), g2 = 1.0f - g1;
-        yl = dl_[0].read(d1) * g1 + dl_[0].read(d2) * g2;
-        yr = dl_[1].read(d1) * g1 + dl_[1].read(d2) * g2;
+        shifter_.process(xl, xr, pitchRatio, yl, yr);
         break;
       }
       case FxType::Distortion: {
