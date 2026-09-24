@@ -16,49 +16,52 @@ All generation logic is **pure, deterministic TypeScript**. No external AI API i
 
 | Layer | Choice | Why |
 |---|---|---|
-| Frontend | **Next.js (pages router) + React + TypeScript + Tailwind CSS** | Fast static page, easy Vercel deploy, and `darkMode: 'class'` gives a dark/light toggle with no extra dependencies |
-| Backend | **Node.js + Express 5 + TypeScript** | Small, well-known REST layer. Express 5 forwards errors from async handlers on its own |
+| App | **Next.js (pages router) + React + TypeScript + Tailwind CSS** | One project serves both the UI and the API, and it deploys to Vercel in a single step. `darkMode: 'class'` gives a dark/light toggle with no extra dependencies |
+| API | **Next.js API routes** (`pages/api/*`, serverless functions on Vercel) | Same origin as the UI, so there's no CORS setup and no separate server to host |
 | Database | **PostgreSQL via Prisma 5** | Typed queries, migrations, native enums and `String[]` columns for tool lists |
 | Validation | **zod** | One schema serves as the runtime check and the TypeScript type |
 | Auth | **Guest mode + optional email/password JWT** | Anyone can generate without signing up. An account adds saved prompts, history, search and favourites |
-| Tests | **Vitest + Supertest** | Services and API routes are tested without a database |
+| Hosting | **Vercel + Supabase Postgres** | Vercel runs the app. Supabase provides a free hosted Postgres with a connection pooler that suits serverless functions |
+| Tests | **Vitest** | Services and API route handlers are tested without a database |
 
-**Auth decision:** `POST /api/generate-prompt` works for everyone, and a valid `Authorization: Bearer <jwt>` header is optional. With a token, the backend auto-saves the result and returns `savedPromptId`. History routes require the token. This keeps the core feature open to everyone while still supporting accounts. JWTs are stateless (HS256, 7-day expiry by default), and passwords are hashed with bcrypt (12 rounds).
+**Auth decision:** `POST /api/generate-prompt` works for everyone, and a valid `Authorization: Bearer <jwt>` header is optional. With a token, the API auto-saves the result and returns `savedPromptId`. History routes require the token. This keeps the core feature open to everyone while still supporting accounts. JWTs are stateless (HS256, 7-day expiry by default), and passwords are hashed with bcrypt (12 rounds).
 
 ---
 
 ## 2. Architecture
 
 ```
-┌────────────────────────── Browser ──────────────────────────┐
-│ Next.js page (pages/index.tsx)                              │
-│  InputPanel → AdvancedOptionsPanel                          │
-│  CategoryBadge · PromptCard · AIRecommendationPanel         │
-│  HistoryPanel · AuthModal · ThemeToggle                     │
-│  lib/api.ts (fetch + JWT from localStorage)                 │
-└───────────────┬─────────────────────────────────────────────┘
-                │ REST / JSON   (NEXT_PUBLIC_API_URL)
-┌───────────────▼─────────────── Express API ─────────────────┐
-│ helmet · CORS allow-list · JSON 200kb limit · rate limits   │
-│ routes/index.ts → middleware (optionalAuth/requireAuth,     │
-│                    validateBody[zod]) → controllers         │
-│                                                             │
-│ services (pure, no I/O):                                    │
-│   InputAnalysisService    clean · filler strip · language  │
-│   CategoryDetectionService weighted keyword rules           │
-│   PromptGenerationService  templates + style + constraints  │
-│   AIRecommendationService  category/template → tools        │
-│   expertPrompterService    orchestrates the four            │
-│ services (I/O): authService (bcrypt/JWT/Prisma)             │
-└───────────────┬─────────────────────────────────────────────┘
-                │ Prisma Client
-┌───────────────▼─────────────┐
-│ PostgreSQL: User · Prompt · Template │
-└──────────────────────────────┘
+┌──────────────────────── Browser ────────────────────────┐
+│ pages/index.tsx                                          │
+│  InputPanel → AdvancedOptionsPanel                       │
+│  CategoryBadge · PromptCard · AIRecommendationPanel      │
+│  HistoryPanel · AuthModal · ThemeToggle                  │
+│  lib/api.ts (same-origin fetch + JWT from localStorage)  │
+└──────────────┬───────────────────────────────────────────┘
+               │ REST / JSON  (/api/*, same origin)
+┌──────────────▼──── Next.js API routes (Vercel functions) ┐
+│ lib/server/http.ts: method dispatch · zod validation ·   │
+│   optional/required JWT · rate limit · error format      │
+│ next.config.js: security headers on every response       │
+│                                                          │
+│ lib/server/services (pure, no I/O):                      │
+│   InputAnalysisService     clean · filler strip · lang   │
+│   CategoryDetectionService weighted keyword rules        │
+│   PromptGenerationService  templates + style + limits    │
+│   AIRecommendationService  category/template → tools     │
+│   expertPrompterService    orchestrates the four         │
+│ lib/server/services/authService (bcrypt / JWT / Prisma)  │
+└──────────────┬───────────────────────────────────────────┘
+               │ Prisma Client (pooled connection)
+┌──────────────▼──────────────────────────────┐
+│ PostgreSQL (Supabase), schema expertprompter │
+│ User · Prompt · Template                     │
+└──────────────────────────────────────────────┘
 ```
 
-- **Frontend to backend:** plain REST with JSON. `lib/api.ts` adds the bearer token when one is stored and turns error bodies (`{ error: { message, details } }`) into an `ApiError`.
-- **Backend to database:** only controllers and `authService` import Prisma. The generation services are pure functions, which is why they can be unit-tested and run for guests without a database.
+- **UI to API:** plain REST with JSON on the same origin. `lib/api.ts` adds the bearer token when one is stored and turns error bodies (`{ error: { message, details } }`) into an `ApiError`.
+- **API to database:** only the API routes and `authService` import Prisma. The generation services are pure functions, which is why they can be unit-tested and run for guests without a database.
+- **Guest-only mode:** if `DATABASE_URL` is not set, generation still works. Sign-in and history return `503 Accounts are not configured on this deployment`. Vercel preview deployments run this way.
 - **Prompt generation** is template-driven: each category has specific task templates (for example resignation letter, business plan, YouTube script, logo, lesson plan) plus a fallback. See §6.
 - **Category detection** is rule-based: weighted keyword and phrase scoring, a bonus for the leading verb, tie-breaking by priority, and a confidence threshold that falls back to General Writing. See §7.
 
@@ -68,49 +71,41 @@ All generation logic is **pure, deterministic TypeScript**. No external AI API i
 
 ```
 expertprompter/
-├── docker-compose.yml          # local Postgres
-├── render.yaml                 # Render blueprint (API + DB)
-├── backend/
-│   ├── package.json · tsconfig.json · .env.example
-│   ├── prisma/
-│   │   ├── schema.prisma       # User, Prompt, Template + enums
-│   │   ├── migrations/         # generated SQL (init)
-│   │   └── seed.ts             # upserts Template rows from the catalog
-│   ├── src/
-│   │   ├── index.ts            # server bootstrap + graceful shutdown
-│   │   ├── app.ts              # express app (helmet, cors, /health, /api, errors)
-│   │   ├── config/env.ts       # zod-validated environment
-│   │   ├── routes/index.ts     # all /api routes + rate limits
-│   │   ├── controllers/        # generate, prompt (history), auth, meta
-│   │   ├── services/
-│   │   │   ├── inputAnalysisService.ts
-│   │   │   ├── categoryDetectionService.ts
-│   │   │   ├── promptTemplates.ts
-│   │   │   ├── promptGenerationService.ts
-│   │   │   ├── aiRecommendationService.ts
-│   │   │   ├── expertPrompterService.ts
-│   │   │   └── authService.ts
-│   │   ├── middleware/         # auth (require/optional), validate (zod), error
-│   │   ├── lib/                # prisma client, HttpError, zod schemas
-│   │   └── types/index.ts      # Category, PromptStyle, result types
-│   └── tests/                  # services.test.ts, api.test.ts
-└── frontend/
-    ├── package.json · tsconfig.json · next.config.js
+├── docker-compose.yml             # local Postgres
+└── web/                           # the whole app (Vercel root directory)
+    ├── package.json · tsconfig.json · next.config.js · vitest.config.mts
     ├── tailwind.config.ts · postcss.config.js · .env.example
-    ├── pages/                  # _app.tsx, _document.tsx, index.tsx
-    ├── components/             # Header, ThemeToggle, InputPanel, AdvancedOptionsPanel,
-    │                           # CategoryBadge, PromptCard, AIRecommendationPanel,
-    │                           # HistoryPanel, AuthModal, Icons
-    ├── lib/                    # api.ts, auth.tsx (context), useTheme.ts, types.ts
-    ├── styles/globals.css      # Tailwind + .card/.btn/.input component classes
-    └── public/favicon.svg
+    ├── prisma/
+    │   ├── schema.prisma          # User, Prompt, Template + enums
+    │   ├── migrations/            # generated SQL (init)
+    │   └── seed.ts                # upserts Template rows from the catalog
+    ├── scripts/migrate.mjs        # vercel-build step: migrate + seed (skipped without a DB)
+    ├── pages/
+    │   ├── _app.tsx · _document.tsx · index.tsx
+    │   └── api/                   # generate-prompt, health, meta, templates,
+    │       ├── auth/              #   register, login, me
+    │       └── prompts/           #   list, save, [id] (get/delete), [id]/favorite
+    ├── lib/
+    │   ├── api.ts · auth.tsx · useTheme.ts · types.ts      # browser side
+    │   └── server/                                         # server side only
+    │       ├── http.ts            # apiHandler, auth helpers, error mapping
+    │       ├── env.ts · prisma.ts · schemas.ts · httpError.ts · rateLimit.ts
+    │       ├── types.ts           # Category, PromptStyle, result types
+    │       └── services/          # inputAnalysis, categoryDetection, promptTemplates,
+    │                              # promptGeneration, aiRecommendation, expertPrompter, auth
+    ├── components/                # Header, ThemeToggle, InputPanel, AdvancedOptionsPanel,
+    │                              # CategoryBadge, PromptCard, AIRecommendationPanel,
+    │                              # HistoryPanel, AuthModal, Icons
+    ├── styles/globals.css
+    ├── public/favicon.svg
+    └── tests/                     # services.test.ts, api.test.ts
 ```
 
 ---
 
 ## 4. Data model
 
-Defined in `backend/prisma/schema.prisma`:
+Defined in `web/prisma/schema.prisma`. In production the tables live in a dedicated `expertprompter` schema, which Supabase's public Data API does not serve:
 
 - **User**: `id`, `email` (unique), `passwordHash`, `createdAt`, `updatedAt`.
 - **Prompt**: `id`, `userId?` (cascade delete), `rawInput`, `detectedCategory` (enum), `promptStyle` (enum), `options` (JSON: tone, length, format, audience, language), `generatedPrompt`, `recommendedTools` (`String[]`), `title`, `isFavorite`, `createdAt`.
@@ -124,11 +119,11 @@ Guest prompts are never stored. `userId` is nullable so that anonymous saves can
 
 ## 5. API reference
 
-Base URL: `http://localhost:4000`. Errors are always returned as `{ "error": { "message": string, "details"?: object } }`.
+All routes are served by the app itself (`http://localhost:3000` locally). Errors are always returned as `{ "error": { "message": string, "details"?: object } }`.
 
 | Method | Path | Auth | Description |
 |---|---|---|---|
-| GET | `/health` | none | Liveness check |
+| GET | `/api/health` | none | Liveness check (also reports whether a database is configured) |
 | POST | `/api/generate-prompt` | optional | Generate a prompt. Auto-saves when logged in (unless `save: false`) |
 | POST | `/api/auth/register` | none | `{ email, password }` → `{ user, token }` |
 | POST | `/api/auth/login` | none | `{ email, password }` → `{ user, token }` |
@@ -156,7 +151,7 @@ Base URL: `http://localhost:4000`. Errors are always returned as `{ "error": { "
 
 **Response:** `generatedPrompt`, `detectedCategory`, `categoryLabel`, `confidence`, `alternativeCategories`, `recommendedTools` (`string[]`), `toolDetails` (rich objects for the UI), `promptStyle`, `detectedLanguage`, `variation`, `title`, `savedPromptId?`.
 
-Rate limits: generation is limited to 60 requests/min per IP, and auth routes to 20 per 15 min per IP.
+Rate limits: generation is limited to 60 requests/min per IP and sign-in/registration to 10/min per IP. The limiter keeps its counts in memory, so on Vercel each function instance counts separately. For strict global limits, switch it to a shared store such as Upstash Redis.
 
 ---
 
@@ -261,40 +256,35 @@ Clicking **Regenerate** sends the same request with `variation: 1`. The role ope
 ## 10. Running locally
 
 ```bash
-# 1. Database
 cd expertprompter
-docker compose up -d                      # Postgres on :5432
+docker compose up -d                      # Postgres on :5432 (optional: skip for guest-only mode)
 
-# 2. API
-cd backend
-cp .env.example .env                      # set JWT_SECRET
+cd web
+cp .env.example .env                      # set JWT_SECRET; DATABASE_URL/DIRECT_URL point at docker Postgres
 npm install                               # also runs prisma generate
 npx prisma migrate dev                    # creates tables
 npm run db:seed                           # loads the template catalog
-npm run dev                               # http://localhost:4000
-
-# 3. Web app (new terminal)
-cd ../frontend
-cp .env.example .env.local                # NEXT_PUBLIC_API_URL=http://localhost:4000
-npm install
-npm run dev                               # http://localhost:3000
+npm run dev                               # UI + API on http://localhost:3000
 ```
 
 Quality checks:
 
 ```bash
-cd backend  && npm run typecheck && npm test      # 43 tests, no DB needed
-cd frontend && npm run typecheck && npm run build
+cd web && npm run typecheck && npm test && npm run build   # 45 tests, no DB needed
 ```
 
-## 11. Deployment
+## 11. Deployment (Vercel + Supabase)
 
-- **API and database on Render:** `render.yaml` is a blueprint that creates Postgres and a Node web service rooted at `expertprompter/backend`. The service runs `prisma migrate deploy` and the seed at build time. Set `CORS_ORIGINS` to your frontend URL. `JWT_SECRET` is generated automatically.
-- **Frontend on Vercel:** import the repo, set the root directory to `expertprompter/frontend`, and set `NEXT_PUBLIC_API_URL` to the Render URL.
-- Any host that runs Node 18.18+ (Railway, Fly.io, a VPS) works the same way: `npm ci && npm run build && npx prisma migrate deploy && npm start`.
+- **Vercel project:** set the root directory to `expertprompter/web` with the Next.js framework preset. Vercel runs the `vercel-build` script: `prisma generate`, then `scripts/migrate.mjs` (`prisma migrate deploy` + seed, only when `DATABASE_URL` is set), then `next build`.
+- **Environment variables** (Production):
+  - `DATABASE_URL`: the Supabase *transaction* pooler (port 6543) with `?pgbouncer=true&connection_limit=1&schema=expertprompter`
+  - `DIRECT_URL`: the Supabase *session* pooler (port 5432) with `?schema=expertprompter`, used by migrations
+  - `JWT_SECRET`: a long random string
+- **Database role:** the app connects as a dedicated `expertprompter_app` role that owns the `expertprompter` schema. It is not the Supabase `postgres` admin, and its tables are outside the `public` schema that the Supabase Data API serves.
+- **Supabase free tier** pauses a project after about a week without activity. Resume it from the Supabase dashboard if sign-in starts returning 503.
 
 ## 12. Extending
 
-- **New category:** add it to the `Category` enum (Prisma and `src/types`), add rules to `CATEGORY_RULES`, add a default template and a `CATEGORY_TOOLS` entry, then run `prisma migrate dev`.
+- **New category:** add it to the `Category` enum (Prisma and `lib/server/types.ts`), add rules to `CATEGORY_RULES`, add a default template and a `CATEGORY_TOOLS` entry, then run `prisma migrate dev`.
 - **New task template:** add one object to `TEMPLATES` with a `match` regex, then re-run `npm run db:seed`.
 - **Optional LLM refinement:** the pure prompt makes a good seed for an LLM "polish" pass. Add it as a separate service behind a feature flag so the deterministic path remains the default.
