@@ -1,0 +1,96 @@
+name: NeonForge
+
+on:
+  push:
+    paths: ["neonforge/**", ".github/workflows/neonforge.yml"]
+  pull_request:
+    paths: ["neonforge/**", ".github/workflows/neonforge.yml"]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: {POSTGRES_USER: nf, POSTGRES_PASSWORD: nf, POSTGRES_DB: nf_test}
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U nf" --health-interval 3s --health-retries 20
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+    defaults: {run: {working-directory: neonforge/backend}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11", cache: pip}
+      - run: sudo apt-get update && sudo apt-get install -y libegl1 libgles2 libgl1
+      - run: pip install -e ".[dev,postgres]" pytest-timeout
+      - run: ruff check neonforge tests
+      - name: Tests (SQLite, no models → fallback paths)
+        run: pytest -q --timeout 120
+      - run: python scripts/fetch_models.py --dir /tmp/models
+      - name: Fetch sample media
+        run: |
+          mkdir -p /tmp/samples && cd /tmp/samples
+          for f in lena.jpg messi5.jpg baboon.jpg butterfly.jpg; do
+            curl -fsSLO https://raw.githubusercontent.com/opencv/opencv/4.x/samples/data/$f
+          done
+      - name: Tests (Postgres + Redis, with models)
+        env:
+          NF_TEST_DATABASE_URL: postgresql+psycopg://nf:nf@localhost:5432/nf_test
+          NF_TEST_REDIS_URL: redis://localhost:6379/0
+          NF_TEST_MODELS_DIR: /tmp/models
+          NF_TEST_SAMPLES_DIR: /tmp/samples
+        run: pytest -q --timeout 120
+
+  web:
+    runs-on: ubuntu-latest
+    defaults: {run: {working-directory: neonforge/web}}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: 22, cache: npm, cache-dependency-path: neonforge/web/package-lock.json}
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    needs: [backend, web]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11", cache: pip}
+      - uses: actions/setup-node@v4
+        with: {node-version: 22, cache: npm, cache-dependency-path: neonforge/web/package-lock.json}
+      - run: sudo apt-get update && sudo apt-get install -y libegl1 libgles2 libgl1
+      - name: Start API
+        working-directory: neonforge/backend
+        run: |
+          pip install -e .
+          python scripts/fetch_models.py --dir /tmp/models
+          NF_MODELS_DIR=/tmp/models nohup uvicorn neonforge.api.main:app --port 8000 > /tmp/api.log 2>&1 &
+      - name: Fetch sample media
+        run: |
+          mkdir -p /tmp/samples && cd /tmp/samples
+          for f in lena.jpg messi5.jpg baboon.jpg butterfly.jpg; do
+            curl -fsSLO https://raw.githubusercontent.com/opencv/opencv/4.x/samples/data/$f
+          done
+      - name: Build and serve web
+        working-directory: neonforge/web
+        run: |
+          npm ci && npx playwright install --with-deps chromium
+          npm run build && (nohup npx vite preview --port 5173 --strictPort > /tmp/web.log 2>&1 &)
+          npx wait-on -t 60000 http://localhost:5173 http://localhost:8000/v1/health
+      - name: Playwright
+        working-directory: neonforge/web
+        env: {E2E_SAMPLES_DIR: /tmp/samples}
+        run: npx playwright test
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: |
+            neonforge/web/test-results
+            /tmp/api.log
