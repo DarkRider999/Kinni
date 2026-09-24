@@ -1,0 +1,589 @@
+<title>DJ Nexus Pro Mockups</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+  /* Deliberately single-theme: the product is a dark neon booth UI. */
+  :root {
+    color-scheme: dark;
+    --void: #07060D;
+    --deck: #12101E;
+    --deck-2: #181529;
+    --rail: #221E36;
+    --ink: #EDEBFA;
+    --ink-dim: #8B86A8;
+    --a: #19F0FF;
+    --b: #FF2BD6;
+    --c: #FFB020;
+    --d: #8A5CFF;
+    --live: #FF3B5C;
+    --ok: #3DFFA2;
+    --display: "Chakra Petch", "Rajdhani", "Segoe UI", sans-serif;
+    --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--void);
+    color: var(--ink);
+    font: 14px/1.5 var(--body);
+    padding-inline: 16px;
+    padding-block: 32px 64px;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; display: grid; gap: 48px; }
+  h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; letter-spacing: 0.01em; }
+  .eyebrow { font: 600 11px/1 var(--body); letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-dim); }
+  .num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  /* Header */
+  header.top { display: grid; grid-template-columns: auto 1fr; gap: 24px; align-items: center; }
+  header.top img { width: 96px; height: 96px; }
+  header.top h1 { font-size: clamp(30px, 5vw, 48px); font-weight: 700; }
+  header.top h1 span { color: var(--a); }
+  header.top p { margin: 6px 0 0; color: var(--ink-dim); max-width: 62ch; }
+  .tagline { font-family: var(--display); font-size: 18px; color: var(--ink); margin-top: 4px !important; }
+
+  /* Palette + type */
+  .brand { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; }
+  .panel { background: var(--deck); border: 1px solid var(--rail); border-radius: 14px; padding: 20px; display: grid; gap: 14px; align-content: start; }
+  .swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 10px; }
+  .sw { display: grid; gap: 6px; }
+  .sw i { display: block; height: 44px; border-radius: 8px; border: 1px solid var(--rail); }
+  .sw b { font: 600 12px/1.2 var(--body); }
+  .sw code { font: 500 11px/1 var(--mono); color: var(--ink-dim); }
+  .type-row { display: grid; grid-template-columns: 88px 1fr; gap: 12px; align-items: baseline; border-top: 1px solid var(--rail); padding-top: 10px; }
+  .type-row:first-of-type { border-top: 0; padding-top: 0; }
+
+  /* Screen gallery */
+  .section-head { display: grid; gap: 6px; }
+  .section-head h2 { font-size: 26px; }
+  .section-head p { margin: 0; color: var(--ink-dim); max-width: 70ch; }
+  .phones { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 28px; }
+  figure { margin: 0; display: grid; gap: 10px; }
+  figcaption { display: grid; gap: 2px; }
+  figcaption b { font: 600 15px/1.3 var(--display); }
+  figcaption span { color: var(--ink-dim); font-size: 13px; }
+  .phone {
+    width: 100%; max-width: 300px; aspect-ratio: 9 / 18.5; justify-self: center;
+    background: var(--void); border: 1px solid #2C2745; border-radius: 34px; padding: 14px 12px;
+    box-shadow: 0 0 0 6px #0D0B17, 0 30px 60px -30px rgba(138, 92, 255, 0.35);
+    display: flex; flex-direction: column; gap: 10px; overflow: hidden; position: relative;
+  }
+  .status { display: flex; justify-content: space-between; font: 500 10px/1 var(--mono); color: var(--ink-dim); padding: 0 6px; }
+  .scr-title { display: flex; justify-content: space-between; align-items: center; padding: 0 4px; }
+  .scr-title h3 { font-size: 18px; }
+  .badge { font: 700 9px/1 var(--mono); letter-spacing: 0.12em; padding: 5px 7px; border-radius: 999px; border: 1px solid currentColor; }
+  .badge.master { color: var(--c); }
+  .card { background: var(--deck); border: 1px solid var(--rail); border-radius: 12px; padding: 10px 12px; display: grid; gap: 6px; }
+  .muted { color: var(--ink-dim); font-size: 11px; }
+  .row { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .tile { background: var(--deck-2); border: 1px solid var(--rail); border-radius: 10px; padding: 10px; font: 600 12px/1.2 var(--display); display: grid; gap: 6px; }
+  .tile i { width: 22px; height: 22px; border-radius: 6px; display: block; }
+  .tabbar { margin-top: auto; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; border-top: 1px solid var(--rail); padding-top: 8px; font: 500 9px/1 var(--body); color: var(--ink-dim); text-align: center; }
+  .tabbar .on { color: var(--a); }
+  .tabbar i { display: block; width: 18px; height: 3px; border-radius: 2px; margin: 0 auto 5px; background: currentColor; opacity: 0.8; }
+
+  /* Splash */
+  .splash { justify-content: center; align-items: center; text-align: center; gap: 18px;
+    background: radial-gradient(circle at 50% 42%, #1A1530 0%, var(--void) 62%); }
+  .splash img { width: 58%; animation: spinup 2.4s cubic-bezier(.3,.7,.3,1) infinite; }
+  .splash h3 { font-size: 24px; letter-spacing: 0.08em; }
+  .splash .pro { font: 700 10px/1 var(--mono); border: 1px solid var(--a); color: var(--a); padding: 4px 6px; border-radius: 999px; vertical-align: middle; margin-left: 6px; }
+  .loadbar { width: 50%; height: 3px; background: var(--rail); border-radius: 2px; overflow: hidden; }
+  .loadbar i { display: block; height: 100%; width: 40%; background: linear-gradient(90deg, var(--a), var(--b)); animation: load 1.6s ease-in-out infinite; }
+  @keyframes spinup { 0% { transform: rotate(0); } 60%, 100% { transform: rotate(360deg); } }
+  @keyframes load { 0% { transform: translateX(-100%); } 100% { transform: translateX(260%); } }
+
+  /* Bot */
+  .orb { width: 92px; height: 92px; border-radius: 50%; margin: 4px auto;
+    background: radial-gradient(circle at 35% 30%, #fff 0%, #C9B6FF 12%, var(--d) 45%, #2A1560 80%);
+    box-shadow: 0 0 40px 6px rgba(138, 92, 255, 0.55); animation: pulse 3s ease-in-out infinite; }
+  @keyframes pulse { 50% { box-shadow: 0 0 60px 14px rgba(138, 92, 255, 0.35); } }
+  .bar { height: 5px; background: var(--rail); border-radius: 3px; overflow: hidden; }
+  .bar i { display: block; height: 100%; border-radius: 3px; }
+  .q { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; font-size: 12px; padding: 6px 0; border-top: 1px solid var(--rail); }
+  .q:first-of-type { border-top: 0; }
+  .q small { color: var(--ink-dim); font: 500 10px/1.2 var(--mono); }
+  .score { font: 700 12px/1 var(--mono); color: var(--ok); align-self: center; }
+  .prompt { border: 1px solid var(--d); border-radius: 999px; padding: 8px 12px; font-size: 11px; color: var(--ink-dim); display: flex; justify-content: space-between; }
+  .prompt b { color: var(--d); }
+
+  /* Generator */
+  .chips { display: flex; flex-wrap: wrap; gap: 5px; }
+  .chip { font: 500 10px/1 var(--body); padding: 5px 8px; border-radius: 999px; border: 1px solid var(--rail); color: var(--ink-dim); }
+  .chip.on { color: var(--void); background: var(--a); border-color: var(--a); font-weight: 600; }
+  .chip.on.m { background: var(--b); border-color: var(--b); }
+  .chip.on.v { background: var(--d); border-color: var(--d); color: var(--ink); }
+  canvas { display: block; width: 100%; }
+  .btn { font: 600 12px/1 var(--display); letter-spacing: 0.04em; text-align: center; padding: 11px; border-radius: 10px; background: linear-gradient(90deg, var(--a), var(--d) 60%, var(--b)); color: var(--void); border: 0; cursor: pointer; }
+  .btn:focus-visible, button:focus-visible, input:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  /* Hub */
+  .pack { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; }
+  .pack .art { width: 44px; height: 44px; border-radius: 8px; }
+  .pack b { font: 600 12px/1.25 var(--display); display: block; }
+  .price { font: 700 11px/1 var(--mono); color: var(--a); }
+  .price.inc { color: var(--ok); }
+  .seg { display: grid; grid-template-columns: repeat(3, 1fr); background: var(--deck); border: 1px solid var(--rail); border-radius: 10px; padding: 3px; font: 600 11px/1 var(--body); text-align: center; }
+  .seg span { padding: 7px 0; border-radius: 7px; color: var(--ink-dim); }
+  .seg .on { background: var(--rail); color: var(--ink); }
+
+  /* Settings */
+  .set { display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding: 7px 0; border-top: 1px solid var(--rail); }
+  .set:first-of-type { border-top: 0; }
+  .set .v { font: 500 11px/1 var(--mono); color: var(--ink-dim); }
+  .tog { width: 30px; height: 17px; border-radius: 999px; background: var(--rail); position: relative; }
+  .tog::after { content: ""; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%; background: var(--ink-dim); }
+  .tog.on { background: var(--a); }
+  .tog.on::after { left: 15px; background: var(--void); }
+  .group { font: 600 10px/1 var(--body); letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-dim); padding: 2px 4px 0; }
+
+  /* Deck (landscape) */
+  .deck-scroll { overflow-x: auto; padding-bottom: 8px; }
+  .console {
+    min-width: 860px; background: var(--void); border: 1px solid #2C2745; border-radius: 28px; padding: 14px;
+    box-shadow: 0 0 0 6px #0D0B17, 0 40px 80px -40px rgba(25, 240, 255, 0.3);
+    display: grid; gap: 10px;
+  }
+  .wave-stack { display: grid; gap: 4px; background: var(--deck); border: 1px solid var(--rail); border-radius: 12px; padding: 6px; position: relative; }
+  .wave-stack canvas { height: 46px; }
+  .wave-stack .center { position: absolute; top: 6px; bottom: 6px; left: 50%; width: 2px; background: var(--ink); opacity: 0.85; box-shadow: 0 0 8px var(--ink); }
+  .console-main { display: grid; grid-template-columns: 1fr 250px 1fr; gap: 10px; }
+  .deckpane { background: var(--deck); border: 1px solid var(--rail); border-radius: 14px; padding: 10px; display: grid; gap: 8px; transition: box-shadow .3s; }
+  .deckpane.playing.a { box-shadow: 0 0 0 1px var(--a), 0 0 24px -6px var(--a); }
+  .deckpane.playing.b { box-shadow: 0 0 0 1px var(--b), 0 0 24px -6px var(--b); }
+  .deckhead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .deckhead .letter { font: 700 22px/1 var(--display); }
+  .a .letter { color: var(--a); } .b .letter { color: var(--b); }
+  .deckhead .t { font-size: 12px; font-weight: 600; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .readout { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center; }
+  .readout div { background: var(--void); border-radius: 8px; padding: 6px 2px; display: grid; gap: 3px; }
+  .readout b { font: 700 15px/1 var(--mono); }
+  .readout small { font: 500 9px/1 var(--body); color: var(--ink-dim); letter-spacing: 0.1em; text-transform: uppercase; }
+  .deckbody { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: center; }
+  .jog { aspect-ratio: 1; width: 100%; max-width: 150px; justify-self: center; border-radius: 50%; position: relative;
+    background: radial-gradient(circle, #0B0A14 0 38%, #1A1730 39% 64%, #0B0A14 65%); }
+  .jog::before { content: ""; position: absolute; inset: 0; border-radius: 50%; padding: 5px;
+    background: conic-gradient(from 0deg, var(--a), var(--d), var(--b), var(--a));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; opacity: 0.55; }
+  .playing .jog::before { opacity: 1; }
+  .jog .mark { position: absolute; left: 50%; top: 10%; width: 3px; height: 16%; margin-left: -1.5px; background: var(--ink); border-radius: 2px; transform-origin: 50% 250%; }
+  .jog .mark.spin { animation: spin 1.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .pads { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+  .pad { aspect-ratio: 1.3; border-radius: 6px; border: 1px solid var(--rail); background: var(--void); cursor: pointer; font: 700 10px/1 var(--mono); color: var(--ink-dim); }
+  .pad.set { color: var(--void); }
+  .transport { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+  .transport button { font: 700 11px/1 var(--display); letter-spacing: 0.06em; padding: 10px 0; border-radius: 8px; border: 1px solid var(--rail); background: var(--void); color: var(--ink); cursor: pointer; }
+  .transport .play.on { border-color: var(--ok); color: var(--ok); box-shadow: 0 0 12px -2px var(--ok); }
+  .transport .cue { color: var(--c); border-color: var(--c); }
+  .loops { display: flex; gap: 4px; }
+  .loops span { flex: 1; text-align: center; font: 600 10px/1 var(--mono); padding: 6px 0; border-radius: 6px; background: var(--void); color: var(--ink-dim); border: 1px solid var(--rail); }
+  .loops .on { color: var(--c); border-color: var(--c); }
+  .mixer { background: var(--deck); border: 1px solid var(--rail); border-radius: 14px; padding: 10px; display: grid; gap: 8px; }
+  .chan { display: grid; grid-template-columns: 1fr 22px 1fr; gap: 6px; }
+  .knobcol { display: grid; gap: 7px; justify-items: center; }
+  .knob { width: 34px; height: 34px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #2A2545, #0B0A14 70%); border: 1px solid var(--rail); position: relative; }
+  .knob::after { content: ""; position: absolute; left: 50%; top: 4px; width: 2px; height: 11px; margin-left: -1px; background: var(--ink); border-radius: 1px; transform-origin: 50% 13px; transform: rotate(var(--r, 0deg)); }
+  .knob.cyan { box-shadow: 0 0 0 1px rgba(25,240,255,.35); } .knob.mag { box-shadow: 0 0 0 1px rgba(255,43,214,.35); }
+  .knoblabel { font: 500 8px/1 var(--body); color: var(--ink-dim); letter-spacing: 0.1em; margin-top: -3px; }
+  .vu { display: flex; flex-direction: column-reverse; gap: 2px; padding-top: 2px; }
+  .vu i { height: 6px; border-radius: 1px; background: var(--rail); }
+  .vu i.l { background: var(--ok); } .vu i.l.hot { background: var(--c); } .vu i.l.clip { background: var(--live); }
+  .faders { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; justify-items: center; }
+  .vfader { writing-mode: vertical-lr; direction: rtl; height: 70px; width: 22px; accent-color: var(--a); }
+  .vfader.b { accent-color: var(--b); }
+  .xf { width: 100%; accent-color: var(--d); }
+  .fxstrip { display: grid; grid-template-columns: repeat(6, 1fr) auto; gap: 6px; align-items: center; }
+  .fxstrip span { font: 600 10px/1 var(--mono); text-align: center; padding: 8px 0; border-radius: 8px; background: var(--deck); border: 1px solid var(--rail); color: var(--ink-dim); }
+  .fxstrip span.on { color: var(--d); border-color: var(--d); }
+  .emergency { white-space: nowrap; font: 700 10px/1 var(--display); letter-spacing: 0.08em; color: var(--live); border: 1px solid var(--live); padding: 8px 10px; border-radius: 8px; }
+  .botchip { display: flex; gap: 8px; align-items: center; justify-content: center; font-size: 11px; color: var(--ink-dim); }
+  .botchip i { width: 10px; height: 10px; border-radius: 50%; background: var(--d); box-shadow: 0 0 10px var(--d); }
+  .botchip b { color: var(--ink); font-weight: 600; }
+
+  @media (max-width: 520px) {
+    header.top { grid-template-columns: 1fr; }
+    header.top img { width: 72px; height: 72px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <img src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024'%3E%3Cdefs%3E%3ClinearGradient id='r' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2319F0FF'/%3E%3Cstop offset='.55' stop-color='%238A5CFF'/%3E%3Cstop offset='1' stop-color='%23FF2BD6'/%3E%3C/linearGradient%3E%3CradialGradient id='g' cx='.5' cy='.45' r='.7'%3E%3Cstop offset='0' stop-color='%231A1530'/%3E%3Cstop offset='1' stop-color='%2307060D'/%3E%3C/radialGradient%3E%3C/defs%3E%3Crect width='1024' height='1024' rx='224' fill='url(%23g)'/%3E%3Ccircle cx='512' cy='512' r='330' fill='none' stroke='url(%23r)' stroke-width='44'/%3E%3Ccircle cx='512' cy='512' r='268' fill='none' stroke='%23221E36' stroke-width='6'/%3E%3Cpath d='M392 650V374l240 276V374' fill='none' stroke='%23EDEBFA' stroke-width='40' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M452 512h16M484 470v84M516 440v144M548 470v84M580 512h16' stroke='%2319F0FF' stroke-width='14' stroke-linecap='round'/%3E%3C/svg%3E" alt="DJ Nexus Pro icon, a neon platter ring around a waveform N">
+    <div>
+      <span class="eyebrow">UI/UX mockups · v1.0</span>
+      <h1>DJ NE<span>X</span>US PRO</h1>
+      <p class="tagline">Your Personal AI DJ Console</p>
+      <p>Seven core screens from the spec. The deck screen is interactive: press PLAY, tap the hot cues and move the crossfader.</p>
+    </div>
+  </header>
+
+  <section class="brand" aria-label="Brand system">
+    <div class="panel">
+      <span class="eyebrow">Palette</span>
+      <div class="swatches">
+        <div class="sw"><i style="background:#07060D"></i><b>Void</b><code>#07060D</code></div>
+        <div class="sw"><i style="background:#12101E"></i><b>Deck</b><code>#12101E</code></div>
+        <div class="sw"><i style="background:#EDEBFA"></i><b>Ink</b><code>#EDEBFA</code></div>
+        <div class="sw"><i style="background:#19F0FF"></i><b>Deck A</b><code>#19F0FF</code></div>
+        <div class="sw"><i style="background:#FF2BD6"></i><b>Deck B</b><code>#FF2BD6</code></div>
+        <div class="sw"><i style="background:#FFB020"></i><b>Deck C · cue</b><code>#FFB020</code></div>
+        <div class="sw"><i style="background:#8A5CFF"></i><b>Deck D · AI</b><code>#8A5CFF</code></div>
+        <div class="sw"><i style="background:#FF3B5C"></i><b>Live</b><code>#FF3B5C</code></div>
+        <div class="sw"><i style="background:#3DFFA2"></i><b>Locked</b><code>#3DFFA2</code></div>
+      </div>
+    </div>
+    <div class="panel">
+      <span class="eyebrow">Typography</span>
+      <div class="type-row"><span class="muted">Display</span><span style="font:600 26px/1.1 var(--display)">Chakra Petch · DECK A</span></div>
+      <div class="type-row"><span class="muted">UI / body</span><span style="font:400 15px/1.4 var(--body)">IBM Plex Sans for labels, lists and settings.</span></div>
+      <div class="type-row"><span class="muted">Numerals</span><span class="num" style="font-size:22px;font-weight:700;color:var(--a)">126.00 · 8A · −2.4%</span></div>
+    </div>
+  </section>
+
+  <section style="display:grid;gap:20px" aria-labelledby="deck-h">
+    <div class="section-head">
+      <span class="eyebrow">Screen 3 · landscape</span>
+      <h2 id="deck-h">DJ Controller</h2>
+      <p>Two decks around a central mixer. Waveforms stack on a shared centre line so phrases line up by eye. Neon appears only on playing decks. On a phone, scroll sideways to see the whole console.</p>
+    </div>
+    <div class="deck-scroll">
+      <div class="console">
+        <div class="wave-stack">
+          <canvas id="wA" height="46" aria-label="Deck A waveform"></canvas>
+          <canvas id="wB" height="46" aria-label="Deck B waveform"></canvas>
+          <div class="center"></div>
+        </div>
+        <div class="console-main">
+          <div class="deckpane a" id="deckA">
+            <div class="deckhead"><span class="letter">A</span><span class="t">Solar Drift — Kaelen Voss</span><span class="num muted">03:41</span></div>
+            <div class="readout">
+              <div><b class="num" style="color:var(--a)">126.00</b><small>BPM</small></div>
+              <div><b class="num" style="color:var(--ok)">8A</b><small>Key</small></div>
+              <div><b class="num">+0.8%</b><small>Pitch</small></div>
+              <div><b class="num">7</b><small>Energy</small></div>
+            </div>
+            <div class="deckbody">
+              <div class="jog"><i class="mark" id="markA"></i></div>
+              <div style="display:grid;gap:6px">
+                <div class="pads" id="padsA" aria-label="Deck A hot cues"></div>
+                <div class="loops"><span>1</span><span>4</span><span class="on">8</span><span>16</span></div>
+              </div>
+            </div>
+            <div class="transport"><button class="cue" type="button">CUE</button><button class="play" id="playA" type="button" aria-pressed="false">PLAY</button><button type="button" style="color:var(--ok)">SYNC</button></div>
+          </div>
+
+          <div class="mixer" aria-label="Mixer">
+            <div class="botchip"><i></i><span>Bot: <b>drop in 8 bars on A</b></span></div>
+            <div class="chan">
+              <div class="knobcol">
+                <div class="knob cyan" style="--r:10deg"></div><span class="knoblabel">TRIM</span>
+                <div class="knob cyan" style="--r:40deg"></div><span class="knoblabel">HI</span>
+                <div class="knob cyan"></div><span class="knoblabel">MID</span>
+                <div class="knob cyan" style="--r:-60deg"></div><span class="knoblabel">LOW</span>
+                <div class="knob cyan" style="--r:-30deg"></div><span class="knoblabel">FILTER</span>
+              </div>
+              <div class="vu" id="vu"></div>
+              <div class="knobcol">
+                <div class="knob mag"></div><span class="knoblabel">TRIM</span>
+                <div class="knob mag"></div><span class="knoblabel">HI</span>
+                <div class="knob mag" style="--r:-20deg"></div><span class="knoblabel">MID</span>
+                <div class="knob mag" style="--r:-140deg"></div><span class="knoblabel">LOW</span>
+                <div class="knob mag" style="--r:45deg"></div><span class="knoblabel">FILTER</span>
+              </div>
+            </div>
+            <div class="faders">
+              <input class="vfader" id="chA" type="range" min="0" max="100" value="90" aria-label="Channel A fader">
+              <input class="vfader b" id="chB" type="range" min="0" max="100" value="60" aria-label="Channel B fader">
+            </div>
+            <input class="xf" id="xf" type="range" min="0" max="100" value="38" aria-label="Crossfader">
+          </div>
+
+          <div class="deckpane b" id="deckB">
+            <div class="deckhead"><span class="letter">B</span><span class="t">Hollow Signal — Mira Okonjo</span><span class="num muted">05:12</span></div>
+            <div class="readout">
+              <div><b class="num" style="color:var(--b)">126.00</b><small>BPM</small></div>
+              <div><b class="num" style="color:var(--ok)">9A</b><small>Key</small></div>
+              <div><b class="num">−1.6%</b><small>Pitch</small></div>
+              <div><b class="num">8</b><small>Energy</small></div>
+            </div>
+            <div class="deckbody">
+              <div class="jog"><i class="mark" id="markB"></i></div>
+              <div style="display:grid;gap:6px">
+                <div class="pads" id="padsB" aria-label="Deck B hot cues"></div>
+                <div class="loops"><span>1</span><span class="on">4</span><span>8</span><span>16</span></div>
+              </div>
+            </div>
+            <div class="transport"><button class="cue" type="button">CUE</button><button class="play" id="playB" type="button" aria-pressed="false">PLAY</button><button type="button" style="color:var(--ok)">SYNC</button></div>
+          </div>
+        </div>
+        <div class="fxstrip" aria-label="Beat FX">
+          <span>ECHO</span><span class="on">REVERB</span><span>ROLL</span><span>FLANGER</span><span>STUTTER</span><span>STEMS</span>
+          <span class="emergency" title="Long-press to trigger">EMERGENCY MIX</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section style="display:grid;gap:20px" aria-labelledby="scr-h">
+    <div class="section-head">
+      <span class="eyebrow">Portrait screens</span>
+      <h2 id="scr-h">App flow</h2>
+      <p>Track names and library figures are sample data for illustration.</p>
+    </div>
+    <div class="phones">
+
+      <figure>
+        <div class="phone splash">
+          <img src="data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1024 1024'%3E%3Cdefs%3E%3ClinearGradient id='r' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%2319F0FF'/%3E%3Cstop offset='.55' stop-color='%238A5CFF'/%3E%3Cstop offset='1' stop-color='%23FF2BD6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='512' cy='512' r='330' fill='none' stroke='url(%23r)' stroke-width='44'/%3E%3Ccircle cx='512' cy='216' r='9' fill='%23EDEBFA'/%3E%3Cpath d='M392 650V374l240 276V374' fill='none' stroke='%23EDEBFA' stroke-width='40' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E" alt="">
+          <h3>DJ NEXUS<span class="pro">PRO</span></h3>
+          <div class="loadbar"><i></i></div>
+          <span class="muted">Warming up audio engine…</span>
+        </div>
+        <figcaption><b>1 · Splash</b><span>The platter spins up to speed while the engine and library load.</span></figcaption>
+      </figure>
+
+      <figure>
+        <div class="phone">
+          <div class="status"><span>21:48</span><span>● 82%</span></div>
+          <div class="scr-title"><h3>Tonight's booth</h3><span class="badge master">MASTER</span></div>
+          <div class="card">
+            <div class="row"><span class="muted">Library</span><span class="num muted">94% analysed</span></div>
+            <div class="row"><b class="num" style="font-size:20px">3,418</b><span class="num muted">tracks · 241 h</span></div>
+            <div class="bar"><i style="width:94%;background:linear-gradient(90deg,var(--a),var(--d))"></i></div>
+          </div>
+          <div class="card" style="border-color:var(--d)">
+            <span class="eyebrow" style="color:var(--d)">Bot suggests</span>
+            <b style="font-family:var(--display)">Melodic → Peak · 75 min</b>
+            <span class="muted">18 tracks · 122 → 132 BPM · 6A → 11A</span>
+          </div>
+          <div class="tiles">
+            <div class="tile"><i style="background:var(--a)"></i>Decks</div>
+            <div class="tile"><i style="background:var(--d)"></i>Smart Bot</div>
+            <div class="tile"><i style="background:var(--live)"></i>Record</div>
+            <div class="tile"><i style="background:var(--b)"></i>FX Hub</div>
+          </div>
+          <div class="card"><div class="row"><span style="font-size:12px">Sunset set · Sat</span><span class="num muted">62:10</span></div></div>
+          <nav class="tabbar"><span class="on"><i></i>Home</span><span><i></i>Decks</span><span><i></i>Bot</span><span><i></i>Library</span><span><i></i>Hub</span></nav>
+        </div>
+        <figcaption><b>2 · Home dashboard</b><span>Plan badge, library health, a ready-made set and quick tiles.</span></figcaption>
+      </figure>
+
+      <figure>
+        <div class="phone">
+          <div class="status"><span>21:49</span><span>● 81%</span></div>
+          <div class="scr-title"><h3>Smart DJ Bot</h3><span class="muted num">ready</span></div>
+          <div class="orb" aria-hidden="true"></div>
+          <div class="card">
+            <div class="row"><span style="font-size:12px">Internal storage</span><span class="num muted">2,904</span></div>
+            <div class="bar"><i style="width:100%;background:var(--ok)"></i></div>
+            <div class="row"><span style="font-size:12px">USB drive · DJ-STICK</span><span class="num muted">514</span></div>
+            <div class="bar"><i style="width:62%;background:var(--a)"></i></div>
+          </div>
+          <div class="card">
+            <span class="eyebrow">Next up · Smart Queue</span>
+            <div class="q"><span>Glass Horizon</span><span class="score">94</span><small>9A · 127 BPM · E8</small></div>
+            <div class="q"><span>Undertow</span><span class="score">91</span><small>8B · 126 BPM · E7</small></div>
+            <div class="q"><span>Neon Liturgy</span><span class="score" style="color:var(--c)">78</span><small>10A · 128 BPM · E9</small></div>
+          </div>
+          <div class="prompt"><span>“60 min of melodic techno”</span><b>Build</b></div>
+        </div>
+        <figcaption><b>4 · Smart DJ Bot</b><span>Scan progress per source and a scored queue with the reason for each pick.</span></figcaption>
+      </figure>
+
+      <figure>
+        <div class="phone">
+          <div class="status"><span>21:52</span><span>● 80%</span></div>
+          <div class="scr-title"><h3>Playlist generator</h3></div>
+          <div class="card">
+            <span class="muted">Genres</span>
+            <div class="chips"><span class="chip on">Melodic techno</span><span class="chip on m">Trance</span><span class="chip">Psytrance</span><span class="chip">House</span><span class="chip">Techno</span></div>
+            <div class="row"><span class="muted">Length</span><span class="num">90 min</span></div>
+            <div class="row"><span class="muted">BPM</span><span class="num">124 – 134</span></div>
+            <div class="row"><span class="muted">Keys</span><div class="chips"><span class="chip on v">Strict harmonic</span></div></div>
+          </div>
+          <div class="card">
+            <div class="row"><span class="eyebrow">Energy arc</span><span class="num muted">4 → 9 → 6</span></div>
+            <canvas id="arc" height="90" aria-label="Energy curve rising to a peak then easing off"></canvas>
+          </div>
+          <button class="btn" type="button">Generate 22 tracks</button>
+        </div>
+        <figcaption><b>5 · Playlist generator</b><span>Set length, genres, BPM, key strategy, and the energy arc to follow.</span></figcaption>
+      </figure>
+
+      <figure>
+        <div class="phone">
+          <div class="status"><span>21:55</span><span>● 79%</span></div>
+          <div class="scr-title"><h3>FX &amp; Sampler Hub</h3></div>
+          <div class="seg"><span>My packs</span><span class="on">Store</span><span>Import</span></div>
+          <div class="prompt" style="border-color:var(--b)"><span>“dark metallic riser, 8 bars”</span><b style="color:var(--b)">Synth</b></div>
+          <div class="card">
+            <div class="pack"><i class="art" style="background:linear-gradient(135deg,var(--d),var(--b))"></i><span><b>Psytrance Leads &amp; FX</b><span class="muted">64 pads · 145 BPM</span></span><span class="price">$3.99</span></div>
+          </div>
+          <div class="card">
+            <div class="pack"><i class="art" style="background:linear-gradient(135deg,#0E3B44,var(--a))"></i><span><b>Warehouse Drums</b><span class="muted">48 pads · 130 BPM</span></span><span class="price inc">INCLUDED</span></div>
+          </div>
+          <div class="card">
+            <div class="pack"><i class="art" style="background:linear-gradient(135deg,var(--c),var(--live))"></i><span><b>Festival Drops</b><span class="muted">32 risers · impacts</span></span><span class="price">$2.99</span></div>
+          </div>
+          <div class="card">
+            <div class="pack"><i class="art" style="background:linear-gradient(135deg,#2A2545,var(--ink-dim))"></i><span><b>DJ Tags Starter</b><span class="muted">24 vocal tags</span></span><span class="price inc">INCLUDED</span></div>
+          </div>
+        </div>
+        <figcaption><b>6 · FX &amp; sampler hub</b><span>Packs, the AI FX Synthesizer prompt, and custom pack import.</span></figcaption>
+      </figure>
+
+      <figure>
+        <div class="phone">
+          <div class="status"><span>21:58</span><span>● 79%</span></div>
+          <div class="scr-title"><h3>Settings</h3></div>
+          <span class="group">Audio</span>
+          <div class="card">
+            <div class="set"><span>Output</span><span class="v">USB · 4 ch</span></div>
+            <div class="set"><span>Buffer</span><span class="v">128 · 48 kHz</span></div>
+            <div class="set"><span>Measured latency</span><span class="v" style="color:var(--ok)">14.2 ms</span></div>
+            <div class="set"><span>Headphone cue</span><span class="tog on"></span></div>
+          </div>
+          <span class="group">Decks</span>
+          <div class="card">
+            <div class="set"><span>Pitch range</span><span class="v">±8%</span></div>
+            <div class="set"><span>Vinyl mode</span><span class="tog on"></span></div>
+            <div class="set"><span>Quantize</span><span class="tog on"></span></div>
+          </div>
+          <span class="group">AI &amp; account</span>
+          <div class="card">
+            <div class="set"><span>Labs features</span><span class="tog on"></span></div>
+            <div class="set"><span>Plan</span><span class="badge master">MASTER</span></div>
+          </div>
+        </div>
+        <figcaption><b>7 · Settings</b><span>Audio routing with a latency test, deck behaviour, AI and account.</span></figcaption>
+      </figure>
+
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  // Seeded pseudo-random so waveforms look the same on every load.
+  function rng(seed) { return function () { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }; }
+
+  function makeWave(seed, n) {
+    const r = rng(seed), out = [];
+    for (let i = 0; i < n; i++) {
+      const beat = i % 8 === 0 ? 1 : i % 8 === 4 ? 0.8 : 0.35;
+      const section = (i > n * 0.3 && i < n * 0.45) ? 0.35 : 1;   // a breakdown
+      out.push({ lo: beat * section * (0.6 + r() * 0.4), mid: (0.3 + r() * 0.5) * section, hi: 0.15 + r() * 0.35 });
+    }
+    return out;
+  }
+
+  const waves = { wA: makeWave(7, 2400), wB: makeWave(19, 2400) };
+  const offsets = { wA: 300, wB: 300 };
+  const playing = { A: false, B: false };
+
+  function drawWave(id) {
+    const c = document.getElementById(id); if (!c) return;
+    const w = c.clientWidth, h = 46, dpr = window.devicePixelRatio || 1;
+    if (c.width !== Math.round(w * dpr)) { c.width = Math.round(w * dpr); c.height = h * dpr; }
+    const ctx = c.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    const data = waves[id], start = Math.floor(offsets[id]), mid = h / 2;
+    for (let x = 0; x < w; x += 2) {
+      const s = data[(start + (x >> 2)) % data.length];
+      ctx.fillStyle = '#3B2BAF'; ctx.fillRect(x, mid - s.lo * mid, 1.6, s.lo * h);
+      ctx.fillStyle = id === 'wA' ? '#19F0FF' : '#FF2BD6'; ctx.fillRect(x, mid - s.mid * mid * 0.7, 1.6, s.mid * h * 0.7);
+      ctx.fillStyle = '#EDEBFA'; ctx.fillRect(x, mid - s.hi * mid * 0.35, 1.6, s.hi * h * 0.35);
+      if ((start + (x >> 2)) % 32 === 0 && x % 4 === 0) { ctx.fillStyle = 'rgba(237,235,250,0.35)'; ctx.fillRect(x, 0, 1, h); }
+    }
+  }
+
+  function drawArc() {
+    const c = document.getElementById('arc'); if (!c) return;
+    const w = c.clientWidth, h = 90, dpr = window.devicePixelRatio || 1;
+    c.width = Math.round(w * dpr); c.height = h * dpr;
+    const ctx = c.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const pts = [4, 4.5, 5.5, 6, 6.5, 7.5, 8, 9, 8.5, 7, 6];
+    const x = i => 4 + i * (w - 8) / (pts.length - 1), y = v => h - 6 - (v - 1) / 9 * (h - 12);
+    ctx.strokeStyle = '#221E36'; ctx.lineWidth = 1;
+    [3, 6, 9].forEach(v => { ctx.beginPath(); ctx.moveTo(0, y(v)); ctx.lineTo(w, y(v)); ctx.stroke(); });
+    const g = ctx.createLinearGradient(0, 0, w, 0); g.addColorStop(0, '#19F0FF'); g.addColorStop(0.6, '#8A5CFF'); g.addColorStop(1, '#FF2BD6');
+    ctx.beginPath(); pts.forEach((v, i) => i ? ctx.lineTo(x(i), y(v)) : ctx.moveTo(x(i), y(v)));
+    ctx.lineTo(x(pts.length - 1), h); ctx.lineTo(x(0), h); ctx.closePath();
+    ctx.fillStyle = 'rgba(138,92,255,0.18)'; ctx.fill();
+    ctx.beginPath(); pts.forEach((v, i) => i ? ctx.lineTo(x(i), y(v)) : ctx.moveTo(x(i), y(v)));
+    ctx.strokeStyle = g; ctx.lineWidth = 2.5; ctx.stroke();
+    ctx.fillStyle = '#FF2BD6'; ctx.beginPath(); ctx.arc(x(7), y(9), 4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#8B86A8'; ctx.font = '500 9px "JetBrains Mono", monospace'; ctx.fillText('peak 9', Math.min(x(7) + 6, w - 40), y(9) + 3);
+  }
+
+  // Hot cue pads
+  const cueColors = ['#3DFFA2', '#19F0FF', '#FFB020', '#FF3B5C', '#8A5CFF', '#FF2BD6', '#19F0FF', '#FFB020'];
+  function makePads(id, preset) {
+    const el = document.getElementById(id); if (!el) return;
+    for (let i = 0; i < 8; i++) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'pad'; b.textContent = String.fromCharCode(65 + i);
+      b.setAttribute('aria-label', 'Hot cue ' + b.textContent);
+      const setOn = on => { b.classList.toggle('set', on); b.style.background = on ? cueColors[i] : ''; b.style.borderColor = on ? cueColors[i] : ''; };
+      setOn(preset.includes(i));
+      b.addEventListener('click', () => setOn(!b.classList.contains('set')));
+      el.appendChild(b);
+    }
+  }
+  makePads('padsA', [0, 1, 3, 5]);
+  makePads('padsB', [0, 2, 4]);
+
+  // VU meter
+  const vu = document.getElementById('vu');
+  const segs = [];
+  for (let i = 0; i < 14; i++) { const s = document.createElement('i'); vu.appendChild(s); segs.push(s); }
+  function setVu(level) {
+    segs.forEach((s, i) => {
+      const lit = i < level;
+      s.className = lit ? ('l' + (i >= 12 ? ' clip' : i >= 9 ? ' hot' : '')) : '';
+    });
+  }
+  setVu(0);
+
+  function bindPlay(deck) {
+    const btn = document.getElementById('play' + deck), pane = document.getElementById('deck' + deck), mark = document.getElementById('mark' + deck);
+    btn.addEventListener('click', () => {
+      playing[deck] = !playing[deck];
+      btn.classList.toggle('on', playing[deck]);
+      btn.setAttribute('aria-pressed', String(playing[deck]));
+      btn.textContent = playing[deck] ? 'PAUSE' : 'PLAY';
+      pane.classList.toggle('playing', playing[deck]);
+      mark.classList.toggle('spin', playing[deck]);
+    });
+  }
+  bindPlay('A'); bindPlay('B');
+
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let t = 0;
+  function frame() {
+    if (playing.A) offsets.wA += 1.1;
+    if (playing.B) offsets.wB += 1.1;
+    drawWave('wA'); drawWave('wB');
+    const xf = +document.getElementById('xf').value / 100;
+    const a = playing.A ? (+document.getElementById('chA').value / 100) * Math.min(1, 2 * (1 - xf)) : 0;
+    const b = playing.B ? (+document.getElementById('chB').value / 100) * Math.min(1, 2 * xf) : 0;
+    t++;
+    const lvl = Math.max(a, b) > 0 ? Math.round((Math.max(a, b) * 11) + (t % 8 < 2 ? 2 : 0) + (Math.sin(t / 5) > 0.6 ? 1 : 0)) : 0;
+    setVu(Math.min(14, lvl));
+    if (!reduce) requestAnimationFrame(frame);
+  }
+  drawArc();
+  frame();
+  if (reduce) {
+    ['playA', 'playB', 'xf', 'chA', 'chB'].forEach(id => document.getElementById(id).addEventListener('input', frame));
+    ['playA', 'playB'].forEach(id => document.getElementById(id).addEventListener('click', frame));
+  }
+  window.addEventListener('resize', () => { drawArc(); drawWave('wA'); drawWave('wB'); });
+})();
+</script>
