@@ -1,11 +1,24 @@
-import type { AuthUser, GenerateRequest, GenerateResponse, SavedPrompt } from './types';
+import type { AuthUser, Entitlement, GenerateRequest, GenerateResponse, ProvidersInfo, RecommendedTool, SavedPrompt } from './types';
 
 // The API lives in this app (pages/api), so requests are same-origin by default.
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string, public details?: Record<string, string[]>) {
+  constructor(public status: number, message: string, public details?: unknown) {
     super(message);
+  }
+
+  /** Machine-readable reason, e.g. AUTH_REQUIRED or PAYWALL. */
+  get code(): string | undefined {
+    const d = this.details as { code?: unknown } | undefined;
+    return typeof d?.code === 'string' ? d.code : undefined;
+  }
+
+  /** First field-level validation message, if any. */
+  get fieldMessage(): string | undefined {
+    if (!this.details || typeof this.details !== 'object' || this.code) return undefined;
+    const first = Object.values(this.details as Record<string, unknown>).flat()[0];
+    return typeof first === 'string' ? first : undefined;
   }
 }
 
@@ -54,7 +67,11 @@ export const api = {
     request<{ user: AuthUser; token: string }>('/api/auth/register', { method: 'POST', body: JSON.stringify({ email, password }) }),
   login: (email: string, password: string) =>
     request<{ user: AuthUser; token: string }>('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
-  me: () => request<{ user: AuthUser }>('/api/auth/me'),
+  me: () => request<{ user: AuthUser; entitlement: Entitlement | null }>('/api/auth/me'),
+  providers: () => request<ProvidersInfo>('/api/auth/providers'),
+  meta: () => request<{ tools: Array<Omit<RecommendedTool, 'reason' | 'rank'>> }>('/api/meta'),
+  checkout: () => request<{ url: string }>('/api/billing/checkout', { method: 'POST' }),
+  billingPortal: () => request<{ url: string }>('/api/billing/portal', { method: 'POST' }),
 
   listPrompts: (params: { cursor?: string; limit?: number; q?: string } = {}) => {
     const qs = new URLSearchParams();

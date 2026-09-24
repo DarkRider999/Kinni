@@ -45,13 +45,39 @@ enum TemplateSource {
 }
 
 model User {
-  id           String     @id @default(cuid())
-  email        String     @unique
-  passwordHash String
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  prompts      Prompt[]
-  templates    Template[]
+  id                   String     @id @default(cuid())
+  email                String     @unique
+  /// Null for accounts created through Google/Facebook/GitHub only.
+  passwordHash         String?
+  name                 String?
+  image                String?
+  /// Set when an OAuth provider confirmed the address. Master access requires it.
+  emailVerified        DateTime?
+  /// Generations used on the free plan (see FREE_RUN_LIMIT).
+  freeRunsUsed         Int        @default(0)
+  stripeCustomerId     String?    @unique
+  stripeSubscriptionId String?
+  /// Mirrors Stripe: active, trialing, past_due, canceled, ...
+  subscriptionStatus   String?
+  currentPeriodEnd     DateTime?
+  createdAt            DateTime   @default(now())
+  updatedAt            DateTime   @updatedAt
+  prompts              Prompt[]
+  templates            Template[]
+  accounts             Account[]
+}
+
+/// A linked sign-in provider (Google, Facebook, GitHub) for a user.
+model Account {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          String
+  providerAccountId String
+  createdAt         DateTime @default(now())
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
 }
 
 model Prompt {

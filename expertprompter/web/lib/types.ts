@@ -47,6 +47,7 @@ export interface GenerateResponse {
   variation: number;
   title: string;
   savedPromptId?: string;
+  entitlement?: Entitlement | null;
 }
 
 export interface SavedPrompt {
@@ -65,6 +66,27 @@ export interface SavedPrompt {
 export interface AuthUser {
   id: string;
   email: string;
+  name?: string | null;
+  image?: string | null;
+}
+
+export type Plan = 'MASTER' | 'PREMIUM' | 'FREE';
+
+export interface Entitlement {
+  plan: Plan;
+  freeRunsUsed: number;
+  freeRunsLimit: number;
+  /** null when unlimited (Master / Premium). */
+  freeRunsRemaining: number | null;
+  subscriptionStatus: string | null;
+  currentPeriodEnd: string | null;
+}
+
+export interface ProvidersInfo {
+  accountsEnabled: boolean;
+  providers: Array<{ id: 'google' | 'facebook' | 'github'; label: string }>;
+  billingEnabled: boolean;
+  freeRunsLimit: number;
 }
 
 export const CATEGORY_LABELS: Record<Category, string> = {

@@ -1,32 +1,41 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useAuth } from '@/lib/auth';
 import { ApiError } from '@/lib/api';
-import { SpinnerIcon } from './Icons';
+import { FacebookIcon, GitHubIcon, GoogleIcon, SpinnerIcon } from './Icons';
 
 interface AuthModalProps {
   open: boolean;
   onClose: () => void;
+  /** Optional line explaining why sign-in is needed (e.g. "Sign in to get 5 free prompts"). */
+  reason?: string | null;
 }
 
-export default function AuthModal({ open, onClose }: AuthModalProps) {
-  const { login, register } = useAuth();
-  const [mode, setMode] = useState<'login' | 'register'>('login');
+const PROVIDER_ICONS = { google: GoogleIcon, facebook: FacebookIcon, github: GitHubIcon };
+
+export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
+  const { login, register, providers } = useAuth();
+  const [mode, setMode] = useState<'login' | 'register'>('register');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const emailRef = useRef<HTMLInputElement>(null);
+  const [redirecting, setRedirecting] = useState<string | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     setError(null);
-    emailRef.current?.focus();
+    setRedirecting(null);
+    dialogRef.current?.focus();
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
   if (!open) return null;
+
+  const socials = providers?.providers ?? [];
+  const freeRuns = providers?.freeRunsLimit ?? 5;
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -37,11 +46,7 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
       setPassword('');
       onClose();
     } catch (err) {
-      if (err instanceof ApiError && err.details) {
-        setError(Object.values(err.details).flat()[0] ?? err.message);
-      } else {
-        setError(err instanceof Error ? err.message : 'Something went wrong');
-      }
+      setError(err instanceof ApiError ? err.fieldMessage ?? err.message : 'Something went wrong');
     } finally {
       setLoading(false);
     }
@@ -50,19 +55,49 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/50 p-4 backdrop-blur-sm" onMouseDown={onClose}>
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="auth-title"
-        className="card w-full max-w-sm animate-fade-in"
+        className="card w-full max-w-sm animate-fade-in outline-none"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <h2 id="auth-title" className="text-lg font-semibold">{mode === 'login' ? 'Welcome back' : 'Create your account'}</h2>
-        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Sign in to save prompts and keep a history. Generating works without an account.</p>
+        <h2 id="auth-title" className="text-lg font-semibold">{mode === 'login' ? 'Welcome back' : 'Create your free account'}</h2>
+        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          {reason ?? `Get ${freeRuns} free expert prompts, then go unlimited with Premium.`}
+        </p>
 
-        <form onSubmit={submit} className="mt-4 space-y-3">
+        {socials.length > 0 && (
+          <>
+            <div className="mt-4 space-y-2">
+              {socials.map((p) => {
+                const Icon = PROVIDER_ICONS[p.id];
+                return (
+                  <a
+                    key={p.id}
+                    href={`/api/auth/oauth/${p.id}`}
+                    onClick={() => setRedirecting(p.id)}
+                    className="btn-secondary w-full justify-center !py-2.5"
+                  >
+                    {redirecting === p.id ? <SpinnerIcon /> : <Icon />}
+                    Continue with {p.label}
+                  </a>
+                );
+              })}
+            </div>
+            <div className="my-4 flex items-center gap-3 text-xs uppercase tracking-wide text-slate-400">
+              <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+              or use email
+              <span className="h-px flex-1 bg-slate-200 dark:bg-slate-700" />
+            </div>
+          </>
+        )}
+
+        <form onSubmit={submit} className={`space-y-3 ${socials.length ? '' : 'mt-4'}`}>
           <div>
             <label className="label" htmlFor="auth-email">Email</label>
-            <input ref={emailRef} id="auth-email" type="email" autoComplete="email" required className="input" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <input id="auth-email" type="email" autoComplete="email" required className="input" value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div>
             <label className="label" htmlFor="auth-password">Password</label>
@@ -89,6 +124,9 @@ export default function AuthModal({ open, onClose }: AuthModalProps) {
           <button type="button" className="font-medium text-brand-600 hover:underline dark:text-brand-400" onClick={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(null); }}>
             {mode === 'login' ? 'Create an account' : 'Sign in'}
           </button>
+        </p>
+        <p className="mt-3 text-center text-xs text-slate-400">
+          By continuing you agree to the <a href="/terms" className="underline">Terms</a> and <a href="/privacy" className="underline">Privacy Policy</a>.
         </p>
       </div>
     </div>

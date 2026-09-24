@@ -53,7 +53,8 @@ describe('API routes', () => {
     expect(res.body.status).toBe('ok');
   });
 
-  it('POST /api/generate-prompt works for guests', async () => {
+  it('POST /api/generate-prompt works for guests when no database is configured', async () => {
+    delete process.env.DATABASE_URL;
     const res = await call(generate, {
       method: 'POST',
       body: { rawInput: 'Create a business plan for a cloud kitchen in Dubai.', promptStyle: 'professional', options: { tone: 'confident' } },
@@ -84,6 +85,7 @@ describe('API routes', () => {
   });
 
   it('rate limits per client', async () => {
+    delete process.env.DATABASE_URL;
     const statuses: number[] = [];
     for (let i = 0; i < 62; i++) {
       statuses.push((await call(generate, { method: 'POST', body: { rawInput: 'write a poem' }, ip: '10.9.9.9' })).status);
@@ -103,11 +105,13 @@ describe('API routes', () => {
     expect(res.status).toBe(503);
   });
 
-  it('GET /api/auth/me decodes a valid token', async () => {
+  it('GET /api/auth/me decodes a valid token (no database)', async () => {
+    delete process.env.DATABASE_URL;
     const token = signToken({ id: 'u1', email: 'a@example.com' });
     const res = await call(me, { headers: { authorization: `Bearer ${token}` } });
     expect(res.status).toBe(200);
     expect(res.body.user).toEqual({ id: 'u1', email: 'a@example.com' });
+    expect(res.body.entitlement).toBeNull();
   });
 
   it('GET /api/meta lists categories and styles', async () => {
