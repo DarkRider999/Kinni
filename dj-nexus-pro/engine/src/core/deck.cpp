@@ -221,8 +221,8 @@ void Deck::jumpTo(double newPos) {
 }
 
 inline float Deck::readCubic(const float* ch, double p) const {
-  const double lo = -double(Track::kPad) + 2.0;
-  const double hi = double(track_->frames + Track::kPad) - 3.0;
+  const double lo = -double(track_->pad) + 2.0;
+  const double hi = double(track_->frames + track_->pad) - 3.0;
   p = clampv(p, lo, hi);
   const int64_t i = int64_t(std::floor(p));
   const float t = float(p - double(i));

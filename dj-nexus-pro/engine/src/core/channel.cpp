@@ -35,6 +35,7 @@ void ChannelStrip::reset() {
   isoApHp_.reset();
   svf_.reset();
   lastEqMode_ = -1;
+  first_ = true;
 }
 
 void ChannelStrip::updateCoefficients(int eqMode) {
@@ -56,6 +57,13 @@ void ChannelStrip::process(float* l, float* r, int n, const ChannelParams& p, fl
   for (int b = 0; b < 3; ++b) eq_[b].setTarget(p.eqDb[b]);
   filter_.setTarget(clampv(p.filter, -1.0f, 1.0f));
   fader_.setTarget(faderLaw(p.fader));
+  if (first_) {
+    first_ = false;
+    trim_.reset(trim_.target());
+    for (auto& e : eq_) e.reset(e.target());
+    filter_.reset(filter_.target());
+    fader_.reset(fader_.target());
+  }
   peakL_ = peakR_ = 0.0f;
 
   for (int off = 0; off < n; off += kSubBlock) {

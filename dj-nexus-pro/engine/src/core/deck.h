@@ -74,6 +74,11 @@ class Deck {
   // Tempo multiplier without nudges or phase corrections.
   double tempoRate() const { return tempoRate_; }
   double beatPhase() const;
+  // Continuous beat position (beats since the first beat), 0 without a grid.
+  double beatPosition() const {
+    return hasGrid() ? (pos_ - track_->firstBeatFrame) / track_->framesPerBeat() : 0.0;
+  }
+  double currentRate() const { return lastRate_; }
   double position() const { return pos_; }
 
  private:

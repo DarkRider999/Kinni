@@ -72,7 +72,8 @@ void resampleChannel(const float* in, int64_t inFrames, double ratio, float* out
 }
 
 std::unique_ptr<Track> makeTrack(const float* interleaved, int64_t frames, int channels,
-                                 int sourceRate, int engineRate, double bpm, double firstBeatSec) {
+                                 int sourceRate, int engineRate, double bpm, double firstBeatSec,
+                                 int64_t pad) {
   if (!interleaved || frames <= 0 || channels < 1 || channels > 2 || sourceRate <= 0 || engineRate <= 0) {
     return nullptr;
   }
@@ -85,6 +86,7 @@ std::unique_ptr<Track> makeTrack(const float* interleaved, int64_t frames, int c
   }
 
   auto track = std::make_unique<Track>();
+  track->pad = pad;
   track->sampleRate = engineRate;
   track->bpm = bpm > 0 ? bpm : 0.0;
   track->firstBeatFrame = firstBeatSec * engineRate;
@@ -93,17 +95,32 @@ std::unique_ptr<Track> makeTrack(const float* interleaved, int64_t frames, int c
   if (sourceRate != engineRate) {
     const double ratio = double(engineRate) / double(sourceRate);
     outFrames = int64_t(std::floor(double(frames) * ratio));
-    track->left.assign(size_t(outFrames + 2 * Track::kPad), 0.0f);
-    track->right.assign(size_t(outFrames + 2 * Track::kPad), 0.0f);
-    resampleChannel(srcL.data(), frames, ratio, track->left.data() + Track::kPad, outFrames);
-    resampleChannel(srcR.data(), frames, ratio, track->right.data() + Track::kPad, outFrames);
+    track->left.assign(size_t(outFrames + 2 * pad), 0.0f);
+    track->right.assign(size_t(outFrames + 2 * pad), 0.0f);
+    resampleChannel(srcL.data(), frames, ratio, track->left.data() + pad, outFrames);
+    resampleChannel(srcR.data(), frames, ratio, track->right.data() + pad, outFrames);
   } else {
-    track->left.assign(size_t(outFrames + 2 * Track::kPad), 0.0f);
-    track->right.assign(size_t(outFrames + 2 * Track::kPad), 0.0f);
-    std::copy(srcL.begin(), srcL.end(), track->left.begin() + Track::kPad);
-    std::copy(srcR.begin(), srcR.end(), track->right.begin() + Track::kPad);
+    track->left.assign(size_t(outFrames + 2 * pad), 0.0f);
+    track->right.assign(size_t(outFrames + 2 * pad), 0.0f);
+    std::copy(srcL.begin(), srcL.end(), track->left.begin() + pad);
+    std::copy(srcR.begin(), srcR.end(), track->right.begin() + pad);
   }
   track->frames = outFrames;
+  return track;
+}
+
+}  // namespace djn
+
+namespace djn {
+
+std::unique_ptr<Track> makeSilentTrack(int64_t frames, int engineRate, int64_t pad) {
+  if (frames <= 0 || engineRate <= 0) return nullptr;
+  auto track = std::make_unique<Track>();
+  track->pad = pad;
+  track->sampleRate = engineRate;
+  track->frames = frames;
+  track->left.assign(size_t(frames + 2 * pad), 0.0f);
+  track->right.assign(size_t(frames + 2 * pad), 0.0f);
   return track;
 }
 

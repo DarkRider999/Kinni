@@ -24,16 +24,26 @@ Engine::Engine(int sampleRate, int maxBlock, int numDecks)
   cueL_.assign(n, 0.0f);
   cueR_.assign(n, 0.0f);
   interleaved_.assign(n * 2, 0.0f);
+  sampL_.assign(n, 0.0f);
+  sampR_.assign(n, 0.0f);
+  for (auto& u : fxUnits_) u.setup(sampleRate, maxBlock);
+  sampler_.setup(sampleRate, maxBlock);
+  size_t hist = 1;
+  while (hist < size_t(historySeconds() * sampleRate) + size_t(maxBlock)) hist <<= 1;
+  histMask_ = hist - 1;
+  for (int d = 0; d < numDecks; ++d) {
+    histL_[size_t(d)].assign(hist, 0.0f);
+    histR_[size_t(d)].assign(hist, 0.0f);
+  }
 }
 
 Engine::~Engine() {
   recorder.stop();
   // Free tracks still queued for loading, held by decks, or awaiting collection.
   Command c;
-  while (commands_.pop(c)) {
-    if (c.type == Cmd::Load) delete c.track;
-  }
+  while (commands_.pop(c)) delete c.track;  // pending loads / captures
   for (auto& d : decks_) delete d.unload();
+  for (int s = 0; s < Sampler::kSlots; ++s) delete sampler_.load(s, nullptr);
   collectGarbage();
 }
 
@@ -43,7 +53,60 @@ void Engine::collectGarbage() {
   while (garbage_.pop(t)) delete t;
 }
 
+void Engine::capture(int deck, Track* into) {
+  // Copy the most recent `frames` samples of the deck's history.
+  const int64_t frames = into->frames;
+  const int64_t end = histCount_[size_t(deck)];
+  float* l = into->l();
+  float* r = into->r();
+  for (int64_t i = 0; i < frames; ++i) {
+    const int64_t src = end - frames + i;
+    if (src < 0) continue;  // not enough history yet: leading silence
+    l[i] = histL_[size_t(deck)][size_t(src) & histMask_];
+    r[i] = histR_[size_t(deck)][size_t(src) & histMask_];
+  }
+}
+
+void Engine::dispatchSampler(const Command& c) {
+  Track* old = nullptr;
+  switch (c.type) {
+    case Cmd::SamplerLoad: old = sampler_.load(c.slot, c.track); break;
+    case Cmd::SamplerCapture:
+      if (c.deck >= 0 && c.deck < numDecks_) {
+        capture(c.deck, c.track);
+        old = sampler_.load(c.slot, c.track);
+      } else {
+        old = c.track;
+      }
+      break;
+    case Cmd::SamplerTrigger: {
+      // The FX/sampler clock projected to the start of this block.
+      BeatClock clk;
+      clk.bpm = lastClockBpm_;
+      clk.beat = internalBeat_;
+      clk.beatsPerSample = clk.bpm / 60.0 / sampleRate_;
+      sampler_.trigger(c.slot, float(c.value), clk, samplerQuantize.load(std::memory_order_relaxed));
+      break;
+    }
+    case Cmd::SamplerRelease: sampler_.release(c.slot); break;
+    case Cmd::SamplerStopAll: sampler_.stopAll(); break;
+    case Cmd::SamplerMode: sampler_.setMode(c.slot, int(c.value)); break;
+    case Cmd::SamplerChoke: sampler_.setChoke(c.slot, int(c.value)); break;
+    case Cmd::SamplerGain: sampler_.setGainDb(c.slot, float(c.value)); break;
+    case Cmd::SamplerPitch: sampler_.setPitch(c.slot, float(c.value)); break;
+    case Cmd::SamplerSync: sampler_.setSync(c.slot, c.value != 0.0); break;
+    default: break;
+  }
+  if (old && !garbage_.push(old)) {
+    // Queue full: leak rather than free on the audio thread.
+  }
+}
+
 void Engine::dispatch(const Command& c) {
+  if (c.type >= Cmd::SamplerLoad) {
+    dispatchSampler(c);
+    return;
+  }
   if (c.deck < 0 || c.deck >= numDecks_) {
     if (c.type == Cmd::Load) delete c.track;  // unreachable via the C API
     return;
@@ -76,6 +139,7 @@ void Engine::dispatch(const Command& c) {
     case Cmd::Sync: d.setSync(c.slot != 0); break;
     case Cmd::Jog: d.jog(c.slot != 0, c.value); break;
     case Cmd::SetGrid: d.setGrid(c.value, c.value2); break;
+    default: break;  // sampler commands are handled in dispatchSampler()
   }
   if (old && !garbage_.push(old)) {
     // Garbage queue full (control thread never collects): leak rather than
@@ -96,6 +160,27 @@ int Engine::chooseMasterDeck() const {
     if (k.playing() && k.hasGrid()) return d;
   }
   return -1;
+}
+
+BeatClock Engine::makeClock(int master, const SyncRef& ref, int frames) {
+  BeatClock clk;
+  const double manual = fxBpm.load(std::memory_order_relaxed);
+  const Deck* m = master >= 0 ? &decks_[size_t(master)] : nullptr;
+  if (manual > 0) {
+    clk.bpm = manual;
+    clk.beat = internalBeat_;
+  } else if (m && m->playing() && ref.bpm > 0) {
+    // Follow the master deck's own beat grid, so FX land on its beats.
+    clk.bpm = ref.bpm;
+    clk.beat = m->beatPosition();
+  } else {
+    clk.bpm = lastClockBpm_;
+    clk.beat = internalBeat_;
+  }
+  clk.beatsPerSample = clk.bpm / 60.0 / sampleRate_;
+  internalBeat_ = clk.beat + clk.beatsPerSample * frames;
+  lastClockBpm_ = clk.bpm;
+  return clk;
 }
 
 int Engine::process(float* out, int frames, int outChannels) {
@@ -130,6 +215,28 @@ int Engine::process(float* out, int frames, int outChannels) {
     ref.phase = m.beatPhase();
   }
 
+  const BeatClock clock = makeClock(master, ref, frames);
+  clockBpm_.store(clock.bpm, std::memory_order_relaxed);
+  clockBeat_.store(clock.beat, std::memory_order_relaxed);
+
+  FxParams fxp[2];
+  int fxTarget[2];
+  for (int u = 0; u < 2; ++u) {
+    fxp[u].type = fx[size_t(u)].type.load(std::memory_order_relaxed);
+    fxp[u].on = fx[size_t(u)].on.load(std::memory_order_relaxed) != 0;
+    fxp[u].beats = fx[size_t(u)].beats.load(std::memory_order_relaxed);
+    fxp[u].depth = fx[size_t(u)].depth.load(std::memory_order_relaxed);
+    fxp[u].wet = fx[size_t(u)].wet.load(std::memory_order_relaxed);
+    fxTarget[u] = fx[size_t(u)].target.load(std::memory_order_relaxed);
+  }
+
+  // Sampler first: it may be routed into a channel.
+  std::fill(sampL_.begin(), sampL_.begin() + frames, 0.0f);
+  std::fill(sampR_.begin(), sampR_.begin() + frames, 0.0f);
+  sampler_.render(sampL_.data(), sampR_.data(), frames, clock);
+  const float samplerGain = dbToGain(clampv(samplerVolumeDb.load(std::memory_order_relaxed), -80.0f, 12.0f));
+  const int samplerOut = samplerOutput.load(std::memory_order_relaxed);
+
   std::fill(mixL_.begin(), mixL_.begin() + frames, 0.0f);
   std::fill(mixR_.begin(), mixR_.begin() + frames, 0.0f);
   std::fill(cueL_.begin(), cueL_.begin() + frames, 0.0f);
@@ -141,6 +248,24 @@ int Engine::process(float* out, int frames, int outChannels) {
   for (int d = 0; d < numDecks_; ++d) {
     Deck& deck = decks_[size_t(d)];
     deck.render(deckL_.data(), deckR_.data(), frames, ref, d == master);
+
+    // History for sampler capture (what the deck played, before the mixer).
+    {
+      auto& hl = histL_[size_t(d)];
+      auto& hr = histR_[size_t(d)];
+      int64_t w = histCount_[size_t(d)];
+      for (int i = 0; i < frames; ++i, ++w) {
+        hl[size_t(w) & histMask_] = deckL_[size_t(i)];
+        hr[size_t(w) & histMask_] = deckR_[size_t(i)];
+      }
+      histCount_[size_t(d)] = w;
+    }
+    if (samplerOut == d) {
+      for (int i = 0; i < frames; ++i) {
+        deckL_[size_t(i)] += sampL_[size_t(i)] * samplerGain;
+        deckR_[size_t(i)] += sampR_[size_t(i)] * samplerGain;
+      }
+    }
 
     ChannelAtomics& ca = channels[size_t(d)];
     ChannelParams p;
@@ -155,6 +280,11 @@ int Engine::process(float* out, int frames, int outChannels) {
                                cueOn ? cueL_.data() : nullptr, cueOn ? cueR_.data() : nullptr);
 
     // Meters (single writer; the reader resets them).
+    // Beat FX inserted on this channel (post-fader).
+    for (int u = 0; u < 2; ++u) {
+      if (fxTarget[u] == d) fxUnits_[size_t(u)].process(deckL_.data(), deckR_.data(), frames, fxp[u], clock);
+    }
+
     const float pl = strips_[size_t(d)].blockPeakL(), pr = strips_[size_t(d)].blockPeakR();
     if (pl > ca.peakL.load(std::memory_order_relaxed)) ca.peakL.store(pl, std::memory_order_relaxed);
     if (pr > ca.peakR.load(std::memory_order_relaxed)) ca.peakR.store(pr, std::memory_order_relaxed);
@@ -172,6 +302,23 @@ int Engine::process(float* out, int frames, int outChannels) {
   }
   xfGainA_ = xa;
   xfGainB_ = xb;
+
+  if (samplerOut < 0 || samplerOut >= numDecks_) {
+    for (int i = 0; i < frames; ++i) {
+      mixL_[size_t(i)] += sampL_[size_t(i)] * samplerGain;
+      mixR_[size_t(i)] += sampR_[size_t(i)] * samplerGain;
+    }
+  }
+  // Beat FX on the master bus, then any unit pointed at a channel that doesn't
+  // exist still gets processed (on master) so its state keeps moving.
+  for (int u = 0; u < 2; ++u) {
+    if (fxTarget[u] < 0 || fxTarget[u] >= numDecks_) {
+      fxUnits_[size_t(u)].process(mixL_.data(), mixR_.data(), frames, fxp[u], clock);
+    }
+    fx[size_t(u)].tail.store(fxUnits_[size_t(u)].tailActive() ? 1 : 0, std::memory_order_relaxed);
+  }
+  samplerLoaded_.store(sampler_.loadedMask(), std::memory_order_relaxed);
+  samplerPlaying_.store(sampler_.playingMask(), std::memory_order_relaxed);
 
   // ---- master bus: gain ramp -> limiter
   const float dm = (targetMaster - masterGain_) / float(frames);
@@ -234,6 +381,20 @@ void Engine::fillState(djn_engine_state* s) {
   s->xruns = recorder.overflows();
   s->blocks_processed = blocks_.load(std::memory_order_relaxed);
   s->dsp_load = dspLoad_.load(std::memory_order_relaxed);
+  s->clock_bpm = clockBpm_.load(std::memory_order_relaxed);
+  s->clock_beat = clockBeat_.load(std::memory_order_relaxed);
+  s->sampler_loaded = samplerLoaded_.load(std::memory_order_relaxed);
+  s->sampler_playing = samplerPlaying_.load(std::memory_order_relaxed);
+  for (int u = 0; u < 2; ++u) {
+    djn_fx_state& f = s->fx[u];
+    f.on = fx[size_t(u)].on.load(std::memory_order_relaxed);
+    f.type = fx[size_t(u)].type.load(std::memory_order_relaxed);
+    f.target = fx[size_t(u)].target.load(std::memory_order_relaxed);
+    f.tail_active = fx[size_t(u)].tail.load(std::memory_order_relaxed);
+    f.beats = fx[size_t(u)].beats.load(std::memory_order_relaxed);
+    f.depth = fx[size_t(u)].depth.load(std::memory_order_relaxed);
+    f.wet = fx[size_t(u)].wet.load(std::memory_order_relaxed);
+  }
   for (int d = 0; d < numDecks_; ++d) {
     const DeckTelemetry& t = telemetry_[size_t(d)];
     djn_deck_state& o = s->decks[d];

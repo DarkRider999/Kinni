@@ -1,6 +1,6 @@
 # Deck Lab (browser preview)
 
-A two-deck DJ console in the browser, running the real DJ Nexus engine
+A two-deck DJ console with beat FX and a 16-pad sampler, running the real DJ Nexus engine
 compiled to WebAssembly. It exists so anyone can hear and test the engine
 without installing the app.
 
@@ -11,7 +11,7 @@ python3 -m http.server 8000     # then open http://localhost:8000
 
 | File | What it is |
 |---|---|
-| `index.html` | The console UI: decks, mixer, waveforms, BPM detection, demo tracks |
+| `index.html` | The console UI: decks, mixer, beat FX, sampler, waveforms, BPM detection, demo tracks and pad sounds |
 | `djnexus-runtime.js` | JS wrapper around the engine; works in an AudioWorklet or on the main thread |
 | `djnexus-worklet.js` | AudioWorklet processor that renders the engine on the audio thread |
 | `djnexus.wasm` | The engine (`src/`) built for `wasm32-wasi` with `-DDJN_NO_THREADS` (generated) |

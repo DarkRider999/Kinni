@@ -9,7 +9,7 @@
 
 namespace {
 
-double run(int decks, bool keyLock, bool isolator, int block) {
+double run(int decks, bool keyLock, bool isolator, int block, bool fxAndSampler = false) {
   const int rate = 48000;
   djn_engine_config cfg{rate, block, decks};
   djn_engine* e = djn_engine_create(&cfg);
@@ -26,6 +26,20 @@ double run(int decks, bool keyLock, bool isolator, int block) {
     djn_deck_play(e, d);
   }
   if (isolator) djn_mixer_set_eq_mode(e, DJN_EQ_ISOLATOR);
+  if (fxAndSampler) {
+    // Worst case: both FX units busy (reverb on master, echo on a channel)
+    // and 8 sampler voices, half of them key-locked loops.
+    djn_fx_set_type(e, 0, DJN_FX_REVERB);
+    djn_fx_set_type(e, 1, DJN_FX_ECHO);
+    djn_fx_set_target(e, 1, 0);
+    djn_fx_set_on(e, 0, 1);
+    djn_fx_set_on(e, 1, 1);
+    for (int s = 0; s < 8; ++s) {
+      djn_sampler_load_pcm(e, s, pcm.data(), rate * 2, 2, rate, 124);
+      djn_sampler_set_mode(e, s, s % 2 ? DJN_PAD_LOOP : DJN_PAD_ONE_SHOT);
+      djn_sampler_trigger(e, s, 0.5f);
+    }
+  }
   std::vector<float> out(size_t(block) * 2);
   const int seconds = 60;
   const int blocks = seconds * rate / block;
@@ -41,12 +55,13 @@ double run(int decks, bool keyLock, bool isolator, int block) {
 int main() {
   std::printf("DJ Nexus engine benchmark (60 s of audio per case)\n");
   std::printf("%-44s %12s\n", "case", "x realtime");
-  struct Case { const char* name; int decks; bool keyLock; bool iso; int block; } cases[] = {
+  struct Case { const char* name; int decks; bool keyLock; bool iso; int block; bool fx = false; } cases[] = {
       {"2 decks, varispeed, classic EQ, 256", 2, false, false, 256},
       {"2 decks, key lock, classic EQ, 256", 2, true, false, 256},
       {"4 decks, key lock, isolator EQ, 256", 4, true, true, 256},
       {"4 decks, key lock, isolator EQ, 64", 4, true, true, 64},
+      {"4 decks + 2 FX (reverb, echo) + 8 pads, 256", 4, true, true, 256, true},
   };
-  for (const auto& c : cases) std::printf("%-44s %12.1f\n", c.name, run(c.decks, c.keyLock, c.iso, c.block));
+  for (const auto& c : cases) std::printf("%-44s %12.1f\n", c.name, run(c.decks, c.keyLock, c.iso, c.block, c.fx));
   return 0;
 }

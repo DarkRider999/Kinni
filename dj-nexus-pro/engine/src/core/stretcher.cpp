@@ -13,7 +13,6 @@ void Stretcher::setup(int sampleRate, int /*maxBlock*/) {
   frameLen_ = sampleRate > 96000 ? 8192 : (sampleRate > 48000 ? 4096 : 2048);
   hopLen_ = frameLen_ / 2;
   search_ = frameLen_ / 4;
-  static_assert(Track::kPad >= 8192, "padding must cover frame + search");
   window_.resize(size_t(frameLen_));
   for (int i = 0; i < frameLen_; ++i) {
     // Periodic Hann: overlapping copies at hop = N/2 sum to exactly 1.
@@ -45,8 +44,9 @@ void Stretcher::hop(const Track& track, double rate) {
     const double len = loopEnd_ - loopStart_;
     while (analysisPos_ >= loopEnd_) analysisPos_ -= len;
   }
-  const int64_t lo = -Track::kPad + search_;
-  const int64_t hi = track.frames + Track::kPad - frameLen_ - search_ - 1;
+  // Tracks carry at least frameLen + search frames of padding (Track::padForRate).
+  const int64_t lo = -track.pad + search_;
+  const int64_t hi = track.frames + track.pad - frameLen_ - search_ - 1;
   const int64_t ideal = clampv<int64_t>(int64_t(std::llround(analysisPos_)), lo, hi);
   int64_t start = ideal;
 

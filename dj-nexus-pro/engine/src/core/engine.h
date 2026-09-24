@@ -12,7 +12,9 @@
 #include "channel.h"
 #include "deck.h"
 #include "dsp.h"
+#include "fx.h"
 #include "platform.h"
+#include "sampler.h"
 #include "recorder.h"
 #include "spsc_queue.h"
 #include "track.h"
@@ -26,6 +28,9 @@ enum class Cmd : uint8_t {
   HotCueSet, HotCueSetAt, HotCueTrigger, HotCueClear,
   LoopIn, LoopOut, LoopBeats, LoopExit, LoopHalve, LoopDouble,
   Pitch, KeyLock, Quantize, Slip, Reverse, Sync, Jog, SetGrid,
+  // Sampler (deck = -1 except SamplerCapture, which names the source deck)
+  SamplerLoad, SamplerCapture, SamplerTrigger, SamplerRelease, SamplerStopAll,
+  SamplerMode, SamplerChoke, SamplerGain, SamplerPitch, SamplerSync,
 };
 
 struct Command {
@@ -80,11 +85,32 @@ class Engine {
   std::atomic<float> headphoneDb{0.0f};
   std::atomic<int> masterDeckRequest{-1};
 
+  struct FxAtomics {
+    std::atomic<int> type{0}, on{0}, target{-1};
+    std::atomic<double> beats{1.0};
+    std::atomic<float> depth{0.5f}, wet{0.5f};
+    std::atomic<int> tail{0};  // telemetry
+  };
+  std::array<FxAtomics, 2> fx;
+  std::atomic<double> fxBpm{0.0};
+  std::atomic<double> samplerQuantize{0.0};
+  std::atomic<float> samplerVolumeDb{0.0f};
+  std::atomic<int> samplerOutput{-1};
+
+  // Telemetry used by the control side (capture needs the deck tempo).
+  double deckEffectiveBpm(int d) const { return telemetry_[size_t(d)].effectiveBpm.load(std::memory_order_relaxed); }
+  double clockBpm() const { return clockBpm_.load(std::memory_order_relaxed); }
+  // Longest capture the per-deck history holds.
+  double historySeconds() const { return 8.0; }
+
   Recorder recorder;
 
  private:
   void dispatch(const Command& c);
+  void dispatchSampler(const Command& c);
   int chooseMasterDeck() const;
+  BeatClock makeClock(int master, const SyncRef& ref, int frames);
+  void capture(int deck, Track* into);
 
   int sampleRate_;
   int maxBlock_;
@@ -94,6 +120,15 @@ class Engine {
   std::array<ChannelStrip, 4> strips_;
   std::array<DeckTelemetry, 4> telemetry_;
   Limiter limiter_;
+  std::array<FxUnit, 2> fxUnits_;
+  Sampler sampler_;
+  double internalBeat_ = 0.0;
+  double lastClockBpm_ = 120.0;
+
+  // Per-deck history of the pre-fader signal for sampler capture.
+  std::array<std::vector<float>, 4> histL_, histR_;
+  std::array<int64_t, 4> histCount_{};
+  size_t histMask_ = 0;
 
   SpscQueue<Command, 1024> commands_;
   SpscQueue<Track*, 64> garbage_;
@@ -101,7 +136,7 @@ class Engine {
   Mutex garbageMutex_;
 
   // Scratch buffers (allocated once).
-  std::vector<float> deckL_, deckR_, mixL_, mixR_, cueL_, cueR_, interleaved_;
+  std::vector<float> deckL_, deckR_, mixL_, mixR_, cueL_, cueR_, interleaved_, sampL_, sampR_;
 
   float xfGainA_ = 0.707f, xfGainB_ = 0.707f;
   float masterGain_ = 1.0f;
@@ -110,6 +145,8 @@ class Engine {
   std::atomic<float> limiterGr_{0.0f};
   std::atomic<uint64_t> blocks_{0};
   std::atomic<double> dspLoad_{0.0};
+  std::atomic<double> clockBpm_{120.0}, clockBeat_{0.0};
+  std::atomic<uint64_t> samplerLoaded_{0}, samplerPlaying_{0};
 };
 
 }  // namespace djn

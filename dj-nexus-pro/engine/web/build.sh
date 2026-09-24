@@ -11,7 +11,7 @@ OUT=${1:-web}
 mkdir -p "$OUT"
 CXX=${CXX:-clang++}
 SOURCES=(src/core/track.cpp src/core/stretcher.cpp src/core/deck.cpp src/core/channel.cpp
-         src/core/recorder.cpp src/core/engine.cpp src/capi.cpp src/decode/decoder_none.cpp
+         src/core/recorder.cpp src/core/engine.cpp src/core/fx.cpp src/core/sampler.cpp src/capi.cpp src/decode/decoder_none.cpp
          src/hosts/host_none.cpp src/web/djnexus_web.cpp)
 # Export exactly the public C API (plus the web helpers, which export themselves).
 EXPORTS=()

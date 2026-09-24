@@ -36,8 +36,10 @@ extern "C" {
 #define DJN_VERSION_MINOR 1
 #define DJN_VERSION_PATCH 0
 
-#define DJN_MAX_DECKS     4
-#define DJN_MAX_HOT_CUES  16
+#define DJN_MAX_DECKS          4
+#define DJN_MAX_HOT_CUES       16
+#define DJN_MAX_FX_UNITS       2
+#define DJN_MAX_SAMPLER_SLOTS  64
 
 typedef enum djn_result {
   DJN_OK = 0,
@@ -171,6 +173,80 @@ DJN_API int djn_mixer_set_limiter(djn_engine* engine, int32_t enabled, float cei
 DJN_API int djn_mixer_set_cue_mix(djn_engine* engine, float cue_to_master);         /* 0 = cue only .. 1 = master only */
 DJN_API int djn_mixer_set_headphone_db(djn_engine* engine, float db);
 
+/* ---------------------------------------------------------------- beat FX */
+
+/*
+ * Two FX units. Each hosts one effect and is inserted on one channel (post
+ * fader) or on the master bus. Timing follows the sync master deck's tempo and
+ * beat position (or djn_fx_set_bpm). Echo, delay, ping-pong and reverb keep
+ * ringing out after the unit is switched off.
+ */
+typedef enum djn_fx_type {
+  DJN_FX_ECHO = 0,       /* feedback echo, darkened repeats. depth = feedback */
+  DJN_FX_DELAY = 1,      /* clean digital delay. depth = feedback */
+  DJN_FX_PING_PONG = 2,  /* stereo bouncing echo. depth = feedback */
+  DJN_FX_REVERB = 3,     /* room to hall. depth = decay time (0.5..10 s); beats unused */
+  DJN_FX_FLANGER = 4,    /* beats = sweep period. depth = feedback */
+  DJN_FX_PHASER = 5,     /* beats = sweep period. depth = feedback */
+  DJN_FX_ROLL = 6,       /* repeats the last beats-long slice, starting on the beat */
+  DJN_FX_STUTTER = 7,    /* gated roll */
+  DJN_FX_TRANS = 8,      /* rhythmic volume cuts. depth = cut depth */
+  DJN_FX_PITCH = 9,      /* pitch shift. depth 0..1 = -12..+12 semitones (0.5 = none) */
+  DJN_FX_DISTORTION = 10,/* depth = drive */
+  DJN_FX_CRUSH = 11      /* bit / sample-rate reduction. depth = amount */
+} djn_fx_type;
+
+#define DJN_FX_TARGET_MASTER (-1)
+
+DJN_API int djn_fx_set_type(djn_engine* engine, int32_t unit, djn_fx_type type);
+DJN_API int djn_fx_set_beats(djn_engine* engine, int32_t unit, double beats);   /* 1/16 .. 16 */
+DJN_API int djn_fx_set_depth(djn_engine* engine, int32_t unit, float depth);    /* 0..1 */
+DJN_API int djn_fx_set_wet(djn_engine* engine, int32_t unit, float wet);        /* 0..1 dry/wet */
+DJN_API int djn_fx_set_target(djn_engine* engine, int32_t unit, int32_t target);/* channel 0..3 or DJN_FX_TARGET_MASTER */
+DJN_API int djn_fx_set_on(djn_engine* engine, int32_t unit, int32_t on);
+/* Tempo for FX and sampler timing. 0 (default) follows the sync master deck. */
+DJN_API int djn_fx_set_bpm(djn_engine* engine, double bpm);
+
+/* ---------------------------------------------------------------- sampler */
+
+/*
+ * 64 sample slots, 16 voices. The app maps slots to pads and banks.
+ */
+typedef enum djn_pad_mode {
+  DJN_PAD_ONE_SHOT = 0,  /* plays to the end; pressing again restarts */
+  DJN_PAD_GATE = 1,      /* plays while held */
+  DJN_PAD_LOOP = 2,      /* loops while held */
+  DJN_PAD_TOGGLE = 3     /* press to start looping, press again to stop */
+} djn_pad_mode;
+
+#define DJN_SAMPLER_TO_MASTER (-1)
+
+/* Load a sample (copied and resampled to the engine rate on the calling
+   thread). bpm > 0 lets loops follow the master tempo. */
+DJN_API int djn_sampler_load_pcm(djn_engine* engine, int32_t slot, const float* interleaved, int64_t frames,
+                                 int32_t channels, int32_t sample_rate, double bpm);
+DJN_API int djn_sampler_load_file(djn_engine* engine, int32_t slot, const char* utf8_path, double bpm);
+DJN_API int djn_sampler_unload(djn_engine* engine, int32_t slot);
+/* Capture the last `beats` beats a deck played (pre-fader) into a slot, e.g.
+   for instant loops and vocal chops. Uses the deck's current tempo. */
+DJN_API int djn_sampler_capture(djn_engine* engine, int32_t slot, int32_t deck, double beats);
+
+DJN_API int djn_sampler_set_mode(djn_engine* engine, int32_t slot, djn_pad_mode mode);
+DJN_API int djn_sampler_set_choke(djn_engine* engine, int32_t slot, int32_t group);   /* 0 = none, 1..8 */
+DJN_API int djn_sampler_set_gain_db(djn_engine* engine, int32_t slot, float db);      /* -60..+12 */
+DJN_API int djn_sampler_set_pitch(djn_engine* engine, int32_t slot, float semitones); /* -24..+24 */
+DJN_API int djn_sampler_set_sync(djn_engine* engine, int32_t slot, int32_t enabled);  /* loops follow tempo (default on) */
+
+DJN_API int djn_sampler_trigger(djn_engine* engine, int32_t slot, float velocity);    /* pad pressed, velocity 0..1 */
+DJN_API int djn_sampler_release(djn_engine* engine, int32_t slot);                    /* pad released */
+DJN_API int djn_sampler_stop_all(djn_engine* engine);
+
+DJN_API int djn_sampler_set_quantize(djn_engine* engine, double beats);  /* start on the next 1/4, 1, ... beat; 0 = off */
+DJN_API int djn_sampler_set_volume_db(djn_engine* engine, float db);
+/* Where the sampler plays: DJN_SAMPLER_TO_MASTER (default), or a channel
+   0..3 so it goes through that channel's EQ, filter, fader and FX. */
+DJN_API int djn_sampler_set_output(djn_engine* engine, int32_t target);
+
 /* ---------------------------------------------------------------- state */
 
 typedef struct djn_deck_state {
@@ -196,6 +272,16 @@ typedef struct djn_deck_state {
   float   peak_l, peak_r;  /* post-fader channel peak since last read (linear) */
 } djn_deck_state;
 
+typedef struct djn_fx_state {
+  int32_t on;
+  int32_t type;         /* djn_fx_type */
+  int32_t target;       /* channel, or DJN_FX_TARGET_MASTER */
+  int32_t tail_active;  /* switched off but still ringing out */
+  double  beats;
+  float   depth;
+  float   wet;
+} djn_fx_state;
+
 typedef struct djn_engine_state {
   int32_t sample_rate;
   int32_t num_decks;
@@ -208,6 +294,11 @@ typedef struct djn_engine_state {
   uint64_t blocks_processed;
   double  dsp_load;            /* last block processing time / block duration, 0..1+ */
   djn_deck_state decks[DJN_MAX_DECKS];
+  djn_fx_state fx[DJN_MAX_FX_UNITS];
+  double   clock_bpm;        /* tempo driving FX and the sampler */
+  double   clock_beat;       /* beat position of that clock */
+  uint64_t sampler_loaded;   /* bit n = slot n has a sample */
+  uint64_t sampler_playing;  /* bit n = slot n is sounding */
 } djn_engine_state;
 
 /* Snapshot of the engine; peaks reset on read. Call at UI rate. */

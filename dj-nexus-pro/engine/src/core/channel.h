@@ -54,6 +54,7 @@ class ChannelStrip {
   Svf svf_;
   float lastFilter_ = 1e9f, lastRes_ = -1.0f;
   float peakL_ = 0.0f, peakR_ = 0.0f;
+  bool first_ = true;  // the first block starts at the target values, no glide
 };
 
 }  // namespace djn

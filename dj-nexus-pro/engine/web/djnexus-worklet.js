@@ -26,6 +26,9 @@ class DJNexusProcessor extends AudioWorkletProcessor {
       if (m.type === "call") {
         const result = this.rt.call(m.fn, m.args);
         if (m.id) this.port.postMessage({ type: "result", id: m.id, result });
+      } else if (m.type === "loadSample") {
+        const result = this.rt.loadSample(m.slot, m.left, m.right, m.sampleRate, m.bpm);
+        this.port.postMessage({ type: "result", id: m.id, result });
       } else if (m.type === "load") {
         const result = this.rt.load(m.deck, m.left, m.right, m.sampleRate, m.bpm, m.firstBeat);
         this.port.postMessage({ type: "result", id: m.id, result });

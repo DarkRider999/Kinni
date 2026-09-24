@@ -8,15 +8,17 @@
   var DECK_FIELDS = ["loaded", "playing", "keyLock", "sync", "slip", "reverse", "looping", "master",
     "position", "duration", "trackBpm", "effectiveBpm", "rate", "beatPhase", "loopStart", "loopEnd",
     "cue", "peakL", "peakR"];
-  var ENGINE_FIELDS = ["masterPeakL", "masterPeakR", "limiterDb", "dspLoad", "masterDeck"];
-  var DECKS = 2;
+  var ENGINE_FIELDS = ["masterPeakL", "masterPeakR", "limiterDb", "dspLoad", "masterDeck", "clockBpm",
+    "samplerLoadedLo", "samplerLoadedHi", "samplerPlayingLo", "samplerPlayingHi"];
+  var FX_FIELDS = ["on", "type", "target", "tail", "beats", "depth", "wet"];
+  var DECKS = 2, FX_UNITS = 2;
 
   function Runtime() {
     this.exports = null;
     this.memory = null;
     this.engine = 0;
     this.mode = "";
-    this.stateSize = DECKS * DECK_FIELDS.length + ENGINE_FIELDS.length;
+    this.stateSize = DECKS * DECK_FIELDS.length + ENGINE_FIELDS.length + FX_UNITS * FX_FIELDS.length;
   }
 
   // WASI imports. The engine only needs a clock and (for fatal messages) stdout.
@@ -100,6 +102,21 @@
     return r;
   };
 
+  Runtime.prototype.loadSample = function (slot, left, right, sampleRate, bpm) {
+    var n = left.length;
+    var ptr = this.exports.djnw_malloc(n * 8);
+    if (!ptr) return -3;
+    var f = new Float32Array(this.memory.buffer, ptr, n * 2);
+    for (var i = 0, j = 0; i < n; i++, j += 2) {
+      f[j] = left[i];
+      f[j + 1] = right[i];
+    }
+    var r = this.exports.djnw_sampler_load(this.engine, slot, ptr, n, 2, sampleRate, bpm);
+    this.exports.djnw_free(ptr);
+    this.exports.djn_engine_collect_garbage(this.engine);
+    return r;
+  };
+
   Runtime.prototype.render = function (outL, outR, frames) {
     var done = 0;
     while (done < frames) {
@@ -123,6 +140,9 @@
       for (var f = 0; f < DECK_FIELDS.length; f++) out[k++] = this.exports.djnw_deck(d, f);
     }
     for (var e = 0; e < ENGINE_FIELDS.length; e++) out[k++] = this.exports.djnw_engine(e);
+    for (var u = 0; u < FX_UNITS; u++) {
+      for (var x = 0; x < FX_FIELDS.length; x++) out[k++] = this.exports.djnw_fx(u, x);
+    }
     return out;
   };
 
@@ -134,6 +154,15 @@
       s.decks.push(o);
     }
     for (var e = 0; e < ENGINE_FIELDS.length; e++) s[ENGINE_FIELDS[e]] = a[k++];
+    s.fx = [];
+    for (var u = 0; u < FX_UNITS; u++) {
+      var fx = {};
+      for (var x = 0; x < FX_FIELDS.length; x++) fx[FX_FIELDS[x]] = a[k++];
+      s.fx.push(fx);
+    }
+    // Sampler masks as bit tests: slot n playing?
+    s.samplerLoaded = function (n) { return ((n < 32 ? s.samplerLoadedLo : s.samplerLoadedHi) >>> (n % 32)) & 1; };
+    s.samplerPlaying = function (n) { return ((n < 32 ? s.samplerPlayingLo : s.samplerPlayingHi) >>> (n % 32)) & 1; };
     return s;
   };
 
