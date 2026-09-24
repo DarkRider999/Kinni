@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The DJ Nexus mark: a gradient ring around an "N" (see docs/dj-nexus-pro/icon.svg). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M54,31a23,23 0,1 1,0 46a23,23 0,1 1,0 -46"
+        android:strokeWidth="3.2"
+        android:fillColor="#00000000">
+        <aapt:attr name="android:strokeColor">
+            <gradient
+                android:type="linear"
+                android:startX="31" android:startY="31"
+                android:endX="77" android:endY="77"
+                android:startColor="#19F0FF"
+                android:centerColor="#8A5CFF"
+                android:endColor="#FF2BD6" />
+        </aapt:attr>
+    </path>
+    <path
+        android:pathData="M45.5,64V44.5L62.5,64V44.5"
+        android:strokeWidth="3"
+        android:strokeColor="#EDEBFA"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="#00000000" />
+</vector>

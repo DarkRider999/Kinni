@@ -1,0 +1,56 @@
+name: DJ Nexus Deck Lab APK
+
+on:
+  push:
+    paths:
+      - "dj-nexus-pro/android-app/**"
+      - "dj-nexus-pro/engine/web/**"
+      - ".github/workflows/dj-nexus-apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write  # publish the APK to the deck-lab-apk release
+
+concurrency:
+  group: dj-nexus-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    name: Build APK
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.14.3"
+      - name: Build
+        run: gradle -p dj-nexus-pro/android-app assembleDebug --no-daemon --stacktrace
+      - name: Collect
+        run: |
+          cp dj-nexus-pro/android-app/build/outputs/apk/debug/*.apk DJNexus-DeckLab.apk
+          ls -la DJNexus-DeckLab.apk
+          unzip -l DJNexus-DeckLab.apk | grep -E "assets/decklab/(index.html|djnexus.wasm)|classes.dex"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DJNexus-DeckLab-apk
+          path: DJNexus-DeckLab.apk
+      - name: Publish to the deck-lab-apk release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          TAG=deck-lab-apk
+          NOTES="DJ Nexus Deck Lab for Android (preview), built from ${GITHUB_SHA::7} on ${GITHUB_REF_NAME}.
+          Install: open DJNexus-DeckLab.apk on the phone and allow installs from this source."
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" DJNexus-DeckLab.apk --clobber
+            gh release edit "$TAG" --notes "$NOTES"
+          else
+            gh release create "$TAG" DJNexus-DeckLab.apk --prerelease --target "$GITHUB_SHA" \
+              --title "DJ Nexus Deck Lab (Android preview)" --notes "$NOTES"
+          fi
