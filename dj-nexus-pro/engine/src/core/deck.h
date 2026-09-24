@@ -59,6 +59,7 @@ class Deck {
   void setReverse(bool on) { reverse_ = on; }
   void setSync(bool on);
   void jog(bool touched, double rate);
+  void setGrid(double bpm, double firstBeatSec);
 
   // Renders n frames of pre-fader audio (always writes n frames).
   void render(float* outL, float* outR, int n, const SyncRef& ref, bool isMaster);

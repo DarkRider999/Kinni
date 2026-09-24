@@ -332,6 +332,24 @@ TEST(sync_follows_master_tempo_changes) {
   CHECK(std::fabs(phaseDiff(s.decks[1].beat_phase, s.decks[0].beat_phase)) < 0.02);
 }
 
+TEST(set_grid_enables_sync_after_load) {
+  EngineHandle e;
+  load(e, 0, clicks(126, 0.0, 30), 126, 0.0);
+  load(e, 1, clicks(128, 0.1, 30), 0, 0.0);  // loaded without a grid
+  djn_deck_play(e, 0);
+  render(e, 0.5);
+  CHECK(deckState(e, 1).track_bpm == 0.0);
+  CHECK(djn_deck_set_grid(e, 1, 128, 0.1) == DJN_OK);
+  djn_deck_set_sync(e, 1, 1);
+  djn_deck_play(e, 1);
+  render(e, 3.0);
+  const auto a = deckState(e, 0), b = deckState(e, 1);
+  CHECK_NEAR(b.track_bpm, 128.0, 1e-9);
+  CHECK_NEAR(b.effective_bpm, 126.0, 0.01);
+  CHECK(std::fabs(phaseDiff(b.beat_phase, a.beat_phase)) < 0.02);
+  CHECK(djn_deck_set_grid(e, 1, 1000, 0) == DJN_ERR_INVALID_ARG);
+}
+
 TEST(cue_sets_when_paused_and_returns_when_playing) {
   EngineHandle e;
   load(e, 0, sine(440, 10));

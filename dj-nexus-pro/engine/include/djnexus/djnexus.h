@@ -97,6 +97,10 @@ DJN_API int djn_deck_load_file(djn_engine* engine, int32_t deck, const char* utf
 
 DJN_API int djn_deck_unload(djn_engine* engine, int32_t deck);
 
+/* Replace the beat grid of the loaded track, e.g. after the user corrects the
+   BPM or re-analysis finishes. bpm <= 0 removes the grid. */
+DJN_API int djn_deck_set_grid(djn_engine* engine, int32_t deck, double bpm, double first_beat_sec);
+
 DJN_API int djn_deck_play(djn_engine* engine, int32_t deck);
 DJN_API int djn_deck_pause(djn_engine* engine, int32_t deck);
 DJN_API int djn_deck_toggle_play(djn_engine* engine, int32_t deck);

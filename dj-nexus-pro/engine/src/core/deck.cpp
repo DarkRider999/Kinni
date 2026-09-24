@@ -175,6 +175,13 @@ void Deck::jog(bool touched, double rate) {
   }
 }
 
+void Deck::setGrid(double bpm, double firstBeatSec) {
+  if (!track_) return;
+  track_->bpm = bpm > 0 ? bpm : 0.0;
+  track_->firstBeatFrame = firstBeatSec * sampleRate_;
+  if (!hasGrid()) sync_ = false;
+}
+
 void Deck::setLoopActive(bool on) {
   looping_ = on && loopEnd_ > loopStart_;
   stretcher_.setLoop(looping_, loopStart_, loopEnd_);

@@ -6,7 +6,9 @@
 #include <cstdint>
 #include <cstdio>
 #include <string>
+#if !defined(DJN_NO_THREADS)
 #include <thread>
+#endif
 
 #include "spsc_queue.h"
 
@@ -37,7 +39,9 @@ class Recorder {
   void writeHeader(uint32_t dataBytes);
 
   SampleRing ring_;
+#if !defined(DJN_NO_THREADS)
   std::thread thread_;
+#endif
   std::FILE* file_ = nullptr;
   Format format_ = kWav16;
   int sampleRate_ = 48000;

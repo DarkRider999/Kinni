@@ -7,12 +7,12 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
-#include <mutex>
 #include <vector>
 
 #include "channel.h"
 #include "deck.h"
 #include "dsp.h"
+#include "platform.h"
 #include "recorder.h"
 #include "spsc_queue.h"
 #include "track.h"
@@ -25,14 +25,15 @@ enum class Cmd : uint8_t {
   Load, Unload, Play, Pause, TogglePlay, Cue, Seek,
   HotCueSet, HotCueSetAt, HotCueTrigger, HotCueClear,
   LoopIn, LoopOut, LoopBeats, LoopExit, LoopHalve, LoopDouble,
-  Pitch, KeyLock, Quantize, Slip, Reverse, Sync, Jog,
+  Pitch, KeyLock, Quantize, Slip, Reverse, Sync, Jog, SetGrid,
 };
 
 struct Command {
   Cmd type;
   int8_t deck;
   int32_t slot;   // hot cue slot, bool flags, jog touched
-  double value;   // seconds, beats, pitch, jog rate
+  double value;   // seconds, beats, pitch, jog rate, bpm
+  double value2;  // SetGrid: first beat (seconds)
   Track* track;   // Load only
 };
 
@@ -48,7 +49,7 @@ class Engine {
   // is single-producer, so producers are serialised here; the audio thread
   // only pops and never takes this lock.
   bool send(const Command& c) {
-    std::lock_guard<std::mutex> lock(sendMutex_);
+    LockGuard<Mutex> lock(sendMutex_);
     return commands_.push(c);
   }
   void collectGarbage();
@@ -96,8 +97,8 @@ class Engine {
 
   SpscQueue<Command, 1024> commands_;
   SpscQueue<Track*, 64> garbage_;
-  std::mutex sendMutex_;
-  std::mutex garbageMutex_;
+  Mutex sendMutex_;
+  Mutex garbageMutex_;
 
   // Scratch buffers (allocated once).
   std::vector<float> deckL_, deckR_, mixL_, mixR_, cueL_, cueR_, interleaved_;

@@ -38,7 +38,7 @@ Engine::~Engine() {
 }
 
 void Engine::collectGarbage() {
-  std::lock_guard<std::mutex> lock(garbageMutex_);
+  LockGuard<Mutex> lock(garbageMutex_);
   Track* t = nullptr;
   while (garbage_.pop(t)) delete t;
 }
@@ -75,6 +75,7 @@ void Engine::dispatch(const Command& c) {
     case Cmd::Reverse: d.setReverse(c.slot != 0); break;
     case Cmd::Sync: d.setSync(c.slot != 0); break;
     case Cmd::Jog: d.jog(c.slot != 0, c.value); break;
+    case Cmd::SetGrid: d.setGrid(c.value, c.value2); break;
   }
   if (old && !garbage_.push(old)) {
     // Garbage queue full (control thread never collects): leak rather than

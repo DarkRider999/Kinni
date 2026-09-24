@@ -31,7 +31,11 @@ std::FILE* openFileUtf8(const char* path, const char* mode) {
 namespace {
 
 // ~22 s of stereo audio at 48 kHz: plenty of slack for slow storage.
+#if defined(DJN_NO_THREADS)
+constexpr size_t kRingSamples = 16;  // recording is unavailable without a writer thread
+#else
 constexpr size_t kRingSamples = size_t(1) << 21;
+#endif
 
 void put16(std::FILE* f, uint16_t v) {
   const uint8_t b[2] = {uint8_t(v), uint8_t(v >> 8)};
@@ -71,6 +75,10 @@ void Recorder::writeHeader(uint32_t dataBytes) {
 }
 
 bool Recorder::start(const char* utf8Path, Format format, int sampleRate) {
+#if defined(DJN_NO_THREADS)
+  (void)utf8Path; (void)format; (void)sampleRate;
+  return false;  // no disk writer thread in single-threaded (web) builds
+#else
   if (active_.load() || !utf8Path) return false;
   if (thread_.joinable()) thread_.join();
   file_ = openFileUtf8(utf8Path, "wb");
@@ -86,13 +94,18 @@ bool Recorder::start(const char* utf8Path, Format format, int sampleRate) {
   thread_ = std::thread([this] { writerLoop(); });
   active_.store(true, std::memory_order_release);
   return true;
+#endif
 }
 
 void Recorder::stop() {
+#if defined(DJN_NO_THREADS)
+  return;
+#else
   if (!thread_.joinable()) return;
   active_.store(false, std::memory_order_release);
   stopRequested_.store(true, std::memory_order_release);
   thread_.join();
+#endif
 }
 
 void Recorder::write(const float* interleaved, int frames) {
@@ -112,7 +125,9 @@ void Recorder::writerLoop() {
     const size_t got = ring_.read(buf.data(), buf.size());
     if (got == 0) {
       if (stopRequested_.load(std::memory_order_acquire)) break;
+#if !defined(DJN_NO_THREADS)
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
+#endif
       continue;
     }
     size_t nb = 0;

@@ -4,6 +4,7 @@
 #include <new>
 
 #include "core/engine.h"
+#include "core/platform.h"
 #include "decode/decoder.h"
 #include "djnexus/djnexus.h"
 
@@ -21,7 +22,7 @@ bool validDeck(const djn_engine* e, int32_t deck) { return e && deck >= 0 && dec
 
 int send(djn_engine* e, int32_t deck, Cmd type, int32_t slot = 0, double value = 0.0) {
   if (!validDeck(e, deck)) return DJN_ERR_INVALID_ARG;
-  Command c{type, int8_t(deck), slot, value, nullptr};
+  Command c{type, int8_t(deck), slot, value, 0.0, nullptr};
   return e->impl.send(c) ? DJN_OK : DJN_ERR_QUEUE_FULL;
 }
 
@@ -64,13 +65,12 @@ DJN_API int djn_deck_load_pcm(djn_engine* engine, int32_t deck, const float* int
                               int32_t channels, int32_t sample_rate, double bpm, double first_beat_sec) {
   if (!validDeck(engine, deck) || !interleaved || frames <= 0) return DJN_ERR_INVALID_ARG;
   std::unique_ptr<djn::Track> track;
-  try {
+  DJN_TRY {
     track = djn::makeTrack(interleaved, frames, channels, sample_rate, engine->impl.sampleRate(), bpm, first_beat_sec);
-  } catch (const std::bad_alloc&) {
-    return DJN_ERR_NO_MEMORY;
   }
+  DJN_CATCH_BAD_ALLOC(return DJN_ERR_NO_MEMORY)
   if (!track) return DJN_ERR_INVALID_ARG;
-  Command c{Cmd::Load, int8_t(deck), 0, 0.0, track.get()};
+  Command c{Cmd::Load, int8_t(deck), 0, 0.0, 0.0, track.get()};
   if (!engine->impl.send(c)) return DJN_ERR_QUEUE_FULL;
   track.release();  // now owned by the engine
   engine->impl.collectGarbage();
@@ -82,17 +82,22 @@ DJN_API int djn_deck_load_file(djn_engine* engine, int32_t deck, const char* utf
   if (!validDeck(engine, deck) || !utf8_path) return DJN_ERR_INVALID_ARG;
   djn::DecodedAudio audio;
   int r;
-  try {
+  DJN_TRY {
     r = djn::decodeFile(utf8_path, audio);
-  } catch (const std::bad_alloc&) {
-    return DJN_ERR_NO_MEMORY;
   }
+  DJN_CATCH_BAD_ALLOC(return DJN_ERR_NO_MEMORY)
   if (r != DJN_OK) return r;
   return djn_deck_load_pcm(engine, deck, audio.samples.data(), audio.frames, audio.channels, audio.sampleRate, bpm,
                            first_beat_sec);
 }
 
 DJN_API int djn_deck_unload(djn_engine* e, int32_t d) { return send(e, d, Cmd::Unload); }
+
+DJN_API int djn_deck_set_grid(djn_engine* e, int32_t d, double bpm, double first_beat_sec) {
+  if (!validDeck(e, d) || !std::isfinite(bpm) || !std::isfinite(first_beat_sec) || bpm > 400) return DJN_ERR_INVALID_ARG;
+  Command c{Cmd::SetGrid, int8_t(d), 0, bpm, first_beat_sec, nullptr};
+  return e->impl.send(c) ? DJN_OK : DJN_ERR_QUEUE_FULL;
+}
 DJN_API int djn_deck_play(djn_engine* e, int32_t d) { return send(e, d, Cmd::Play); }
 DJN_API int djn_deck_pause(djn_engine* e, int32_t d) { return send(e, d, Cmd::Pause); }
 DJN_API int djn_deck_toggle_play(djn_engine* e, int32_t d) { return send(e, d, Cmd::TogglePlay); }

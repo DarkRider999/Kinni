@@ -23,7 +23,7 @@ The real-time audio core of DJ Nexus Pro: decks, key lock, mixer, master bus and
 | Mixer | Trim, 3-band EQ (classic −26/+6 dB or isolator with full kill), bipolar LPF/HPF filter with resonance, channel faders, crossfader (smooth / sharp curves), A/B/THRU assign |
 | Master | Master gain, look-ahead peak limiter, peak meters, headphone cue mix on 4-channel interfaces |
 | Recording | WAV 16-bit (TPDF dither) / 24-bit / 32-bit float, written off the audio thread |
-| Loading | Any PCM from the app (`djn_deck_load_pcm`) or WAV/FLAC/MP3 files (`djn_deck_load_file`); tracks are resampled to the device rate with a band-limited sinc resampler |
+| Loading | Any PCM from the app (`djn_deck_load_pcm`), grid updates after load (`djn_deck_set_grid`) or WAV/FLAC/MP3 files (`djn_deck_load_file`); tracks are resampled to the device rate with a band-limited sinc resampler |
 | Hosts | Desktop: miniaudio (WASAPI, CoreAudio, PulseAudio/ALSA/JACK). Android: Oboe (AAudio/OpenSL ES). iOS: RemoteIO + AVAudioSession |
 
 Real-time rules on the audio thread: no allocation, no locks, no file I/O, no logging. Denormals are flushed to zero on x86, ARM64 and ARMv7.
@@ -32,7 +32,7 @@ Real-time rules on the audio thread: no allocation, no locks, no file I/O, no lo
 
 | Check | Result |
 |---|---|
-| 29 unit/integration tests (x86-64 Linux) | pass |
+| 30 unit/integration tests (x86-64 Linux) | pass |
 | Same tests under ASan + UBSan | pass, no reports |
 | Multi-thread stress test (audio + UI + background loader + recorder) under TSan | pass, no data races |
 | Same tests on **ARM64** and **ARMv7** (cross-compiled, run under QEMU) | pass |
@@ -148,6 +148,10 @@ djn_engine_collect_garbage(e);       // frees tracks the audio thread released
 ```
 
 BPM and first-beat values come from the Smart DJ Bot's analysis models (AI blueprint A1/A3). Without them (`bpm = 0`), everything except sync, quantize and beat loops still works.
+
+## Browser preview
+
+[`web/`](web/) builds the same engine to WebAssembly and wraps it in a two-deck console ("Deck Lab") so the engine can be heard without installing anything. See [web/README.md](web/README.md).
 
 ## Not in this milestone yet
 
