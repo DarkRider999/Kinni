@@ -29,7 +29,7 @@ android {
         // A fixed debug key (password "android"), so each preview build installs
         // over the last one. Not for store releases.
         getByName("debug") {
-            storeFile = file("debug.keystore")
+            storeFile = file("decklab-preview.keystore")
             storePassword = "android"
             keyAlias = "androiddebugkey"
             keyPassword = "android"

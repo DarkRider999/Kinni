@@ -30,4 +30,4 @@ gradle -p dj-nexus-pro/android-app assembleDebug
 | `assets/midi-shim.js` | `navigator.requestMIDIAccess` for the page, backed by the bridge (the WebView has no Web MIDI) |
 | `build.gradle.kts` | Copies the page, `djnexus.wasm` and the JS runtime from `engine/web` into the APK at build time |
 
-`debug.keystore` is a preview-only signing key (password `android`); a store release needs its own key.
+`decklab-preview.keystore` is a preview-only signing key (password `android`); a store release needs its own key.
