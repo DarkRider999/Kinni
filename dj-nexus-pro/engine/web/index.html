@@ -94,6 +94,10 @@
   .loops { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
   .loops button { padding: 7px 0; font-family: var(--mono); font-size: 10px; }
   .loops button.on { color: var(--c); border-color: var(--c); }
+  .rolls { display: grid; grid-template-columns: auto repeat(4, minmax(0, 1fr)) 1.4fr; gap: 4px; align-items: center; }
+  .rolls button { padding: 7px 0; font-family: var(--mono); font-size: 10px; touch-action: none; }
+  .rolls button.held { color: var(--void); background: var(--c); border-color: var(--c); }
+  .rolls .censor { font-family: var(--display); }
   .transport { display: grid; grid-template-columns: 1fr 1.3fr repeat(4, 1fr); gap: 5px; }
   .transport button { padding: 12px 0; }
   .t-cue { color: var(--c) !important; border-color: var(--c) !important; }
@@ -246,7 +250,7 @@
       <ul>
         <li>Press <b>PLAY</b> on A. On B, press <b>SYNC</b>, then <b>PLAY</b>: B locks to A's tempo and beat.</li>
         <li>Turn B's <b>LOW</b> knob all the way down, raise the crossfader to the middle, then swap the bass.</li>
-        <li>Tap a <b>loop</b> size, then <b>SLIP</b> + loop exit to jump back where the track would be.</li>
+        <li>Hold a <b>ROLL</b> size (slide across them to change it) or <b>CENSOR</b>, then let go: the deck lands back where the track would be.</li>
         <li>Drag a <b>jog wheel</b> to scratch. Hold <b>‹ ›</b> to nudge.</li>
         <li>Pick an <b>FX</b>, a beat length and hold <b>HOLD</b>, or tap <b>ON</b>. Try Echo on 1/2 beat and let go: it rings out.</li>
         <li>Switch <b>Color FX</b> to Dub Echo or Space and twist a <b>COLOR</b> knob, then let it go: the tail rings on.</li>
@@ -259,7 +263,7 @@
       <h3>What's running</h3>
       <ul>
         <li>The same C++ engine as the app, compiled to <b>WebAssembly</b> and run on the browser's audio thread.</li>
-        <li>Key lock (tempo without pitch change), phase-locked sync, loops, slip, hot cues, isolator EQ, filter, limiter.</li>
+        <li>Key lock (tempo without pitch change), phase-locked sync, loops, slip, slip roll, censor, hot cues, isolator EQ, filter, limiter.</li>
         <li>12 beat FX timed from the master deck's beat grid, and a 16-voice sampler with quantized triggers and tempo-synced loops.</li>
         <li>Six colour FX on the channel knobs and three bar-quantized macros: riser, build-up and drop.</li>
         <li>Demo tracks are generated in your browser. Nothing is uploaded; your files stay on this device.</li>
@@ -611,6 +615,10 @@
           <div class="row"><button type="button" class="toggle" id="clr${d.i}">CLEAR CUE</button><button type="button" id="in${d.i}">IN</button><button type="button" id="out${d.i}">OUT</button><button type="button" id="exit${d.i}">EXIT</button></div>
           <div class="loops" id="loops${d.i}">${loops}</div>
           <div class="row"><button type="button" id="half${d.i}">LOOP ÷2</button><button type="button" id="dbl${d.i}">LOOP ×2</button></div>
+          <div class="rolls" id="rolls${d.i}"><span class="label">Roll</span>
+            <button type="button" data-roll="0.125" aria-label="Hold for a 1/8 beat slip roll">⅛</button><button type="button" data-roll="0.25" aria-label="Hold for a 1/4 beat slip roll">¼</button>
+            <button type="button" data-roll="0.5" aria-label="Hold for a 1/2 beat slip roll">½</button><button type="button" data-roll="1" aria-label="Hold for a 1 beat slip roll">1</button>
+            <button type="button" class="censor" data-censor="1" aria-label="Hold to play backwards (censor)">CENSOR</button></div>
         </div>
       </div>
       <div class="pitch">
@@ -1066,6 +1074,30 @@
       if (!d.bpm) { toast("Beat loops need a BPM."); return; }
       Engine.call("djn_deck_loop_beats", i, +b.dataset.loop);
     });
+    // Slip roll / censor: hold to perform, release to land back on the beat.
+    // Sliding onto another roll size while held changes the length.
+    const rollsEl = $(`#rolls${i}`);
+    let rollHeld = null;
+    const rollDown = (b) => {
+      if (b.dataset.censor) { Engine.call("djn_deck_censor", i, 1); rollHeld = b; b.classList.add("held"); return; }
+      if (!d.bpm) { toast("Slip roll needs a BPM."); return; }
+      if (rollHeld && rollHeld !== b) rollHeld.classList.remove("held");
+      rollHeld = b; b.classList.add("held");
+      Engine.call("djn_deck_slip_roll", i, 1, +b.dataset.roll);
+    };
+    const rollUp = () => {
+      if (!rollHeld) return;
+      if (rollHeld.dataset.censor) Engine.call("djn_deck_censor", i, 0);
+      else Engine.call("djn_deck_slip_roll", i, 0, 0);
+      rollHeld.classList.remove("held"); rollHeld = null;
+    };
+    rollsEl.addEventListener("pointerdown", (e) => { const b = e.target.closest("button"); if (!b) return; e.preventDefault(); rollDown(b); });
+    rollsEl.addEventListener("pointerover", (e) => { const b = e.target.closest("button[data-roll]"); if (b && rollHeld && !rollHeld.dataset.censor && b !== rollHeld) rollDown(b); });
+    window.addEventListener("pointerup", rollUp);
+    window.addEventListener("pointercancel", rollUp);
+    rollsEl.addEventListener("keydown", (e) => { const b = e.target.closest("button"); if (b && (e.key === "Enter" || e.key === " ") && !e.repeat) { e.preventDefault(); rollDown(b); } });
+    rollsEl.addEventListener("keyup", (e) => { if (e.key === "Enter" || e.key === " ") rollUp(); });
+
     $(`#clr${i}`).onclick = () => { d.clearing = !d.clearing; $(`#clr${i}`).classList.toggle("on", d.clearing); renderPads(d); };
     $(`#pads${i}`).addEventListener("click", (e) => {
       const b = e.target.closest(".pad"); if (!b) return;

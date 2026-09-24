@@ -28,7 +28,7 @@ enum class Cmd : uint8_t {
   Load, Unload, Play, Pause, TogglePlay, Cue, Seek,
   HotCueSet, HotCueSetAt, HotCueTrigger, HotCueClear,
   LoopIn, LoopOut, LoopBeats, LoopExit, LoopHalve, LoopDouble,
-  Pitch, KeyLock, Quantize, Slip, Reverse, Sync, Jog, SetGrid,
+  Pitch, KeyLock, Quantize, Slip, Reverse, Sync, Jog, SetGrid, SlipRoll, Censor,
   // Sampler (deck = -1 except SamplerCapture, which names the source deck)
   SamplerLoad, SamplerCapture, SamplerTrigger, SamplerRelease, SamplerStopAll,
   SamplerMode, SamplerChoke, SamplerGain, SamplerPitch, SamplerSync,

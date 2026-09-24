@@ -19,6 +19,7 @@ The real-time audio core of DJ Nexus Pro: decks, key lock, mixer, master bus and
 | Tempo | Pitch ±50%, **key lock** (built-in WSOLA time-stretcher), nudge, vinyl scratch via jog, reverse |
 | Sync | Tempo + beat-phase sync to a master deck (auto or manual), phase-locked loop with half/double-time matching, quantized hot cues |
 | Loops | Loop in/out, beat loops 1/32–64 beats snapped to the grid, halve/double, **slip mode** |
+| Slip roll & censor | Hold-to-perform moves with slip forced on: slip roll repeats a 1/16–4 beat slice from the last grid line (length changeable while held), censor plays backwards; on release the deck lands exactly where the track would have been and the user's slip setting is restored |
 | Seamless jumps | Every jump, loop wrap and engine switch is crossfaded over ~5 ms, so no clicks |
 | Mixer | Trim, 3-band EQ (classic −26/+6 dB or isolator with full kill), bipolar LPF/HPF filter with resonance, channel faders, crossfader (smooth / sharp curves), A/B/THRU assign |
 | Master | Master gain, look-ahead peak limiter, peak meters, headphone cue mix on 4-channel interfaces |
@@ -36,7 +37,7 @@ Real-time rules on the audio thread: no allocation, no locks, no file I/O, no lo
 
 | Check | Result |
 |---|---|
-| 61 unit/integration tests (x86-64 Linux) | pass |
+| 65 unit/integration tests (x86-64 Linux) | pass |
 | Same tests under ASan + UBSan | pass, no reports |
 | Multi-thread stress test (audio + UI + background loader + recorder) under TSan | pass, no data races |
 | Same tests on **ARM64** and **ARMv7** (cross-compiled, run under QEMU) | pass |
@@ -180,7 +181,6 @@ BPM and first-beat values come from the Smart DJ Bot's analysis models (AI bluep
 
 ## Not in this milestone yet
 
-- **Slip roll** as a deck feature: today a slip + beat loop gives the same result; the app can map its Slip Roll button to that.
 - **Stems playback** (4-stem decks fed by the AI Stem Splitter).
 - **Commercial time-stretcher.** The built-in WSOLA stretcher passes the pitch and level-stability tests and is fine for development. SPEC §10.1 plans a Rubber Band / Superpowered bake-off before launch; `Stretcher` is isolated behind a small interface for that swap.
 - **AAC/M4A/ALAC decoding.** Use the platform decoders (MediaCodec, AVAudioFile) and `djn_deck_load_pcm`.

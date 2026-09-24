@@ -133,6 +133,18 @@ DJN_API int djn_deck_set_quantize(djn_engine* engine, int32_t deck, int32_t enab
 DJN_API int djn_deck_set_slip(djn_engine* engine, int32_t deck, int32_t enabled);
 DJN_API int djn_deck_set_reverse(djn_engine* engine, int32_t deck, int32_t enabled);
 
+/*
+ * Momentary moves with slip forced on (the deck's slip setting is restored
+ * afterwards). Call with on = 1 when the button goes down and 0 when released:
+ * playback then continues exactly where the track would have been.
+ *   Slip roll: repeats a `beats`-long slice (1/16..4) starting on the latest
+ *              grid line; calling again while held changes the length.
+ *              Needs a beat grid.
+ *   Censor:    plays backwards while held.
+ */
+DJN_API int djn_deck_slip_roll(djn_engine* engine, int32_t deck, int32_t on, double beats);
+DJN_API int djn_deck_censor(djn_engine* engine, int32_t deck, int32_t on);
+
 /* Sync: match tempo and beat phase to the master deck (see djn_engine_set_master_deck). */
 DJN_API int djn_deck_set_sync(djn_engine* engine, int32_t deck, int32_t enabled);
 DJN_API int djn_engine_set_master_deck(djn_engine* engine, int32_t deck); /* -1 = auto */
@@ -292,6 +304,8 @@ typedef struct djn_deck_state {
   int32_t reverse;
   int32_t looping;
   int32_t is_master;
+  int32_t slip_roll;       /* slip roll held */
+  int32_t censor;          /* censor held */
   double  position_sec;    /* playhead */
   double  duration_sec;
   double  slip_position_sec;

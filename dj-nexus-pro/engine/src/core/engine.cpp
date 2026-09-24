@@ -150,6 +150,8 @@ void Engine::dispatch(const Command& c) {
     case Cmd::Sync: d.setSync(c.slot != 0); break;
     case Cmd::Jog: d.jog(c.slot != 0, c.value); break;
     case Cmd::SetGrid: d.setGrid(c.value, c.value2); break;
+    case Cmd::SlipRoll: d.slipRoll(c.slot != 0, c.value); break;
+    case Cmd::Censor: d.censor(c.slot != 0); break;
     default: break;  // sampler commands are handled in dispatchGlobal()
   }
   if (old && !garbage_.push(old)) {
@@ -431,6 +433,8 @@ void Engine::fillState(djn_engine_state* s) {
     o.slip = t.slip.load(std::memory_order_relaxed);
     o.reverse = t.reverse.load(std::memory_order_relaxed);
     o.looping = t.looping.load(std::memory_order_relaxed);
+    o.slip_roll = t.slipRoll.load(std::memory_order_relaxed);
+    o.censor = t.censor.load(std::memory_order_relaxed);
     o.is_master = s->master_deck == d ? 1 : 0;
     o.position_sec = t.position.load(std::memory_order_relaxed);
     o.duration_sec = t.duration.load(std::memory_order_relaxed);

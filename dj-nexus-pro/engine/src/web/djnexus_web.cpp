@@ -50,7 +50,8 @@ WEB_EXPORT(djnw_poll) void djnw_poll(djn_engine* e) {
 
 // Deck fields: 0 loaded, 1 playing, 2 key lock, 3 sync, 4 slip, 5 reverse,
 // 6 looping, 7 master, 8 position, 9 duration, 10 track bpm, 11 effective bpm,
-// 12 rate, 13 beat phase, 14 loop start, 15 loop end, 16 cue, 17 peak L, 18 peak R.
+// 12 rate, 13 beat phase, 14 loop start, 15 loop end, 16 cue, 17 peak L, 18 peak R,
+// 19 slip roll held, 20 censor held.
 WEB_EXPORT(djnw_deck) double djnw_deck(int d, int field) {
   if (d < 0 || d >= DJN_MAX_DECKS) return 0;
   const djn_deck_state& s = g_state.decks[d];
@@ -74,6 +75,8 @@ WEB_EXPORT(djnw_deck) double djnw_deck(int d, int field) {
     case 16: return s.cue_sec;
     case 17: return s.peak_l;
     case 18: return s.peak_r;
+    case 19: return s.slip_roll;
+    case 20: return s.censor;
   }
   return 0;
 }

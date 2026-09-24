@@ -154,6 +154,41 @@ void Deck::loopDouble() {
 
 void Deck::setPitch(double p) { pitch_ = clampv(p, -0.5, 0.5); }
 
+void Deck::slipRoll(bool on, double beats) {
+  if (on) {
+    if (!hasGrid()) return;  // rolls are defined in beats
+    beats = clampv(beats, 1.0 / 16.0, 4.0);
+    if (!slipRoll_ && !censor_) savedSlip_ = slip_;
+    slip_ = true;
+    slipRoll_ = true;
+    // The slice starts on the latest grid line of the division (at most a beat
+    // back), so the current position is inside it and nothing jumps now.
+    const double fpb = track_->framesPerBeat();
+    const double unit = std::min(beats, 1.0) * fpb;
+    loopStart_ = track_->firstBeatFrame + std::floor((pos_ - track_->firstBeatFrame) / unit) * unit;
+    loopEnd_ = loopStart_ + beats * fpb;
+    setLoopActive(true);
+  } else if (slipRoll_) {
+    slipRoll_ = false;
+    setLoopActive(false);
+    if (!censor_) restoreSlip_ = true;  // after the slip return in render()
+  }
+}
+
+void Deck::censor(bool on) {
+  if (!track_) return;
+  if (on) {
+    if (!slipRoll_ && !censor_) savedSlip_ = slip_;
+    slip_ = true;
+    censor_ = true;
+    reverse_ = true;
+  } else if (censor_) {
+    censor_ = false;
+    reverse_ = false;
+    if (!slipRoll_) restoreSlip_ = true;
+  }
+}
+
 void Deck::setSlip(bool on) {
   slip_ = on;
   slipPos_ = pos_;
@@ -246,6 +281,10 @@ void Deck::render(float* outL, float* outR, int n, const SyncRef& ref, bool isMa
     lastRate_ = 0.0;
     stretching_ = false;
     if (!inExcursion()) slipPos_ = pos_;
+    if (restoreSlip_) {  // released while paused: nothing to return to
+      slip_ = savedSlip_;
+      restoreSlip_ = false;
+    }
     return;
   }
 
@@ -253,6 +292,10 @@ void Deck::render(float* outL, float* outR, int n, const SyncRef& ref, bool isMa
   const bool excursion = inExcursion();
   if (slip_ && wasExcursion_ && !excursion) jumpTo(slipPos_);
   wasExcursion_ = excursion;
+  if (restoreSlip_) {
+    slip_ = savedSlip_;
+    restoreSlip_ = false;
+  }
 
   // ---- tempo
   const double fpb = track_->framesPerBeat();
@@ -398,6 +441,8 @@ void Deck::publish(DeckTelemetry& t) const {
   t.slip.store(slip_ ? 1 : 0, std::memory_order_relaxed);
   t.reverse.store(reverse_ ? 1 : 0, std::memory_order_relaxed);
   t.looping.store(looping_ ? 1 : 0, std::memory_order_relaxed);
+  t.slipRoll.store(slipRoll_ ? 1 : 0, std::memory_order_relaxed);
+  t.censor.store(censor_ ? 1 : 0, std::memory_order_relaxed);
   t.position.store(pos_ / sr, std::memory_order_relaxed);
   t.duration.store(track_ ? double(track_->frames) / sr : 0.0, std::memory_order_relaxed);
   t.slipPosition.store(slipPos_ / sr, std::memory_order_relaxed);

@@ -7,7 +7,7 @@
   // Deck fields exposed by djnw_deck() (see src/web/djnexus_web.cpp).
   var DECK_FIELDS = ["loaded", "playing", "keyLock", "sync", "slip", "reverse", "looping", "master",
     "position", "duration", "trackBpm", "effectiveBpm", "rate", "beatPhase", "loopStart", "loopEnd",
-    "cue", "peakL", "peakR"];
+    "cue", "peakL", "peakR", "slipRoll", "censor"];
   var ENGINE_FIELDS = ["masterPeakL", "masterPeakR", "limiterDb", "dspLoad", "masterDeck", "clockBpm",
     "samplerLoadedLo", "samplerLoadedHi", "samplerPlayingLo", "samplerPlayingHi",
     "colorFx", "colorParam", "macro", "macroTarget", "macroProgress", "macroBeatsLeft"];

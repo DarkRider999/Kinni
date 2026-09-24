@@ -464,3 +464,94 @@ TEST(control_thread_and_audio_thread_run_concurrently) {
   std::remove(path);
   CHECK(finite.load());
 }
+
+// ---------------------------------------------------------------- slip roll / censor
+
+namespace {
+// One tone per beat at 120 BPM: 200, 250, 300 ... Hz, so the playing beat is audible.
+std::vector<float> beatTones(double seconds) {
+  std::vector<float> s(size_t(seconds * kRate) * 2);
+  double phase = 0;
+  for (size_t i = 0; i < s.size() / 2; ++i) {
+    const int beat = int(double(i) / (kRate * 0.5));
+    phase += 2 * kPi * (200.0 + 50.0 * beat) / kRate;
+    s[2 * i] = s[2 * i + 1] = 0.4f * float(std::sin(phase));
+  }
+  return s;
+}
+}  // namespace
+
+TEST(slip_roll_repeats_the_slice_and_returns_on_time) {
+  EngineHandle e;
+  load(e, 0, beatTones(20), 120, 0.0);
+  djn_deck_play(e, 0);
+  render(e, 2.15);  // beat 4.3 (400 Hz)
+  djn_deck_slip_roll(e, 0, 1, 0.5);
+  const auto held = render(e, 1.0);
+  auto s = deckState(e, 0);
+  CHECK(s.slip_roll == 1 && s.looping == 1 && s.slip == 1);
+  CHECK_NEAR(s.loop_start_sec, 2.0, 1e-6);  // the half-beat line before 2.15 s
+  CHECK_NEAR(s.loop_end_sec - s.loop_start_sec, 0.25, 1e-6);
+  CHECK_NEAR(frequency(held, size_t(0.5 * kRate)), 400.0, 5.0);  // still beat 4, a second later
+  djn_deck_slip_roll(e, 0, 0, 0);
+  render(e, 0.2);
+  s = deckState(e, 0);
+  CHECK(s.slip_roll == 0 && s.looping == 0);
+  CHECK(s.slip == 0);                            // the user's setting (off) is back
+  CHECK_NEAR(s.position_sec, 2.15 + 1.2, 0.02);  // continued as if never rolled
+}
+
+TEST(slip_roll_length_changes_while_held) {
+  EngineHandle e;
+  load(e, 0, beatTones(20), 120, 0.0);
+  djn_deck_play(e, 0);
+  render(e, 2.6);
+  djn_deck_slip_roll(e, 0, 1, 1.0);
+  render(e, 0.3);
+  CHECK_NEAR(deckState(e, 0).loop_end_sec - deckState(e, 0).loop_start_sec, 0.5, 1e-6);
+  djn_deck_slip_roll(e, 0, 1, 0.25);
+  render(e, 0.3);
+  CHECK_NEAR(deckState(e, 0).loop_end_sec - deckState(e, 0).loop_start_sec, 0.125, 1e-6);
+  djn_deck_slip_roll(e, 0, 0, 0);
+  render(e, 0.1);
+  CHECK_NEAR(deckState(e, 0).position_sec, 2.6 + 0.7, 0.02);
+}
+
+TEST(censor_plays_backwards_then_snaps_to_the_real_position) {
+  EngineHandle e;
+  load(e, 0, beatTones(20), 120, 0.0);
+  djn_deck_set_slip(e, 0, 1);  // the user already had slip on: it must stay on
+  djn_deck_play(e, 0);
+  render(e, 3.0);
+  djn_deck_censor(e, 0, 1);
+  render(e, 1.0);
+  auto s = deckState(e, 0);
+  CHECK(s.censor == 1 && s.reverse == 1);
+  CHECK_NEAR(s.position_sec, 2.0, 0.03);  // went backwards
+  djn_deck_censor(e, 0, 0);
+  render(e, 0.1);
+  s = deckState(e, 0);
+  CHECK(s.censor == 0 && s.reverse == 0 && s.slip == 1);
+  CHECK_NEAR(s.position_sec, 4.1, 0.03);
+}
+
+TEST(slip_roll_needs_a_grid_and_survives_pause) {
+  EngineHandle e;
+  load(e, 0, beatTones(20), 0, 0.0);  // no grid
+  djn_deck_play(e, 0);
+  render(e, 1.0);
+  CHECK(djn_deck_slip_roll(e, 0, 1, 1.0) == DJN_OK);
+  render(e, 0.2);
+  CHECK(deckState(e, 0).slip_roll == 0);  // ignored
+  CHECK(djn_deck_slip_roll(e, 0, 1, 0) == DJN_ERR_INVALID_ARG);
+
+  djn_deck_set_grid(e, 0, 120, 0.0);
+  djn_deck_slip_roll(e, 0, 1, 1.0);
+  render(e, 0.2);
+  djn_deck_pause(e, 0);
+  render(e, 0.2);
+  djn_deck_slip_roll(e, 0, 0, 0);  // released while paused
+  render(e, 0.1);
+  const auto s = deckState(e, 0);
+  CHECK(s.slip_roll == 0 && s.slip == 0 && s.looping == 0);
+}

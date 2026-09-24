@@ -141,6 +141,11 @@ DJN_API int djn_deck_set_quantize(djn_engine* e, int32_t d, int32_t on) { return
 DJN_API int djn_deck_set_slip(djn_engine* e, int32_t d, int32_t on) { return send(e, d, Cmd::Slip, on != 0); }
 DJN_API int djn_deck_set_reverse(djn_engine* e, int32_t d, int32_t on) { return send(e, d, Cmd::Reverse, on != 0); }
 DJN_API int djn_deck_set_sync(djn_engine* e, int32_t d, int32_t on) { return send(e, d, Cmd::Sync, on != 0); }
+DJN_API int djn_deck_slip_roll(djn_engine* e, int32_t d, int32_t on, double beats) {
+  if (on && (!(beats > 0) || !std::isfinite(beats))) return DJN_ERR_INVALID_ARG;
+  return send(e, d, Cmd::SlipRoll, on != 0, beats);
+}
+DJN_API int djn_deck_censor(djn_engine* e, int32_t d, int32_t on) { return send(e, d, Cmd::Censor, on != 0); }
 DJN_API int djn_deck_jog(djn_engine* e, int32_t d, int32_t touched, double rate) {
   if (!std::isfinite(rate)) return DJN_ERR_INVALID_ARG;
   return send(e, d, Cmd::Jog, touched != 0, rate);

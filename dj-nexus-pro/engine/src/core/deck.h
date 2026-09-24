@@ -24,6 +24,7 @@ struct SyncRef {
 // Values the UI reads. Written by the audio thread once per block.
 struct DeckTelemetry {
   std::atomic<int> loaded{0}, playing{0}, keyLock{0}, sync{0}, slip{0}, reverse{0}, looping{0};
+  std::atomic<int> slipRoll{0}, censor{0};
   std::atomic<double> position{0}, duration{0}, slipPosition{0}, trackBpm{0}, effectiveBpm{0}, rate{0};
   std::atomic<double> beatPhase{-1}, loopStart{0}, loopEnd{0}, cue{0};
   std::atomic<int64_t> beatIndex{0};
@@ -57,6 +58,10 @@ class Deck {
   void setQuantize(bool on) { quantize_ = on; }
   void setSlip(bool on);
   void setReverse(bool on) { reverse_ = on; }
+  // Momentary performance moves with slip forced on: when released, playback
+  // continues where the track would have been.
+  void slipRoll(bool on, double beats);  // repeat the last `beats` slice while held
+  void censor(bool on);                  // play backwards while held
   void setSync(bool on);
   void jog(bool touched, double rate);
   void setGrid(double bpm, double firstBeatSec);
@@ -124,6 +129,9 @@ class Deck {
 
   // Slip
   bool slip_ = false;
+  bool slipRoll_ = false, censor_ = false;
+  bool savedSlip_ = false;     // user's slip setting, restored after a momentary move
+  bool restoreSlip_ = false;   // restore it once the slip return has happened
   double slipPos_ = 0.0;
   bool wasExcursion_ = false;
 
