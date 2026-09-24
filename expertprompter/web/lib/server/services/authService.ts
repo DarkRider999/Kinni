@@ -2,7 +2,8 @@ import bcrypt from 'bcryptjs';
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import { jwtExpiresIn, jwtSecret } from '../env';
 import { prisma } from '../prisma';
-import { conflict, unauthorized } from '../httpError';
+import { badRequest, conflict, unauthorized } from '../httpError';
+import type { OAuthProfile } from '../oauth';
 
 export interface AuthUser {
   id: string;
@@ -44,8 +45,62 @@ export async function register(email: string, password: string) {
 
 export async function login(email: string, password: string) {
   const user = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
+  // Accounts created with Google/Facebook/GitHub have no password.
   const ok = await bcrypt.compare(password, user?.passwordHash ?? getDummyHash());
-  if (!user || !ok) throw unauthorized('Invalid email or password');
+  if (!user || !user.passwordHash || !ok) throw unauthorized('Invalid email or password');
+  const authUser = { id: user.id, email: user.email };
+  return { user: authUser, token: signToken(authUser) };
+}
+
+/**
+ * Finds or creates the user for a provider sign-in and returns a session.
+ *
+ * - A known provider account signs straight in.
+ * - Otherwise, a provider-verified email links to an existing user with that
+ *   email. Linking clears any password on that account: it was set without
+ *   proving ownership of the email, so it must not keep working once the real
+ *   owner has signed in. (This also stops anyone pre-registering the owner's
+ *   email to hijack master access.)
+ * - Unverified provider emails never link; they need a fresh account.
+ */
+export async function signInWithProvider(provider: string, profile: OAuthProfile) {
+  const existingLink = await prisma.account.findUnique({
+    where: { provider_providerAccountId: { provider, providerAccountId: profile.providerAccountId } },
+    include: { user: true },
+  });
+
+  let user = existingLink?.user;
+  if (!user) {
+    if (!profile.email) throw badRequest('Your account did not share an email address. Please allow email access and try again.');
+    const email = profile.email.trim().toLowerCase();
+    const byEmail = await prisma.user.findUnique({ where: { email } });
+
+    if (byEmail && !profile.emailVerified) {
+      throw conflict('An account with this email already exists. Sign in with your password instead.');
+    }
+
+    user = byEmail
+      ? await prisma.user.update({
+          where: { id: byEmail.id },
+          data: {
+            emailVerified: byEmail.emailVerified ?? new Date(),
+            passwordHash: byEmail.emailVerified ? byEmail.passwordHash : null,
+            name: byEmail.name ?? profile.name,
+            image: byEmail.image ?? profile.image,
+            accounts: { create: { provider, providerAccountId: profile.providerAccountId } },
+          },
+        })
+      : await prisma.user.create({
+          data: {
+            email,
+            name: profile.name,
+            image: profile.image,
+            emailVerified: profile.emailVerified ? new Date() : null,
+            accounts: { create: { provider, providerAccountId: profile.providerAccountId } },
+          },
+        });
+  }
+
   const authUser = { id: user.id, email: user.email };
   return { user: authUser, token: signToken(authUser) };
 }

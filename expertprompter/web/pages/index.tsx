@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Header from '@/components/Header';
 import InputPanel, { type InputState } from '@/components/InputPanel';
 import CategoryBadge from '@/components/CategoryBadge';
@@ -6,10 +6,11 @@ import PromptCard from '@/components/PromptCard';
 import AIRecommendationPanel from '@/components/AIRecommendationPanel';
 import HistoryPanel from '@/components/HistoryPanel';
 import AuthModal from '@/components/AuthModal';
+import PaywallModal from '@/components/PaywallModal';
 import { SparklesIcon } from '@/components/Icons';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import type { Category, GenerateRequest, GenerateResponse, PromptOptions, SavedPrompt } from '@/lib/types';
+import type { Category, GenerateRequest, GenerateResponse, PromptOptions, RecommendedTool, SavedPrompt } from '@/lib/types';
 import { CATEGORY_LABELS } from '@/lib/types';
 
 /** Drops empty option fields so the request stays clean. */
@@ -18,7 +19,7 @@ function compactOptions(options: PromptOptions): PromptOptions {
 }
 
 export default function Home() {
-  const { user } = useAuth();
+  const { user, entitlement, providers, setEntitlement, refresh, oauthError, clearOauthError } = useAuth();
   const [input, setInput] = useState<InputState>({ rawInput: '', promptStyle: 'PROFESSIONAL', options: {} });
   const [result, setResult] = useState<GenerateResponse | null>(null);
   const [lastRequest, setLastRequest] = useState<GenerateRequest | null>(null);
@@ -26,16 +27,69 @@ export default function Home() {
   const [regenerating, setRegenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
+  const [authReason, setAuthReason] = useState<string | null>(null);
+  const [paywallOpen, setPaywallOpen] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
   const [historyKey, setHistoryKey] = useState(0);
   const [savedId, setSavedId] = useState<string | null>(null);
   const outputRef = useRef<HTMLDivElement>(null);
 
+  const freeLimit = providers?.freeRunsLimit ?? 5;
+  const openSignIn = useCallback((reason: string | null = null) => {
+    setAuthReason(reason);
+    setAuthOpen(true);
+  }, []);
+
+  // Surface a failed Google/Facebook/GitHub sign-in.
+  useEffect(() => {
+    if (oauthError) {
+      setError(oauthError);
+      clearOauthError();
+    }
+  }, [oauthError, clearOauthError]);
+
+  // Back from Stripe Checkout: the webhook may land a moment after the redirect,
+  // so re-check the plan a few times.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const billing = params.get('billing');
+    if (!billing) return;
+    window.history.replaceState(null, '', window.location.pathname);
+    if (billing === 'cancelled') {
+      setNotice('Checkout cancelled. You can upgrade any time.');
+      return;
+    }
+    setNotice('Payment received. Activating Premium…');
+    let tries = 0;
+    const timer = setInterval(() => {
+      tries += 1;
+      void refresh();
+      if (tries >= 6) clearInterval(timer);
+    }, 2000);
+    return () => clearInterval(timer);
+  }, [refresh]);
+
+  useEffect(() => {
+    if (notice?.startsWith('Payment received') && entitlement?.plan === 'PREMIUM') {
+      setNotice('Welcome to Premium! Enjoy unlimited prompts.');
+    }
+  }, [notice, entitlement]);
+
   const run = useCallback(async (payload: GenerateRequest, mode: 'generate' | 'regenerate') => {
+    if (providers?.accountsEnabled && !user) {
+      openSignIn(`Sign in to get ${freeLimit} free expert prompts.`);
+      return;
+    }
+    if (entitlement?.plan === 'FREE' && entitlement.freeRunsRemaining === 0) {
+      setPaywallOpen(true);
+      return;
+    }
     const setBusy = mode === 'generate' ? setLoading : setRegenerating;
     setBusy(true);
     setError(null);
     try {
       const res = await api.generate(payload);
+      if (res.entitlement) setEntitlement(res.entitlement);
       setResult(res);
       setLastRequest(payload);
       setSavedId(res.savedPromptId ?? null);
@@ -45,11 +99,15 @@ export default function Home() {
         requestAnimationFrame(() => outputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
       }
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.');
+      if (e instanceof ApiError && e.code === 'AUTH_REQUIRED') openSignIn(e.message);
+      else if (e instanceof ApiError && e.code === 'PAYWALL') {
+        setPaywallOpen(true);
+        void refresh();
+      } else setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.');
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [providers, user, entitlement, freeLimit, openSignIn, setEntitlement, refresh]);
 
   const generate = () =>
     run(
@@ -84,18 +142,30 @@ export default function Home() {
     setHistoryKey((k) => k + 1);
   };
 
-  // Re-open a saved prompt: restore the form and show the saved text, and
-  // fetch fresh tool details without saving a duplicate.
+  // Re-open a saved prompt without generating again (which would use a free run):
+  // tool cards come from the catalog by name.
   const openSaved = async (p: SavedPrompt) => {
     const request: GenerateRequest = { rawInput: p.rawInput, promptStyle: p.promptStyle, options: p.options, category: p.detectedCategory, variation: 0 };
     setInput({ rawInput: p.rawInput, promptStyle: p.promptStyle, options: p.options ?? {} });
     setError(null);
-    try {
-      const fresh = await api.generate({ ...request, save: false });
-      setResult({ ...fresh, generatedPrompt: p.generatedPrompt });
-    } catch {
-      setResult(null);
-    }
+    const catalog = await api.meta().then((m) => m.tools).catch(() => []);
+    const toolDetails: RecommendedTool[] = p.recommendedTools.flatMap((name, i) => {
+      const tool = catalog.find((t) => t.name === name);
+      return tool ? [{ ...tool, reason: tool.description, rank: i + 1 }] : [];
+    });
+    setResult({
+      generatedPrompt: p.generatedPrompt,
+      detectedCategory: p.detectedCategory,
+      categoryLabel: CATEGORY_LABELS[p.detectedCategory],
+      confidence: 1,
+      alternativeCategories: [],
+      recommendedTools: p.recommendedTools,
+      toolDetails,
+      promptStyle: p.promptStyle,
+      detectedLanguage: p.options?.language || 'English',
+      variation: 0,
+      title: p.title ?? p.rawInput,
+    });
     setLastRequest(request);
     setSavedId(p.id);
     outputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -103,7 +173,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen">
-      <Header onSignIn={() => setAuthOpen(true)} />
+      <Header onSignIn={() => openSignIn()} onUpgrade={() => setPaywallOpen(true)} />
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
         <div className="mb-8 max-w-2xl">
@@ -124,11 +194,10 @@ export default function Home() {
             ) : (
               <div className="card text-sm text-slate-600 dark:text-slate-400">
                 <p>
-                  You&apos;re using guest mode.{' '}
-                  <button type="button" className="font-medium text-brand-600 hover:underline dark:text-brand-400" onClick={() => setAuthOpen(true)}>
-                    Sign in
+                  <button type="button" className="font-medium text-brand-600 hover:underline dark:text-brand-400" onClick={() => openSignIn()}>
+                    Sign in with Google, Facebook or email
                   </button>{' '}
-                  to save prompts and keep a searchable history.
+                  to get {freeLimit} free expert prompts and a searchable history.
                 </p>
               </div>
             )}
@@ -136,6 +205,12 @@ export default function Home() {
 
           {/* Right column: output */}
           <div ref={outputRef} className="scroll-mt-24 space-y-6" aria-live="polite">
+            {notice && (
+              <div role="status" className="flex items-start justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
+                <span>{notice}</span>
+                <button type="button" className="text-xs underline" onClick={() => setNotice(null)}>Dismiss</button>
+              </div>
+            )}
             {error && (
               <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
                 {error}
@@ -197,9 +272,11 @@ export default function Home() {
 
       <footer className="mx-auto max-w-7xl px-4 pb-10 pt-4 text-xs text-slate-400 sm:px-6">
         ExpertPrompter generates prompts with deterministic, rule-based logic. No data is sent to third-party AI services.
+        {' · '}<a href="/privacy" className="underline">Privacy</a>{' · '}<a href="/terms" className="underline">Terms</a>
       </footer>
 
-      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} reason={authReason} />
+      <PaywallModal open={paywallOpen} onClose={() => setPaywallOpen(false)} />
     </div>
   );
 }
