@@ -125,14 +125,22 @@ struct WaveformSeekBar: View {
     }
     /// Stable per-track pseudo-waveform.
     static func bars(for id: String) -> [Double] {
-        var seed = UInt64(truncatingIfNeeded: id.utf8.reduce(7) { $0 &* 31 &+ Int($1) })
-        return (0..<64).map { i in
+        var hash: UInt64 = 7
+        for b in id.utf8 { hash = hash &* 31 &+ UInt64(b) }
+        var seed = hash
+        var out: [Double] = []
+        out.reserveCapacity(64)
+        for i in 0..<64 {
             seed = seed &* 6364136223846793005 &+ 1442695040888963407
-            return (0.25 + 0.75 * abs(sin(Double(i) * 0.37 + Double(seed >> 40) / Double(1 << 24)))) * (0.6 + 0.4 * Double(seed >> 52) / 4096)
+            let phase: Double = Double(seed >> 40) / 16_777_216.0
+            let shape: Double = abs(sin(Double(i) * 0.37 + phase))
+            let scale: Double = 0.6 + 0.4 * Double(seed >> 52) / 4096.0
+            out.append((0.25 + 0.75 * shape) * scale)
         }
+        return out
     }
 
-    private func fmt(_ ms: Int64) -> String { let s = ms / 1000; return String(format: "%d:%02d", s / 60, s % 60) }
+    private func fmt(_ ms: Int64) -> String { let s = Int(ms / 1000); return String(format: "%d:%02d", s / 60, s % 60) }
 }
 
 struct LyricsPanel: View {
