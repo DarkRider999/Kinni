@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SubZero</string>
+    <string name="alias_calculator">Calculator</string>
+    <string name="alias_notes">Notes</string>
+    <string name="alias_weather">Weather</string>
+    <string name="alias_gallery">Gallery</string>
+    <string name="alias_system">System Update</string>
+</resources>
