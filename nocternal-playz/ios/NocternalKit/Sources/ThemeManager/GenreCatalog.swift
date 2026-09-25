@@ -9,7 +9,7 @@ public enum GenreCatalog {
         radioTags: ["devotional", "bhajan", "spiritual"], defaultMood: .spiritual, bpmMin: 60, bpmMax: 110)
     public static let meditation = GenreDefinition(id: "meditation", displayName: "Meditation", emoji: "🧘", themePresetId: "emerald_tranquility", eqPresetId: "airy_highs",
         aliases: ["meditation", "healing", "solfeggio", "432hz", "528hz", "binaural", "reiki", "yoga", "zen", "mindful", "tibetan", "singing bowl"],
-        aiSuggestions: ["Healing frequencies (432 / 528 Hz],
+        aiSuggestions: ["Healing frequencies (432 / 528 Hz)", "Guided breathing ambience", "Tibetan singing bowls", "Yoga flow"],
         radioTags: ["meditation", "healing", "yoga"], defaultMood: .calm, bpmMin: 40, bpmMax: 80)
     public static let sleep = GenreDefinition(id: "sleep", displayName: "Sleep", emoji: "🌙", themePresetId: "moonlit_cyan_drift", eqPresetId: "balanced_lows",
         aliases: ["sleep", "rain", "white noise", "brown noise", "pink noise", "lullaby", "thunder", "ocean waves", "night sounds", "asmr"],
@@ -53,7 +53,7 @@ public enum GenreCatalog {
         radioTags: ["workout", "hiphop", "dance"], defaultMood: .energetic, bpmMin: 120, bpmMax: 180)
     public static let focus = GenreDefinition(id: "focus", displayName: "Focus", emoji: "🎯", themePresetId: "laser_focus_teal", eqPresetId: "focus_neutral",
         aliases: ["focus", "study", "concentration", "deep work", "productivity", "coding", "alpha waves"],
-        aiSuggestions: ["Deep work (no vocals],
+        aiSuggestions: ["Deep work (no vocals)", "Alpha-wave focus", "Coding flow state"],
         radioTags: ["study", "focus", "instrumental"], defaultMood: .focused, bpmMin: 60, bpmMax: 120)
     public static let romantic = GenreDefinition(id: "romantic", displayName: "Romantic", emoji: "💖", themePresetId: "rose_neon_heart", eqPresetId: "romantic_warm",
         aliases: ["romantic", "love", "romance", "r&b", "rnb", "soul", "ballad", "slow jam"],
