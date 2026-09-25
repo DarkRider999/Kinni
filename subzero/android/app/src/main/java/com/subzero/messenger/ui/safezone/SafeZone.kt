@@ -12,6 +12,7 @@ enum class SafeZoneScreen(val id: String, val display: String, val isGame: Boole
     WEATHER("weather", "Weather", false),
     GAME_2048("2048", "2048", true),
     SNAKE("snake", "Snake", true),
+    SUDOKU("sudoku", "Sudoku", true),
     TIC_TAC_TOE("ttt", "Tic-Tac-Toe", true),
     MEMORY("memory", "Memory Puzzle", true),
     SLIDING_TILES("slide", "Sliding Tiles", true),

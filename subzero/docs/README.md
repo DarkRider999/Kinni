@@ -48,8 +48,8 @@ subzero/
 | Screenshot protection | ✅ FLAG_SECURE | ✅ (see notes) |
 | Biometric app lock | ✅ | ✅ |
 | SafeZone quick-hide | ✅ | ✅ |
-| Mini-games (2048, Snake, Tic-Tac-Toe, Memory…) | ✅ framework + games | ⚙️ framework |
-| Decoy calculator / notes / weather | ✅ calculator | ⚙️ scaffold |
+| Mini-games (all 10: 2048, Snake, Sudoku, Tic-Tac-Toe, Memory, Sliding Tiles, Quick Math, Pattern Match, Word Shuffle, Bubble Pop) | ✅ all playable | ⚙️ Tic-Tac-Toe |
+| Decoy calculator / notes / weather | ✅ calculator | ⚙️ calculator |
 | Identity (name + icon) switching | ✅ launcher aliases | ⚙️ alternate icons |
 | Rooted/jailbroken device awareness | ✅ | ✅ |
 | Encrypted voice/video (WebRTC) | ⚙️ interface scaffold | ⚙️ interface scaffold |
