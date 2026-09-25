@@ -78,17 +78,17 @@ struct FmDial: View {
             Text(String(format: "%.1f", frequency)).font(.system(size: 44, weight: .black)).foregroundStyle(tuned != nil ? theme.accent : theme.text).neonGlow(theme.accent, tuned != nil ? theme.glow : 0)
             Text(tuned?.name ?? "· · · static · · ·").font(.caption.monospaced()).foregroundStyle(tuned != nil ? theme.secondary : theme.muted)
             Canvas { ctx, size in
-                let span = 6.0, start = frequency - span / 2, px = size.width / span
+                let span = 6.0, start = frequency - span / 2, px = Double(size.width) / span, h = Double(size.height)
                 var f = (start * 10).rounded() / 10
                 while f <= start + span {
                     let x = (f - start) * px, major = Int((f * 10).rounded()) % 10 == 0
                     if (87.5...108).contains(f) {
-                        var p = Path(); p.move(to: CGPoint(x: x, y: size.height * (major ? 0.55 : 0.8))); p.addLine(to: CGPoint(x: x, y: size.height))
+                        var p = Path(); p.move(to: CGPoint(x: x, y: h * (major ? 0.55 : 0.8))); p.addLine(to: CGPoint(x: x, y: h))
                         ctx.stroke(p, with: .color(theme.muted.opacity(major ? 0.8 : 0.35)), lineWidth: major ? 2 : 1)
                     }
                     f = ((f + 0.1) * 10).rounded() / 10
                 }
-                for s in stations { if let sf = s.fmFrequency, sf >= start, sf <= start + span { ctx.fill(Path(ellipseIn: CGRect(x: (sf - start) * px - 4, y: size.height * 0.3 - 4, width: 8, height: 8)), with: .color(theme.secondary)) } }
+                for s in stations { if let sf = s.fmFrequency, sf >= start, sf <= start + span { ctx.fill(Path(ellipseIn: CGRect(x: (sf - start) * px - 4, y: h * 0.3 - 4, width: 8.0, height: 8.0)), with: .color(theme.secondary)) } }
                 var needle = Path(); needle.move(to: CGPoint(x: size.width / 2, y: 0)); needle.addLine(to: CGPoint(x: size.width / 2, y: size.height))
                 ctx.stroke(needle, with: .color(theme.accent), lineWidth: 4)
             }
