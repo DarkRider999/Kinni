@@ -34,6 +34,8 @@
 
 ## 2. Model Inventory
 
+> **Status (engine 0.1):** none of these models is trained yet. A1 BPM, A2 key and A3 beat grid / downbeat have signal-processing baselines in the engine (`djn_analyze_pcm`; see `dj-nexus-pro/engine/README.md`, "Track analysis"). The trained models must beat these baselines on the release gates in §7 before they replace them.
+
 | Group | Model | Architecture | Runs | Release |
 |---|---|---|---|---|
 | **A. Audio analysis** | A1 BPM Detection | Shared encoder + TCN beat/tempo head | Device | 1.0 |

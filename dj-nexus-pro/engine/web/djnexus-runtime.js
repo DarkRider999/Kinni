@@ -261,6 +261,29 @@
     return n > 0 ? new Uint8Array(this.memory.buffer.slice(this.midiBuf, this.midiBuf + n)) : null;
   };
 
+  // ---------------------------------------------------------------- analysis
+  // Tempo, beat grid (first downbeat) and key of a whole track. Blocking: run
+  // it in a Worker (djnexus-analyzer.js), not on the audio thread.
+  Runtime.prototype.analyze = function (left, right, sampleRate, minBpm, maxBpm) {
+    var ex = this.exports, n = left.length;
+    var ptr = ex.djnw_malloc(n * 8);
+    if (!ptr) throw new Error("out of memory");
+    var f = new Float32Array(this.memory.buffer, ptr, n * 2);
+    for (var i = 0, j = 0; i < n; i++, j += 2) {
+      f[j] = left[i];
+      f[j + 1] = right[i];
+    }
+    var r = ex.djnw_analyze(ptr, n, 2, sampleRate, minBpm || 0, maxBpm || 0);
+    ex.djnw_free(ptr);
+    if (r !== 0) throw new Error("analysis failed (" + r + ")");
+    var num = function (k) { return ex.djnw_analysis_num(k); };
+    var str = function (k) { return utf8Decode(this._cstring(ex.djnw_analysis_str(k))); }.bind(this);
+    return {
+      bpm: num(0), firstBeat: num(1), bpmConfidence: num(2), downbeatConfidence: num(3), tempoStable: !!num(4),
+      key: num(5), keyConfidence: num(6), tuningCents: num(7), keyName: str(0), camelot: str(1), openKey: str(2)
+    };
+  };
+
   // Packs the current engine state into a Float64Array (see unpack()).
   Runtime.prototype.state = function (out) {
     out = out || new Float64Array(this.stateSize);

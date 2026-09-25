@@ -373,6 +373,44 @@ typedef enum djn_rec_format {
 DJN_API int djn_record_start(djn_engine* engine, const char* utf8_path, djn_rec_format format);
 DJN_API int djn_record_stop(djn_engine* engine);
 
+/* ---------------------------------------------------------------- track analysis */
+
+/*
+ * Offline analysis of a whole track: tempo, beat grid with the downbeat, and
+ * musical key. Signal processing, no trained models. Blocking and
+ * self-contained (no engine needed): run it on a background thread, then pass
+ * bpm / first_beat_sec to djn_deck_load_pcm or djn_deck_set_grid.
+ */
+#define DJN_ANALYZE_TEMPO 1
+#define DJN_ANALYZE_KEY   2
+
+typedef struct djn_analysis_options {
+  double  min_bpm;   /* tempo range the result is folded into (default 78) */
+  double  max_bpm;   /* (default 180) */
+  int32_t flags;     /* DJN_ANALYZE_TEMPO | DJN_ANALYZE_KEY; 0 = both */
+} djn_analysis_options;
+
+typedef struct djn_analysis {
+  double  bpm;                  /* 0 when no steady beat was found */
+  double  first_beat_sec;       /* the first downbeat (start of a bar) */
+  double  bpm_confidence;       /* 0..1 */
+  double  downbeat_confidence;  /* 0..1: how clearly bar starts stand out */
+  int32_t tempo_stable;         /* 1 = one constant grid fits the whole track */
+  int32_t key;                  /* 0-11 = C..B major, 12-23 = C..B minor, -1 = none found */
+  double  key_confidence;       /* 0..1 */
+  double  tuning_cents;         /* reference pitch vs A = 440 Hz, -50..+50 */
+  char    key_name[12];         /* "A minor", "Db major" */
+  char    camelot[4];           /* "8A" */
+  char    open_key[4];          /* "1m" */
+} djn_analysis;
+
+DJN_API void djn_analysis_default_options(djn_analysis_options* options);
+/* options may be NULL (defaults). */
+DJN_API int djn_analyze_pcm(const float* interleaved, int64_t frames, int32_t channels, int32_t sample_rate,
+                            const djn_analysis_options* options, djn_analysis* out);
+/* Decodes and analyzes a file (WAV, FLAC, MP3). */
+DJN_API int djn_analyze_file(const char* utf8_path, const djn_analysis_options* options, djn_analysis* out);
+
 /* ---------------------------------------------------------------- MIDI controllers */
 
 /*

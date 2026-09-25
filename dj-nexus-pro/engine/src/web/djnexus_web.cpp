@@ -10,6 +10,7 @@
 namespace {
 float g_out[4096 * 2];
 djn_engine_state g_state;
+djn_analysis g_analysis;
 }  // namespace
 
 extern "C" {
@@ -121,6 +122,38 @@ WEB_EXPORT(djnw_fx) double djnw_fx(int unit, int field) {
     case 6: return f.wet;
   }
   return 0;
+}
+
+// Track analysis: run djnw_analyze, then read the fields.
+WEB_EXPORT(djnw_analyze) int djnw_analyze(const float* interleaved, int frames, int channels, int rate, double minBpm,
+                                          double maxBpm) {
+  djn_analysis_options o;
+  djn_analysis_default_options(&o);
+  if (minBpm > 0) o.min_bpm = minBpm;
+  if (maxBpm > 0) o.max_bpm = maxBpm;
+  return djn_analyze_pcm(interleaved, frames, channels, rate, &o, &g_analysis);
+}
+
+// 0 bpm, 1 first beat, 2 bpm confidence, 3 downbeat confidence, 4 tempo stable,
+// 5 key, 6 key confidence, 7 tuning cents.
+WEB_EXPORT(djnw_analysis_num) double djnw_analysis_num(int field) {
+  const djn_analysis& a = g_analysis;
+  switch (field) {
+    case 0: return a.bpm;
+    case 1: return a.first_beat_sec;
+    case 2: return a.bpm_confidence;
+    case 3: return a.downbeat_confidence;
+    case 4: return a.tempo_stable;
+    case 5: return a.key;
+    case 6: return a.key_confidence;
+    case 7: return a.tuning_cents;
+  }
+  return 0;
+}
+
+// 0 key name, 1 Camelot, 2 Open Key.
+WEB_EXPORT(djnw_analysis_str) const char* djnw_analysis_str(int field) {
+  return field == 0 ? g_analysis.key_name : field == 1 ? g_analysis.camelot : g_analysis.open_key;
 }
 
 }  // extern "C"

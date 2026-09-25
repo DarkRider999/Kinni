@@ -14,6 +14,7 @@ python3 -m http.server 8000     # then open http://localhost:8000
 | `index.html` | The console UI: decks, mixer, beat FX, sampler, MIDI panel, waveforms, BPM detection, demo tracks and pad sounds |
 | `djnexus-runtime.js` | JS wrapper around the engine; works in an AudioWorklet or on the main thread |
 | `djnexus-worklet.js` | AudioWorklet processor that renders the engine on the audio thread |
+| `djnexus-analyzer.js` | Web Worker running the engine's track analysis (BPM, downbeat, key) off the main thread |
 | `djnexus.wasm` | The engine (`src/`) built for `wasm32-wasi` with `-DDJN_NO_THREADS` (generated) |
 | `djnexus-asm.js` | The same build converted to plain JS by `wasm2js`, used only if WebAssembly is blocked (generated) |
 

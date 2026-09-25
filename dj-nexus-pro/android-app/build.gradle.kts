@@ -4,7 +4,8 @@ plugins {
 
 // The page, the WebAssembly engine and its JS runtime come straight from the
 // engine's browser build, so the app always runs the current engine.
-val deckLabFiles = listOf("index.html", "djnexus.wasm", "djnexus-asm.js", "djnexus-runtime.js", "djnexus-worklet.js")
+val deckLabFiles = listOf("index.html", "djnexus.wasm", "djnexus-asm.js", "djnexus-runtime.js", "djnexus-worklet.js",
+    "djnexus-analyzer.js")
 val deckLabAssets = layout.buildDirectory.dir("generated/decklab-assets")
 val copyDeckLab by tasks.registering(Copy::class) {
     from("../engine/web") { include(deckLabFiles) }

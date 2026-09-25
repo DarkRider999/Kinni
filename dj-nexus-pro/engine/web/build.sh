@@ -13,6 +13,7 @@ CXX=${CXX:-clang++}
 SOURCES=(src/core/track.cpp src/core/stretcher.cpp src/core/deck.cpp src/core/channel.cpp
          src/core/recorder.cpp src/core/engine.cpp src/core/fx.cpp src/core/sampler.cpp src/core/colorfx.cpp src/core/macro.cpp src/capi.cpp src/decode/decoder_none.cpp
          src/midi/midi_mapping.cpp src/midi/midi_controller.cpp src/midi/midi_capi.cpp src/midi/midi_ports_none.cpp
+         src/analysis/analysis.cpp src/analysis/analysis_capi.cpp
          src/hosts/host_none.cpp src/web/djnexus_web.cpp)
 # Controller mappings compiled in (same generator as the CMake build).
 GEN=$(mktemp -d)

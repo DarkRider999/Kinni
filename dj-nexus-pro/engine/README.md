@@ -29,6 +29,7 @@ The real-time audio core of DJ Nexus Pro: decks, key lock, mixer, master bus and
 | Sampler | 64 slots, 16 voices; one-shot, gate, loop and toggle pads; choke groups; per-pad pitch and level; quantized triggers; loops follow the master tempo with key lock; routing to master or through a channel; **capture the last N beats from any deck** into a pad |
 | Recording | WAV 16-bit (TPDF dither) / 24-bit / 32-bit float, written off the audio thread |
 | Loading | Any PCM from the app (`djn_deck_load_pcm`), grid updates after load (`djn_deck_set_grid`) or WAV/FLAC/MP3 files (`djn_deck_load_file`); tracks are resampled to the device rate with a band-limited sinc resampler |
+| Track analysis | `djn_analyze_pcm` / `djn_analyze_file`: BPM to 0.01 (whole-number snapping when it fits), the first **downbeat** to a few ms, tempo-drift detection, and **key** (24 keys, Camelot and Open Key codes) with tuning estimation. Signal processing, no trained models yet; runs in well under a second per track (the `djnexus_analyze` tool prints it for any file) |
 | MIDI controllers | Text mappings ([docs/MIDI_MAPPING.md](docs/MIDI_MAPPING.md)) for notes, CCs, 14-bit CCs, pitch bend and relative encoders; SHIFT layer; MIDI Learn; jog wheels with vinyl scratch and pitch bend; LED feedback for 21 engine states; keep-alive and start-up messages; built-in mappings picked by port name (generic template, **Pioneer DDJ-FLX4**). Ports: RtMidi 6.0 on Windows (WinMM), macOS/iOS (CoreMIDI) and Linux (ALSA); Android via `android.media.midi` ([DjnMidi.kt](android/com/djnexus/engine/DjnMidi.kt) + JNI); browsers via Web MIDI |
 | Hosts | Desktop: miniaudio (WASAPI, CoreAudio, PulseAudio/ALSA/JACK). Android: Oboe (AAudio/OpenSL ES). iOS: RemoteIO + AVAudioSession |
 
@@ -38,7 +39,7 @@ Real-time rules on the audio thread: no allocation, no locks, no file I/O, no lo
 
 | Check | Result |
 |---|---|
-| 80 unit/integration tests (x86-64 Linux) | pass |
+| 86 unit/integration tests (x86-64 Linux) | pass |
 | Same tests under ASan + UBSan | pass, no reports |
 | Multi-thread stress test (audio + UI + background loader + recorder) and the MIDI service thread under TSan | pass, no data races |
 | Same tests on **ARM64** and **ARMv7** (cross-compiled, run under QEMU) | pass |
@@ -178,6 +179,21 @@ djn_engine_collect_garbage(e);       // frees tracks the audio thread released
 
 BPM and first-beat values come from the Smart DJ Bot's analysis models (AI blueprint A1/A3). Without them (`bpm = 0`), everything except sync, quantize and beat loops still works.
 
+### Track analysis
+
+```c
+djn_analysis a;
+djn_analyze_file("track.mp3", NULL, &a);        /* blocking: use a background thread */
+printf("%.2f BPM, downbeat %.3f s, %s (%s)\n", a.bpm, a.first_beat_sec, a.key_name, a.camelot);
+djn_deck_load_file(e, 0, "track.mp3", a.bpm, a.first_beat_sec);
+```
+
+`djn_analysis_options` sets the BPM range results are folded into (default 78–180, like the range setting in other DJ software). From the command line: `build/djnexus_analyze [--range 88-175] [--csv] *.mp3`.
+
+How it works: spectral-flux onsets, then onset autocorrelation with a tempo prior picks the tempo. Kick-drum evidence decides between half and double tempo. A whole-track comb search sets the exact period, and a 1 kHz kick envelope sets the phase. The downbeat is the beat position where the sound changes most. For key: a harmonic spectrum (time-median filtered), then spectral peaks folded into a tuned chroma, then correlation with Krumhansl–Kessler and Temperley key profiles plus a bass-tonic term.
+
+Accuracy so far: exact on synthesised test music (BPM within 0.01, downbeat within 6 ms, all 24 keys, detuned tracks). A spot check on seven real Creative Commons recordings gave plausible results; for example the Sugar Plum Fairy was correctly read as E minor. It has **not** yet been measured on a large annotated set (GiantSteps, Beatport-style EDM); that is the next step before trusting it over user edits.
+
 ### MIDI controllers
 
 ```c
@@ -223,11 +239,12 @@ src/core/                   engine, deck, stretcher, channel strip, DSP, recorde
 src/hosts/                  host_desktop.cpp · host_android.cpp · host_ios.mm · host_none.cpp
 src/decode/                 file decoding (miniaudio)
 tests/                      tests (no external framework) + benchmark
+src/analysis/               tempo / downbeat / key analysis (FFT, onsets, chroma)
 src/midi/                   MIDI mapping parser, controller (actions, jog, LEDs), ports, C API, Android JNI
 android/                    DjnMidi.kt: android.media.midi -> engine
 docs/MIDI_MAPPING.md        mapping format reference · docs/DDJ_FLX4.md
 mappings/                   controller mappings compiled into the engine (cmake/EmbedMappings.cmake)
-tools/                      djnexus_play (real time) · djnexus_render (offline mix)
+tools/                      djnexus_play (real time) · djnexus_render (offline mix) · djnexus_analyze (BPM / key)
 third_party/miniaudio/      miniaudio 0.11.22 (public domain / MIT-0)
 third_party/rtmidi/         RtMidi 6.0.0 (MIT-style licence)
 ```
