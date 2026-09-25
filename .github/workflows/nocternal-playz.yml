@@ -36,3 +36,24 @@ jobs:
         with:
           name: nocternal-playz-debug-apk
           path: nocternal-playz/android/app/build/outputs/apk/debug/*.apk
+
+  ios:
+    name: iOS (Swift package tests + app build)
+    runs-on: macos-15
+    defaults:
+      run:
+        working-directory: nocternal-playz/ios
+    steps:
+      - uses: actions/checkout@v4
+      - name: Swift package tests (shared modules)
+        run: swift test --package-path NocternalKit
+      - name: Generate Xcode project
+        run: |
+          brew install xcodegen
+          xcodegen generate
+      - name: Build app for the iOS Simulator
+        run: |
+          xcodebuild -project NocternalPlayz.xcodeproj -scheme NocternalPlayz \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO build | tail -n 200
+          exit ${PIPESTATUS[0]}
