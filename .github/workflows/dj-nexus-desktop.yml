@@ -1,0 +1,94 @@
+name: DJ Nexus Deck Lab desktop
+
+on:
+  push:
+    paths:
+      - "dj-nexus-pro/desktop-app/**"
+      - "dj-nexus-pro/engine/web/**"
+      - ".github/workflows/dj-nexus-desktop.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write  # publish to the deck-lab-desktop release
+
+concurrency:
+  group: dj-nexus-desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: dj-nexus-pro/desktop-app
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: Windows, os: windows-2022, script: "dist:win", smoke: "dist/win-unpacked/DJ Nexus Deck Lab.exe" }
+          - { name: Linux, os: ubuntu-24.04, script: "dist:linux", smoke: "dist/linux-unpacked/djnexus-decklab" }
+          - { name: macOS, os: macos-14, script: "dist:mac", smoke: "" }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm ci
+      - name: Build
+        run: npm run ${{ matrix.script }} -- --publish never
+      - name: Smoke test (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: node smoke-test.js "${{ matrix.smoke }}"
+      - name: Smoke test (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update && sudo apt-get install -y xvfb
+          xvfb-run -a node smoke-test.js "${{ matrix.smoke }}"
+      - uses: actions/upload-artifact@v4
+        if: always() && matrix.smoke != ''
+        with:
+          name: smoke-${{ matrix.name }}
+          path: dj-nexus-pro/desktop-app/smoke.png
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.name }}
+          path: |
+            dj-nexus-pro/desktop-app/dist/*.exe
+            dj-nexus-pro/desktop-app/dist/*.zip
+            dj-nexus-pro/desktop-app/dist/*.AppImage
+          if-no-files-found: error
+
+  release:
+    name: Publish
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: desktop-*
+          path: ${{ runner.temp }}/out
+          merge-multiple: true
+      - name: Publish to the deck-lab-desktop release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        working-directory: .
+        run: |
+          ls -la "$RUNNER_TEMP/out"
+          TAG=deck-lab-desktop
+          NOTES="DJ Nexus Deck Lab for Windows, macOS and Linux (preview), built from ${GITHUB_SHA::7} on ${GITHUB_REF_NAME}.
+          Windows: download DJNexus-DeckLab-Windows.exe and run it (no install). If SmartScreen warns, choose More info > Run anyway.
+          macOS: unzip, then right-click the app > Open the first time (it is not notarised).
+          Linux: chmod +x the AppImage and run it."
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$RUNNER_TEMP"/out/* --clobber
+            gh release edit "$TAG" --notes "$NOTES"
+          else
+            gh release create "$TAG" "$RUNNER_TEMP"/out/* --prerelease --target "$GITHUB_SHA" \
+              --title "DJ Nexus Deck Lab (desktop preview)" --notes "$NOTES"
+          fi

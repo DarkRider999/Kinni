@@ -1681,7 +1681,9 @@
         catch (e) { this.access = await navigator.requestMIDIAccess({ sysex: false }); }
       } catch (e) {
         msg.className = "midimsg err";
-        msg.textContent = "MIDI access was blocked (" + (e && e.name ? e.name : e) + "). Embedded previews often can't use MIDI: open this page directly in Chrome or Edge and allow MIDI.";
+        msg.textContent = e && e.name === "InvalidStateError"
+          ? "This computer's MIDI system didn't start (no MIDI drivers or service). Controllers can't connect here; test messages below still work."
+          : "MIDI access was blocked (" + (e && e.name ? e.name : e) + "). Embedded previews often can't use MIDI: open this page directly in Chrome or Edge and allow MIDI.";
         return;
       }
       this.access.onstatechange = () => this.refreshPorts();

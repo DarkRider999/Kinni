@@ -1,0 +1,66 @@
+{
+  "name": "djnexus-decklab",
+  "productName": "DJ Nexus Deck Lab",
+  "version": "0.1.0",
+  "description": "DJ Nexus Pro Deck Lab: the DJ Nexus audio engine with two decks, mixer, FX, sampler, stems and MIDI controllers.",
+  "author": "DJ Nexus",
+  "license": "UNLICENSED",
+  "private": true,
+  "main": "main.js",
+  "scripts": {
+    "assets": "node copy-assets.js",
+    "start": "npm run assets && electron .",
+    "dist:win": "npm run assets && electron-builder --win portable zip",
+    "dist:linux": "npm run assets && electron-builder --linux AppImage",
+    "dist:mac": "npm run assets && electron-builder --mac zip",
+    "smoke": "node smoke-test.js"
+  },
+  "devDependencies": {
+    "electron": "44.4.5",
+    "electron-builder": "26.15.3",
+    "playwright-core": "1.63.0"
+  },
+  "build": {
+    "appId": "com.djnexus.decklab",
+    "artifactName": "DJNexus-DeckLab-${os}-${arch}.${ext}",
+    "files": [
+      "main.js",
+      "decklab/**"
+    ],
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "win": {
+      "target": [
+        "portable",
+        "zip"
+      ],
+      "icon": "build/icon.png",
+      "signAndEditExecutable": false
+    },
+    "portable": {
+      "artifactName": "DJNexus-DeckLab-Windows.exe"
+    },
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "icon": "build/icon.png",
+      "category": "Audio"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "category": "public.app-category.music",
+      "identity": null
+    }
+  }
+}
