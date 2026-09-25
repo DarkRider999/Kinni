@@ -49,7 +49,8 @@ typedef enum djn_result {
   DJN_ERR_IO = -4,
   DJN_ERR_UNSUPPORTED = -5,
   DJN_ERR_DEVICE = -6,
-  DJN_ERR_STATE = -7
+  DJN_ERR_STATE = -7,
+  DJN_ERR_CANCELLED = -8     /* a progress callback asked to stop */
 } djn_result;
 
 typedef struct djn_engine djn_engine;
@@ -94,6 +95,12 @@ DJN_API int djn_deck_load_pcm(djn_engine* engine, int32_t deck,
 
 /* Decode a file (WAV, FLAC, MP3) and load it. Returns DJN_ERR_UNSUPPORTED on
    builds without the built-in decoder. Blocking: call off the UI thread. */
+/* Decode a file (WAV, FLAC, MP3) to interleaved float PCM at its own rate, e.g.
+   for djn_separate_stems or djn_analyze_pcm. Free *pcm with djn_free_audio. */
+DJN_API int djn_decode_file(const char* utf8_path, float** pcm, int64_t* frames, int32_t* channels,
+                            int32_t* sample_rate);
+DJN_API void djn_free_audio(float* pcm);
+
 DJN_API int djn_deck_load_file(djn_engine* engine, int32_t deck, const char* utf8_path,
                                double bpm, double first_beat_sec);
 
@@ -144,6 +151,39 @@ DJN_API int djn_deck_set_reverse(djn_engine* engine, int32_t deck, int32_t enabl
  */
 DJN_API int djn_deck_slip_roll(djn_engine* engine, int32_t deck, int32_t on, double beats);
 DJN_API int djn_deck_censor(djn_engine* engine, int32_t deck, int32_t on);
+
+/* Stems: drums, bass, vocals and other, each with its own level, like a
+   4-channel mixer inside the deck. "Other" is the mix minus the other three,
+   so all stems at full level play exactly the original. Stems work with key
+   lock, loops, slip and everything else. */
+typedef enum djn_stem {
+  DJN_STEM_DRUMS = 0,
+  DJN_STEM_BASS = 1,
+  DJN_STEM_VOCALS = 2,
+  DJN_STEM_OTHER = 3
+} djn_stem;
+#define DJN_NUM_STEMS 4
+
+/* Attach separated stems to the track now on `deck`. `track_id` is
+   djn_deck_state.track_id from when the track was loaded; stems for a track
+   that has since been replaced are ignored (DJN_ERR_STATE when detected here).
+   drums/bass/vocals: interleaved PCM with the same frames, channels and rate
+   as the PCM the track was loaded from (e.g. the outputs of
+   djn_separate_stems). Allocates and resamples: call off the audio thread. */
+DJN_API int djn_deck_load_stems(djn_engine* engine, int32_t deck, uint32_t track_id, const float* drums,
+                                const float* bass, const float* vocals, int64_t frames, int32_t channels,
+                                int32_t sample_rate);
+/* Stem level 0..1 (smoothed; 0 mutes). Levels reset to 1 when a track loads. */
+DJN_API int djn_deck_set_stem_gain(djn_engine* engine, int32_t deck, djn_stem stem, float gain);
+
+/* Splits a mix into drums, bass and vocals (other = mix - these). Blocking and
+   slow (seconds to a minute per track): run it on a background thread. Each
+   output buffer holds frames * channels floats. `progress` (may be NULL) gets
+   0..1 and can return nonzero to cancel (DJN_ERR_CANCELLED). Signal
+   processing, no trained model: see the README for what to expect. */
+typedef int (*djn_progress_fn)(void* user, float progress);
+DJN_API int djn_separate_stems(const float* interleaved, int64_t frames, int32_t channels, int32_t sample_rate,
+                               float* drums, float* bass, float* vocals, djn_progress_fn progress, void* user);
 
 /* Sync: match tempo and beat phase to the master deck (see djn_engine_set_master_deck). */
 DJN_API int djn_deck_set_sync(djn_engine* engine, int32_t deck, int32_t enabled);
@@ -319,6 +359,9 @@ typedef struct djn_deck_state {
   double  loop_end_sec;
   double  cue_sec;
   float   peak_l, peak_r;  /* post-fader channel peak since last read (linear) */
+  uint32_t track_id;       /* changes with every load (pass to djn_deck_load_stems) */
+  int32_t stems_loaded;    /* stems are attached to the loaded track */
+  float   stem_gain[4];    /* djn_stem order: drums, bass, vocals, other */
 } djn_deck_state;
 
 typedef struct djn_fx_state {

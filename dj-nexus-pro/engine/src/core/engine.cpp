@@ -119,7 +119,7 @@ void Engine::dispatch(const Command& c) {
     return;
   }
   if (c.deck < 0 || c.deck >= numDecks_) {
-    if (c.type == Cmd::Load) delete c.track;  // unreachable via the C API
+    if (c.type == Cmd::Load || c.type == Cmd::AttachStems) delete c.track;  // unreachable via the C API
     return;
   }
   Deck& d = decks_[size_t(c.deck)];
@@ -152,6 +152,8 @@ void Engine::dispatch(const Command& c) {
     case Cmd::SetGrid: d.setGrid(c.value, c.value2); break;
     case Cmd::SlipRoll: d.slipRoll(c.slot != 0, c.value); break;
     case Cmd::Censor: d.censor(c.slot != 0); break;
+    case Cmd::AttachStems: old = d.attachStems(c.track); break;
+    case Cmd::StemGain: d.setStemGain(c.slot, float(c.value)); break;
     default: break;  // sampler commands are handled in dispatchGlobal()
   }
   if (old && !garbage_.push(old)) {
@@ -435,6 +437,9 @@ void Engine::fillState(djn_engine_state* s, bool consumePeaks) {
     o.looping = t.looping.load(std::memory_order_relaxed);
     o.slip_roll = t.slipRoll.load(std::memory_order_relaxed);
     o.censor = t.censor.load(std::memory_order_relaxed);
+    o.track_id = t.trackId.load(std::memory_order_relaxed);
+    o.stems_loaded = t.stemsLoaded.load(std::memory_order_relaxed);
+    for (int k = 0; k < 4; ++k) o.stem_gain[k] = t.stemGain[k].load(std::memory_order_relaxed);
     o.is_master = s->master_deck == d ? 1 : 0;
     o.position_sec = t.position.load(std::memory_order_relaxed);
     o.duration_sec = t.duration.load(std::memory_order_relaxed);

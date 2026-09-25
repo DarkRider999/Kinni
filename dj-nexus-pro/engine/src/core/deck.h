@@ -24,7 +24,9 @@ struct SyncRef {
 // Values the UI reads. Written by the audio thread once per block.
 struct DeckTelemetry {
   std::atomic<int> loaded{0}, playing{0}, keyLock{0}, sync{0}, slip{0}, reverse{0}, looping{0};
-  std::atomic<int> slipRoll{0}, censor{0};
+  std::atomic<int> slipRoll{0}, censor{0}, stemsLoaded{0};
+  std::atomic<uint32_t> trackId{0};
+  std::atomic<float> stemGain[4] = {{1.0f}, {1.0f}, {1.0f}, {1.0f}};
   std::atomic<uint32_t> hotCueMask{0};
   std::atomic<double> position{0}, duration{0}, slipPosition{0}, trackBpm{0}, effectiveBpm{0}, rate{0};
   std::atomic<double> beatPhase{-1}, loopStart{0}, loopEnd{0}, cue{0};
@@ -66,6 +68,10 @@ class Deck {
   void setSync(bool on);
   void jog(bool touched, double rate);
   void setGrid(double bpm, double firstBeatSec);
+  // Stems: `carrier` holds stems for the track with serial carrier->stemsFor.
+  // Returns the carrier (now holding the replaced stems, if any) for freeing.
+  Track* attachStems(Track* carrier);
+  void setStemGain(int stem, float gain);  // stem 0..3 = drums, bass, vocals, other
 
   // Renders n frames of pre-fader audio (always writes n frames).
   void render(float* outL, float* outR, int n, const SyncRef& ref, bool isMaster);
@@ -95,6 +101,8 @@ class Deck {
   double phasePreservingTarget(double target) const;
   bool inExcursion() const { return looping_ || reverse_ || touched_; }
   inline float readCubic(const float* ch, double p) const;
+  // Channel ch at position p with the given stem gains (plain mix when g is null).
+  inline float readMix(int ch, double p, const float* g) const;
   void setLoopActive(bool on);
 
   int sampleRate_ = 48000;
@@ -135,6 +143,11 @@ class Deck {
   bool restoreSlip_ = false;   // restore it once the slip return has happened
   double slipPos_ = 0.0;
   bool wasExcursion_ = false;
+
+  // Stems: target gains, and the gains the previous block ended on.
+  std::array<float, 4> stemTarget_{{1.0f, 1.0f, 1.0f, 1.0f}};
+  std::array<float, 4> stemGain_{{1.0f, 1.0f, 1.0f, 1.0f}};
+  std::array<float, 4> stemBlock_{};  // per-block gains handed to the stretcher
 
   // Seamless-jump crossfade: the old stream keeps playing and fades out.
   double xfadePos_ = 0.0;

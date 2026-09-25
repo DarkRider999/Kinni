@@ -24,6 +24,7 @@ Built-in mapping id: `pioneer-ddj-flx4` (source: [`mappings/pioneer-ddj-flx4.txt
 | Pads, HOT CUE mode | Hot cues 1–8; SHIFT + pad deletes |
 | Pads, BEAT LOOP mode | Loops of 1/4, 1/2, 1, 2, 4, 8, 16, 32 beats; SHIFT + pad: slip roll of that length |
 | Pads, SAMPLER mode | Sampler pads 1–8 (left deck) and 9–16 (right deck); SHIFT + pad stops all |
+| Pads, KEYBOARD mode | Pads 1–4 toggle the stems: drums, bass, vocals, instruments (lit while audible) |
 | BEAT FX SELECT (SHIFT: back) | Next (previous) beat FX |
 | BEAT ◀ ▶ | Halve · double the FX beat length |
 | CH SELECT + FX ON/OFF | FX on/off, sent to the channel the switch selects |
@@ -33,7 +34,7 @@ LEDs: play, cue, sync, headphone cue, reloop (while looping), hot cue pads (with
 
 ## Not mapped yet
 
-- BEAT JUMP, KEYBOARD, KEY SHIFT, PAD FX 1/2 pad modes (the engine has no beat jump or key shift actions yet).
+- BEAT JUMP, KEY SHIFT and PAD FX 1/2 pad modes, and KEYBOARD pads 5–8 (the engine has no beat jump or key shift actions yet).
 - LOAD buttons and the BROWSE knob: the track library lives in the app, so the app should handle these messages (`LOAD` = notes `0x46`/`0x47` on channel 7, `BROWSE` = CC `0x40` on channel 7) before or alongside `djn_midi_feed`.
 - SMART CFX and SMART FADER.
 - Beat loop pad LEDs, and the pad mode button LEDs.

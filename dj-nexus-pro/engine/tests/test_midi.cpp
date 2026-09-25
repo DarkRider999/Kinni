@@ -579,3 +579,35 @@ TEST(midi_flx4_beat_fx_and_sampler) {
   djn_engine_get_state(e, &st);
   CHECK(st.sampler_playing == 0);
 }
+
+TEST(midi_flx4_keyboard_pads_toggle_stems) {
+  EngineHandle e;
+  std::vector<float> mix = sine(440, 4);
+  CHECK(load(e, 0, mix, 120, 0) == DJN_OK);
+  render(e, 0.02);
+  djn_engine_state st;
+  djn_engine_peek_state(e, &st);
+  std::vector<float> part(mix.size(), 0.0f);
+  CHECK(djn_deck_load_stems(e, 0, st.decks[0].track_id, part.data(), part.data(), mix.data(), int64_t(mix.size() / 2), 2,
+                            kRate) == DJN_OK);
+  Flx4 flx(e);
+  render(e, 0.02);
+  flx.service();
+  auto out = messages(flx.output());
+  CHECK(has(out, {0x97, 0x42, 0x7F}));  // vocals pad lit: stems loaded, vocals up
+  flx.send({0x97, 0x42, 0x7F, 0x97, 0x42, 0x00});  // KEYBOARD mode pad 3
+  tick(e);
+  CHECK(deckState(e, 0).stem_gain[DJN_STEM_VOCALS] == 0.0f);
+  flx.service();
+  out = messages(flx.output());
+  CHECK(has(out, {0x97, 0x42, 0x00}) && has(out, {0x98, 0x42, 0x00}));
+  flx.send({0x98, 0x42, 0x7F});  // with SHIFT too
+  tick(e);
+  CHECK(deckState(e, 0).stem_gain[DJN_STEM_VOCALS] == 1.0f);
+  // A knob mapped to a stem sets its level.
+  char err[128];
+  CHECK(djn_midi_load_mapping(flx.m, "cc 1 0x30 -> deck1.drums\n", err, sizeof(err)) == DJN_OK);
+  flx.cc(1, 0x30, 64);
+  tick(e);
+  CHECK_NEAR(deckState(e, 0).stem_gain[DJN_STEM_DRUMS], 64.0 / 127.0, 1e-3);
+}

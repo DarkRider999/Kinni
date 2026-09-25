@@ -37,7 +37,7 @@ enum class Encoding { Absolute, Rel2c, Rel64, RelSign };
 enum class Act {
   // deck
   Play, Cue, Sync, KeyLock, Slip, Reverse, Quantize, Censor, HotCue, HotCueClear, Loop, LoopIn, LoopOut,
-  LoopExit, LoopHalve, LoopDouble, Roll, Pitch, Jog, JogTouch, NudgeUp, NudgeDown,
+  LoopExit, LoopHalve, LoopDouble, Roll, Pitch, Jog, JogTouch, NudgeUp, NudgeDown, Stem,
   // channel
   Volume, Trim, EqLow, EqMid, EqHigh, Color, Pfl,
   // mixer
@@ -70,7 +70,7 @@ struct Binding {
 };
 
 enum class LedState {
-  Playing, Paused, Loaded, Pfl, Sync, KeyLock, Slip, Reverse, Looping, Master, Beat, HotCue, SlipRoll, Censor, Vu,
+  Playing, Paused, Loaded, Pfl, Stem, Sync, KeyLock, Slip, Reverse, Looping, Master, Beat, HotCue, SlipRoll, Censor, Vu,
   FxOn, FxTail, PadPlaying, PadLoaded, MacroRunning, Shift,
 };
 

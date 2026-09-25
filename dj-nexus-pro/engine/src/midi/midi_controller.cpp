@@ -344,6 +344,19 @@ void Controller::apply(const Binding& b, double v, int delta, bool press, bool r
       if (press) djn_deck_jog(e, d, 0, b.act == Act::NudgeUp ? 0.04 : -0.04);
       else if (release) djn_deck_jog(e, d, 0, 0.0);
       break;
+    case Act::Stem: {
+      const djn_stem stem = djn_stem(b.arg);
+      if (b.control.kind == Kind::Note) {  // button: toggle, or mute while held
+        if (b.momentary) {
+          if (press || release) djn_deck_set_stem_gain(e, d, stem, press ? 0.0f : 1.0f);
+        } else if (press) {
+          djn_deck_set_stem_gain(e, d, stem, state().decks[d].stem_gain[b.arg] > 0.5f ? 0.0f : 1.0f);
+        }
+      } else {  // knob or fader: level
+        djn_deck_set_stem_gain(e, d, stem, float(value));
+      }
+      break;
+    }
     case Act::Volume: djn_mixer_set_fader(e, d, float(value)); break;
     case Act::Trim: djn_mixer_set_trim_db(e, d, float((value - 0.5) * 24.0)); break;
     case Act::EqLow: djn_mixer_set_eq_db(e, d, 0, eqDbFor(value)); break;
@@ -484,6 +497,7 @@ void Controller::sendLeds(bool force) {
       case LedState::Paused: level = ds.loaded && !ds.playing; break;
       case LedState::Loaded: level = ds.loaded; break;
       case LedState::Pfl: level = pfl_[size_t(l.index)]; break;  // as toggled from the controller
+      case LedState::Stem: level = ds.stems_loaded && ds.stem_gain[l.arg] > 0.5f; break;
       case LedState::Sync: level = ds.sync; break;
       case LedState::KeyLock: level = ds.key_lock; break;
       case LedState::Slip: level = ds.slip; break;

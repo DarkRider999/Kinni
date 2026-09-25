@@ -30,6 +30,7 @@ The real-time audio core of DJ Nexus Pro: decks, key lock, mixer, master bus and
 | Recording | WAV 16-bit (TPDF dither) / 24-bit / 32-bit float, written off the audio thread |
 | Loading | Any PCM from the app (`djn_deck_load_pcm`), grid updates after load (`djn_deck_set_grid`) or WAV/FLAC/MP3 files (`djn_deck_load_file`); tracks are resampled to the device rate with a band-limited sinc resampler |
 | Track analysis | `djn_analyze_pcm` / `djn_analyze_file`: BPM to 0.01 (whole-number snapping when it fits), the first **downbeat** to a few ms, tempo-drift detection, and **key** (24 keys, Camelot and Open Key codes) with tuning estimation. Signal processing, no trained models yet; runs in well under a second per track (the `djnexus_analyze` tool prints it for any file) |
+| Stems | Every deck plays drums, bass, vocals and "other" with separate levels, with key lock, loops and slip. `djn_separate_stems` splits a track (signal processing, no trained model; see below), and `djn_deck_load_stems` attaches any 3-stem set, including from a neural separator. Stems are 16-bit and "other" is derived as the mix minus the rest, so a 5-minute track adds ~170 MB and all stems up reproduces the original exactly |
 | MIDI controllers | Text mappings ([docs/MIDI_MAPPING.md](docs/MIDI_MAPPING.md)) for notes, CCs, 14-bit CCs, pitch bend and relative encoders; SHIFT layer; MIDI Learn; jog wheels with vinyl scratch and pitch bend; LED feedback for 21 engine states; keep-alive and start-up messages; built-in mappings picked by port name (generic template, **Pioneer DDJ-FLX4**). Ports: RtMidi 6.0 on Windows (WinMM), macOS/iOS (CoreMIDI) and Linux (ALSA); Android via `android.media.midi` ([DjnMidi.kt](android/com/djnexus/engine/DjnMidi.kt) + JNI); browsers via Web MIDI |
 | Hosts | Desktop: miniaudio (WASAPI, CoreAudio, PulseAudio/ALSA/JACK). Android: Oboe (AAudio/OpenSL ES). iOS: RemoteIO + AVAudioSession |
 
@@ -39,7 +40,7 @@ Real-time rules on the audio thread: no allocation, no locks, no file I/O, no lo
 
 | Check | Result |
 |---|---|
-| 86 unit/integration tests (x86-64 Linux) | pass |
+| 92 unit/integration tests (x86-64 Linux) | pass |
 | Same tests under ASan + UBSan | pass, no reports |
 | Multi-thread stress test (audio + UI + background loader + recorder) and the MIDI service thread under TSan | pass, no data races |
 | Same tests on **ARM64** and **ARMv7** (cross-compiled, run under QEMU) | pass |
@@ -194,6 +195,22 @@ How it works: spectral-flux onsets, then onset autocorrelation with a tempo prio
 
 Accuracy so far: exact on synthesised test music (BPM within 0.01, downbeat within 6 ms, all 24 keys, detuned tracks). A spot check on seven real Creative Commons recordings gave plausible results; for example the Sugar Plum Fairy was correctly read as E minor. It has **not** yet been measured on a large annotated set (GiantSteps, Beatport-style EDM); that is the next step before trusting it over user edits.
 
+### Stems
+
+```c
+float *d = malloc(frames * ch * sizeof(float)), *b = ..., *v = ...;   /* one per stem */
+djn_separate_stems(pcm, frames, ch, rate, d, b, v, progress_cb, user); /* background thread; 5-min track: ~20-40 s */
+djn_engine_state st; djn_engine_get_state(e, &st);
+djn_deck_load_stems(e, 0, st.decks[0].track_id, d, b, v, frames, ch, rate);
+djn_deck_set_stem_gain(e, 0, DJN_STEM_VOCALS, 0.0f);                  /* instrumental */
+```
+
+From the command line: `build/djnexus_stems track.mp3` writes `track.drums.wav`, `.bass.wav`, `.vocals.wav` and `.other.wav`.
+
+How the built-in separator works: two-stage harmonic/percussive separation (Tachibana et al.). Long frames (~370 ms, 2.3 s median) split sustained sounds from fluctuating ones; short frames then split the voice (steady at that scale) from drums. Bass is the sustained part below ~200 Hz. Vocals are weighted to the centre of the stereo image and the voice band.
+
+What to expect: on a synthesised test song it gets drums 7.5 dB, bass 10.4 dB, vocals 10.4 dB and other 7.2 dB SDR. Neural separators (Demucs v4) reach about 9 dB on real music, and real music is much harder than the test song. Known weak spots: any centred melodic instrument with vibrato (strings, lead synths) ends up in "vocals" (a string orchestra put 44% of its energy there), and kick drums with long tails leak into bass. It is useful for quick acapella/instrumental effects and drum/bass muting, not for clean remix stems.
+
 ### MIDI controllers
 
 ```c
@@ -223,7 +240,7 @@ On Android, open devices with [`DjnMidi`](android/com/djnexus/engine/DjnMidi.kt)
 
 ## Not in this milestone yet
 
-- **Stems playback** (4-stem decks fed by the AI Stem Splitter).
+- **A neural stem separator.** The built-in one is a signal-processing baseline (see "Stems" above); the playback side is ready for a Demucs-class model once its licence and on-device cost are settled.
 - **Commercial time-stretcher.** The built-in WSOLA stretcher passes the pitch and level-stability tests and is fine for development. SPEC §10.1 plans a Rubber Band / Superpowered bake-off before launch; `Stretcher` is isolated behind a small interface for that swap.
 - **AAC/M4A/ALAC decoding.** Use the platform decoders (MediaCodec, AVAudioFile) and `djn_deck_load_pcm`.
 - A waveform/peaks API for the UI, and the Dart FFI bindings (generate them from `djnexus.h` with `ffigen`).
@@ -240,11 +257,12 @@ src/hosts/                  host_desktop.cpp · host_android.cpp · host_ios.mm 
 src/decode/                 file decoding (miniaudio)
 tests/                      tests (no external framework) + benchmark
 src/analysis/               tempo / downbeat / key analysis (FFT, onsets, chroma)
+src/stems/                  stem separation (two-stage HPSS)
 src/midi/                   MIDI mapping parser, controller (actions, jog, LEDs), ports, C API, Android JNI
 android/                    DjnMidi.kt: android.media.midi -> engine
 docs/MIDI_MAPPING.md        mapping format reference · docs/DDJ_FLX4.md
 mappings/                   controller mappings compiled into the engine (cmake/EmbedMappings.cmake)
-tools/                      djnexus_play (real time) · djnexus_render (offline mix) · djnexus_analyze (BPM / key)
+tools/                      djnexus_play (real time) · djnexus_render (offline mix) · djnexus_analyze (BPM / key) · djnexus_stems (stem WAVs)
 third_party/miniaudio/      miniaudio 0.11.22 (public domain / MIT-0)
 third_party/rtmidi/         RtMidi 6.0.0 (MIT-style licence)
 ```

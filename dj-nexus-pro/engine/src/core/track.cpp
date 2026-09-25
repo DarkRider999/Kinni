@@ -113,6 +113,27 @@ std::unique_ptr<Track> makeTrack(const float* interleaved, int64_t frames, int c
 
 namespace djn {
 
+std::unique_ptr<Stems> makeStems(const float* const parts[Stems::kParts], int64_t frames, int channels, int sourceRate,
+                                 int engineRate, int64_t pad) {
+  auto stems = std::make_unique<Stems>();
+  stems->pad = pad;
+  for (int p = 0; p < Stems::kParts; ++p) {
+    std::unique_ptr<Track> t = makeTrack(parts[p], frames, channels, sourceRate, engineRate, 0.0, 0.0, pad);
+    if (!t) return nullptr;
+    stems->frames = t->frames;
+    auto toInt = [](const std::vector<float>& in, std::vector<int16_t>& out) {
+      out.resize(in.size());
+      for (size_t i = 0; i < in.size(); ++i) {
+        const float v = std::max(-1.0f, std::min(1.0f, in[i])) * 32767.0f;
+        out[i] = int16_t(std::lround(v));
+      }
+    };
+    toInt(t->left, stems->left[size_t(p)]);
+    toInt(t->right, stems->right[size_t(p)]);
+  }
+  return stems;
+}
+
 std::unique_ptr<Track> makeSilentTrack(int64_t frames, int engineRate, int64_t pad) {
   if (frames <= 0 || engineRate <= 0) return nullptr;
   auto track = std::make_unique<Track>();

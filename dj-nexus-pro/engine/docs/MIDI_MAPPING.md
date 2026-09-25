@@ -70,6 +70,7 @@ Channels are 1–16. Numbers can be decimal (`11`) or hex (`0x0B`). Put `shift` 
 | `jog ticks=N` | encoder | Jog wheel. `ticks` is the number of ticks per revolution. With the platter touched it scratches (vinyl mode); otherwise it bends the pitch |
 | `jogtouch` | button | Jog wheel touch sensor. `novinyl` makes touch bend instead of scratch |
 | `nudge+` · `nudge-` | button | Held: pitch bend |
+| `drums` · `bass` · `vocals` · `inst` (or `other`) | button or knob | Stems: a button toggles the stem (with `momentary`, mutes it while held); a knob or fader sets its level |
 
 ### Channel
 
@@ -136,6 +137,7 @@ LEDs are sent when their state changes, and all of them again when a new output 
 |---|---|
 | `deckN.playing` · `paused` · `loaded` | Playing; loaded and paused; a track is loaded |
 | `deckN.pfl` | Headphone cue is on (as switched from the controller) |
+| `deckN.drums` · `bass` · `vocals` · `inst` | Stems are loaded and that stem is up |
 | `deckN.sync` · `keylock` · `slip` · `reverse` · `looping` · `master` | On |
 | `deckN.hotcue1`…`16` | The hot cue is set |
 | `deckN.sliproll` · `censor` | Held |

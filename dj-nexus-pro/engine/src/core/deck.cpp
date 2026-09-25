@@ -30,7 +30,21 @@ Track* Deck::load(Track* track) {
   lastRate_ = 0.0;
   touched_ = false;
   nudge_ = 0.0;
+  stemTarget_.fill(1.0f);  // a new track starts with every stem up
+  stemGain_.fill(1.0f);
   return old;
+}
+
+Track* Deck::attachStems(Track* carrier) {
+  if (track_ && carrier && carrier->stems && carrier->stemsFor == track_->serial &&
+      carrier->stems->frames == track_->frames && carrier->stems->pad == track_->pad) {
+    track_->stems.swap(carrier->stems);  // the carrier takes the old stems away
+  }
+  return carrier;
+}
+
+void Deck::setStemGain(int stem, float gain) {
+  if (stem >= 0 && stem < 4) stemTarget_[size_t(stem)] = clampv(gain, 0.0f, 1.0f);
 }
 
 Track* Deck::unload() { return load(nullptr); }
@@ -269,6 +283,21 @@ inline float Deck::readCubic(const float* ch, double p) const {
   return ((a * t + b) * t + c) * t + x0;
 }
 
+inline float Deck::readMix(int ch, double p, const float* g) const {
+  if (!g) return readCubic(ch == 0 ? track_->l() : track_->r(), p);
+  const double lo = -double(track_->pad) + 2.0;
+  const double hi = double(track_->frames + track_->pad) - 3.0;
+  p = clampv(p, lo, hi);
+  const int64_t i = int64_t(std::floor(p));
+  const float t = float(p - double(i));
+  const float xm1 = stemMixAt(*track_, ch, i - 1, g), x0 = stemMixAt(*track_, ch, i, g);
+  const float x1 = stemMixAt(*track_, ch, i + 1, g), x2 = stemMixAt(*track_, ch, i + 2, g);
+  const float a = -0.5f * xm1 + 1.5f * x0 - 1.5f * x1 + 0.5f * x2;
+  const float b = xm1 - 2.5f * x0 + 2.0f * x1 - 0.5f * x2;
+  const float c = -0.5f * xm1 + 0.5f * x1;
+  return ((a * t + b) * t + c) * t + x0;
+}
+
 void Deck::render(float* outL, float* outR, int n, const SyncRef& ref, bool isMaster) {
   std::fill(outL, outL + n, 0.0f);
   std::fill(outR, outR + n, 0.0f);
@@ -344,9 +373,23 @@ void Deck::render(float* outL, float* outR, int n, const SyncRef& ref, bool isMa
     stretching_ = wantStretch;
   }
 
-  const float* L = track_->l();
-  const float* R = track_->r();
   const double frames = double(track_->frames);
+  // Stems: gains glide from last block's values to the targets over this block.
+  bool stemsActive = false;
+  if (track_->stems) {
+    for (size_t k = 0; k < 4; ++k) stemsActive = stemsActive || stemGain_[k] != 1.0f || stemTarget_[k] != 1.0f;
+  }
+  const std::array<float, 4> g0 = stemGain_;
+  float gs[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+  const float* gp = stemsActive ? gs : nullptr;
+  auto gainsAt = [&](int i) {
+    if (!stemsActive) return;
+    const float f = float(i + 1) / float(n);
+    for (size_t k = 0; k < 4; ++k) gs[k] = g0[k] + (stemTarget_[k] - g0[k]) * f;
+  };
+  stemBlock_ = stemTarget_;
+  stretcher_.setStemGains(stemsActive ? stemBlock_.data() : nullptr);
+  stemGain_ = stemTarget_;
   const float gainStep = 1.0f / (0.004f * float(sampleRate_));  // 4 ms play/pause ramp
   const float gainTarget = active ? 1.0f : 0.0f;
   bool reachedEnd = false;
@@ -359,8 +402,9 @@ void Deck::render(float* outL, float* outR, int n, const SyncRef& ref, bool isMa
     if (xfadeRemaining_ <= 0) return;
     const float g = float(xfadeRemaining_) / float(kXfadeLen);
     const float g2 = g * g;  // steeper fade-out for the old stream
-    outL[i] = outL[i] * (1.0f - g2) + readCubic(L, xfadePos_) * g2;
-    outR[i] = outR[i] * (1.0f - g2) + readCubic(R, xfadePos_) * g2;
+    gainsAt(i);
+    outL[i] = outL[i] * (1.0f - g2) + readMix(0, xfadePos_, gp) * g2;
+    outR[i] = outR[i] * (1.0f - g2) + readMix(1, xfadePos_, gp) * g2;
     xfadePos_ += r;
     --xfadeRemaining_;
   };
@@ -381,8 +425,9 @@ void Deck::render(float* outL, float* outR, int n, const SyncRef& ref, bool isMa
       double r = rateStart;
       for (int i = 0; i < n; ++i) {
         r += dr;
-        outL[i] = readCubic(L, pos_);
-        outR[i] = readCubic(R, pos_);
+        gainsAt(i);
+        outL[i] = readMix(0, pos_, gp);
+        outR[i] = readMix(1, pos_, gp);
         blendOld(i, r);
         pos_ += r;
         if (looping_) {
@@ -448,6 +493,9 @@ void Deck::publish(DeckTelemetry& t) const {
   }
   t.hotCueMask.store(mask, std::memory_order_relaxed);
   t.censor.store(censor_ ? 1 : 0, std::memory_order_relaxed);
+  t.trackId.store(track_ ? track_->serial : 0, std::memory_order_relaxed);
+  t.stemsLoaded.store(track_ && track_->stems ? 1 : 0, std::memory_order_relaxed);
+  for (size_t k = 0; k < 4; ++k) t.stemGain[k].store(stemTarget_[k], std::memory_order_relaxed);
   t.position.store(pos_ / sr, std::memory_order_relaxed);
   t.duration.store(track_ ? double(track_->frames) / sr : 0.0, std::memory_order_relaxed);
   t.slipPosition.store(slipPos_ / sr, std::memory_order_relaxed);

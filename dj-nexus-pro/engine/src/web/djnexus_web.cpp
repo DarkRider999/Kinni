@@ -52,7 +52,8 @@ WEB_EXPORT(djnw_poll) void djnw_poll(djn_engine* e) {
 // Deck fields: 0 loaded, 1 playing, 2 key lock, 3 sync, 4 slip, 5 reverse,
 // 6 looping, 7 master, 8 position, 9 duration, 10 track bpm, 11 effective bpm,
 // 12 rate, 13 beat phase, 14 loop start, 15 loop end, 16 cue, 17 peak L, 18 peak R,
-// 19 slip roll held, 20 censor held.
+// 19 slip roll held, 20 censor held, 21 track id, 22 stems loaded,
+// 23-26 stem levels (drums, bass, vocals, other).
 WEB_EXPORT(djnw_deck) double djnw_deck(int d, int field) {
   if (d < 0 || d >= DJN_MAX_DECKS) return 0;
   const djn_deck_state& s = g_state.decks[d];
@@ -78,6 +79,9 @@ WEB_EXPORT(djnw_deck) double djnw_deck(int d, int field) {
     case 18: return s.peak_r;
     case 19: return s.slip_roll;
     case 20: return s.censor;
+    case 21: return s.track_id;
+    case 22: return s.stems_loaded;
+    case 23: case 24: case 25: case 26: return s.stem_gain[field - 23];
   }
   return 0;
 }
@@ -149,6 +153,24 @@ WEB_EXPORT(djnw_analysis_num) double djnw_analysis_num(int field) {
     case 7: return a.tuning_cents;
   }
   return 0;
+}
+
+// Stem separation. Progress goes to the page through an imported function
+// (env.djnw_on_progress), which can return 1 to cancel.
+__attribute__((import_module("env"), import_name("djnw_on_progress"))) int djnw_on_progress(float progress);
+
+static int progressToJs(void*, float p) { return djnw_on_progress(p); }
+
+WEB_EXPORT(djnw_separate) int djnw_separate(const float* interleaved, int frames, int channels, int rate, float* drums,
+                                            float* bass, float* vocals) {
+  return djn_separate_stems(interleaved, frames, channels, rate, drums, bass, vocals, progressToJs, nullptr);
+}
+
+// djn_deck_load_stems with a 32-bit frame count (JS numbers, not BigInt).
+WEB_EXPORT(djnw_load_stems) int djnw_load_stems(djn_engine* e, int deck, unsigned trackId, const float* drums,
+                                                const float* bass, const float* vocals, int frames, int channels,
+                                                int rate) {
+  return djn_deck_load_stems(e, deck, trackId, drums, bass, vocals, frames, channels, rate);
 }
 
 // 0 key name, 1 Camelot, 2 Open Key.

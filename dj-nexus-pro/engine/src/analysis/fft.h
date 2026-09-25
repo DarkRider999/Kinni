@@ -33,8 +33,12 @@ class Fft {
       const int half = len / 2, step = n_ / len;
       for (int i = 0; i < n_; i += len) {
         for (int j = 0; j < half; ++j) {
+          // Plain arithmetic: std::complex's operator* checks for NaN/inf
+          // (a library call per multiply) unless compiled with fast-math.
           const std::complex<float> w = tw_[size_t(j * step)];
-          const std::complex<float> u = a[i + j], v = a[i + j + half] * w;
+          const std::complex<float> x = a[i + j + half];
+          const std::complex<float> v(x.real() * w.real() - x.imag() * w.imag(), x.real() * w.imag() + x.imag() * w.real());
+          const std::complex<float> u = a[i + j];
           a[i + j] = u + v;
           a[i + j + half] = u - v;
         }

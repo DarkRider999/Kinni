@@ -4,8 +4,9 @@
 # controller. Not yet checked on hardware by DJ Nexus. The controller sends
 # different notes when SHIFT is held, so shifted functions are ordinary bindings.
 # Pads: each pad mode sends its own notes, so hot cues, beat loops and the
-# sampler all work in their mode. Beat Jump, Keyboard, Key Shift and Pad FX
-# modes are not mapped yet.
+# sampler all work in their mode; KEYBOARD mode pads 1-4 toggle the stems
+# (drums, bass, vocals, instruments). Beat Jump, Key Shift and Pad FX modes
+# are not mapped yet.
 # If the tempo fader runs the wrong way on your unit, delete "invert".
 name: Pioneer DDJ-FLX4
 device: DDJ-FLX4
@@ -99,6 +100,14 @@ note 8 0x36 -> sampler.pad7
 note 9 0x36 -> sampler.stopall
 note 8 0x37 -> sampler.pad8
 note 9 0x37 -> sampler.stopall
+note 8 0x40 -> deck1.drums
+note 8 0x41 -> deck1.bass
+note 8 0x42 -> deck1.vocals
+note 8 0x43 -> deck1.inst
+note 9 0x40 -> deck1.drums
+note 9 0x41 -> deck1.bass
+note 9 0x42 -> deck1.vocals
+note 9 0x43 -> deck1.inst
 # LEDs
 led note 1 0x0B <- deck1.playing
 led note 1 0x47 <- deck1.playing
@@ -142,6 +151,14 @@ led note 8 0x36 <- sampler.pad7
 led note 9 0x36 <- sampler.pad7
 led note 8 0x37 <- sampler.pad8
 led note 9 0x37 <- sampler.pad8
+led note 8 0x40 <- deck1.drums
+led note 9 0x40 <- deck1.drums
+led note 8 0x41 <- deck1.bass
+led note 9 0x41 <- deck1.bass
+led note 8 0x42 <- deck1.vocals
+led note 9 0x42 <- deck1.vocals
+led note 8 0x43 <- deck1.inst
+led note 9 0x43 <- deck1.inst
 
 # ---------------------------------------------------------------- deck 2 (MIDI channel 2)
 note 2 0x0B -> deck2.play
@@ -220,6 +237,14 @@ note 10 0x36 -> sampler.pad15
 note 11 0x36 -> sampler.stopall
 note 10 0x37 -> sampler.pad16
 note 11 0x37 -> sampler.stopall
+note 10 0x40 -> deck2.drums
+note 10 0x41 -> deck2.bass
+note 10 0x42 -> deck2.vocals
+note 10 0x43 -> deck2.inst
+note 11 0x40 -> deck2.drums
+note 11 0x41 -> deck2.bass
+note 11 0x42 -> deck2.vocals
+note 11 0x43 -> deck2.inst
 # LEDs
 led note 2 0x0B <- deck2.playing
 led note 2 0x47 <- deck2.playing
@@ -263,6 +288,14 @@ led note 10 0x36 <- sampler.pad15
 led note 11 0x36 <- sampler.pad15
 led note 10 0x37 <- sampler.pad16
 led note 11 0x37 <- sampler.pad16
+led note 10 0x40 <- deck2.drums
+led note 11 0x40 <- deck2.drums
+led note 10 0x41 <- deck2.bass
+led note 11 0x41 <- deck2.bass
+led note 10 0x42 <- deck2.vocals
+led note 11 0x42 <- deck2.vocals
+led note 10 0x43 <- deck2.inst
+led note 11 0x43 <- deck2.inst
 
 # ---------------------------------------------------------------- mixer (MIDI channel 7)
 cc14 7 0x1F 0x3F -> mixer.crossfader

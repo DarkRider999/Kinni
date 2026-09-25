@@ -85,12 +85,20 @@ void Stretcher::hop(const Track& track, double rate) {
     start = ideal + bestDelta;
   }
 
-  // Overlap-add the chosen, windowed segment.
-  const float* L = track.l() + start;
-  const float* R = track.r() + start;
-  for (int i = 0; i < frameLen_; ++i) {
-    olaL_[size_t(i)] += L[i] * window_[size_t(i)];
-    olaR_[size_t(i)] += R[i] * window_[size_t(i)];
+  // Overlap-add the chosen, windowed segment (the search above always uses the
+  // full mix, so muting a stem never changes the timing).
+  if (stemGains_ && track.stems) {
+    for (int i = 0; i < frameLen_; ++i) {
+      olaL_[size_t(i)] += stemMixAt(track, 0, start + i, stemGains_) * window_[size_t(i)];
+      olaR_[size_t(i)] += stemMixAt(track, 1, start + i, stemGains_) * window_[size_t(i)];
+    }
+  } else {
+    const float* L = track.l() + start;
+    const float* R = track.r() + start;
+    for (int i = 0; i < frameLen_; ++i) {
+      olaL_[size_t(i)] += L[i] * window_[size_t(i)];
+      olaR_[size_t(i)] += R[i] * window_[size_t(i)];
+    }
   }
 
   // The first half is now complete: move it to the fifo and shift.

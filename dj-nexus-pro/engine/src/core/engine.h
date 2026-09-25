@@ -29,6 +29,7 @@ enum class Cmd : uint8_t {
   HotCueSet, HotCueSetAt, HotCueTrigger, HotCueClear,
   LoopIn, LoopOut, LoopBeats, LoopExit, LoopHalve, LoopDouble,
   Pitch, KeyLock, Quantize, Slip, Reverse, Sync, Jog, SetGrid, SlipRoll, Censor,
+  AttachStems, StemGain,
   // Sampler (deck = -1 except SamplerCapture, which names the source deck)
   SamplerLoad, SamplerCapture, SamplerTrigger, SamplerRelease, SamplerStopAll,
   SamplerMode, SamplerChoke, SamplerGain, SamplerPitch, SamplerSync,
@@ -42,7 +43,7 @@ struct Command {
   int32_t slot;   // hot cue slot, bool flags, jog touched
   double value;   // seconds, beats, pitch, jog rate, bpm
   double value2;  // SetGrid: first beat (seconds)
-  Track* track;   // Load only
+  Track* track;   // Load, AttachStems (a stem carrier)
 };
 
 class Engine {
@@ -103,6 +104,7 @@ class Engine {
 
   // Telemetry used by the control side (capture needs the deck tempo).
   double deckEffectiveBpm(int d) const { return telemetry_[size_t(d)].effectiveBpm.load(std::memory_order_relaxed); }
+  uint32_t deckTrackId(int d) const { return telemetry_[size_t(d)].trackId.load(std::memory_order_relaxed); }
   double clockBpm() const { return clockBpm_.load(std::memory_order_relaxed); }
   // Longest capture the per-deck history holds.
   double historySeconds() const { return 8.0; }

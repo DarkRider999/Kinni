@@ -39,6 +39,10 @@ class Stretcher {
     loopEnd_ = end;
   }
 
+  // Stem gains {drums, bass, vocals, other} for tracks with stems; nullptr
+  // plays the plain mix. Applied per hop (the overlap-add smooths changes).
+  void setStemGains(const float* g) { stemGains_ = g; }
+
   static constexpr double kMinRate = 0.5;
   static constexpr double kMaxRate = 2.0;
 
@@ -58,6 +62,7 @@ class Stretcher {
   bool havePrev_ = false;
   double chunkPos_ = 0.0;   // source position of fifo[0]
   double chunkRate_ = 1.0;  // rate used for the chunk in the fifo
+  const float* stemGains_ = nullptr;
   bool loopActive_ = false;
   double loopStart_ = 0.0, loopEnd_ = 0.0;
 };

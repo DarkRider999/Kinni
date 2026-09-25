@@ -1,6 +1,7 @@
 // C API: thin wrappers over djn::Engine.
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <memory>
 #include <new>
 
@@ -18,6 +19,9 @@ namespace {
 
 using djn::Cmd;
 using djn::Command;
+using djn::makeStems;
+using djn::Stems;
+using djn::Track;
 
 bool validDeck(const djn_engine* e, int32_t deck) { return e && deck >= 0 && deck < e->impl.numDecks(); }
 
@@ -77,6 +81,29 @@ DJN_API int djn_deck_load_pcm(djn_engine* engine, int32_t deck, const float* int
   engine->impl.collectGarbage();
   return DJN_OK;
 }
+
+DJN_API int djn_decode_file(const char* utf8_path, float** pcm, int64_t* frames, int32_t* channels,
+                            int32_t* sample_rate) {
+  if (!utf8_path || !pcm || !frames || !channels || !sample_rate) return DJN_ERR_INVALID_ARG;
+  *pcm = nullptr;
+  djn::DecodedAudio audio;
+  int r;
+  DJN_TRY {
+    r = djn::decodeFile(utf8_path, audio);
+  }
+  DJN_CATCH_BAD_ALLOC(return DJN_ERR_NO_MEMORY)
+  if (r != DJN_OK) return r;
+  float* out = static_cast<float*>(std::malloc(audio.samples.size() * sizeof(float)));
+  if (!out) return DJN_ERR_NO_MEMORY;
+  std::copy(audio.samples.begin(), audio.samples.end(), out);
+  *pcm = out;
+  *frames = audio.frames;
+  *channels = audio.channels;
+  *sample_rate = audio.sampleRate;
+  return DJN_OK;
+}
+
+DJN_API void djn_free_audio(float* pcm) { std::free(pcm); }
 
 DJN_API int djn_deck_load_file(djn_engine* engine, int32_t deck, const char* utf8_path, double bpm,
                                double first_beat_sec) {
@@ -146,6 +173,33 @@ DJN_API int djn_deck_slip_roll(djn_engine* e, int32_t d, int32_t on, double beat
   return send(e, d, Cmd::SlipRoll, on != 0, beats);
 }
 DJN_API int djn_deck_censor(djn_engine* e, int32_t d, int32_t on) { return send(e, d, Cmd::Censor, on != 0); }
+DJN_API int djn_deck_load_stems(djn_engine* e, int32_t d, uint32_t trackId, const float* drums, const float* bass,
+                                const float* vocals, int64_t frames, int32_t channels, int32_t sampleRate) {
+  if (!validDeck(e, d) || !drums || !bass || !vocals || frames <= 0 || trackId == 0) return DJN_ERR_INVALID_ARG;
+  // Early out for stale stems (the audio thread checks again when attaching).
+  if (e->impl.deckTrackId(d) != trackId) return DJN_ERR_STATE;
+  std::unique_ptr<Track> carrier;
+  DJN_TRY {
+    const float* const parts[Stems::kParts] = {drums, bass, vocals};
+    std::unique_ptr<Stems> stems = makeStems(parts, frames, channels, sampleRate, e->impl.sampleRate());
+    if (!stems) return DJN_ERR_INVALID_ARG;
+    carrier = std::make_unique<Track>();
+    carrier->stems = std::move(stems);
+    carrier->stemsFor = trackId;
+  }
+  DJN_CATCH_BAD_ALLOC(return DJN_ERR_NO_MEMORY)
+  Command c{Cmd::AttachStems, int8_t(d), 0, 0.0, 0.0, carrier.get()};
+  if (!e->impl.send(c)) return DJN_ERR_QUEUE_FULL;
+  carrier.release();  // the engine owns it now (freed via the garbage queue)
+  e->impl.collectGarbage();
+  return DJN_OK;
+}
+
+DJN_API int djn_deck_set_stem_gain(djn_engine* e, int32_t d, djn_stem stem, float gain) {
+  if (int(stem) < 0 || int(stem) >= DJN_NUM_STEMS || !std::isfinite(gain)) return DJN_ERR_INVALID_ARG;
+  return send(e, d, Cmd::StemGain, int32_t(stem), gain);
+}
+
 DJN_API int djn_deck_jog(djn_engine* e, int32_t d, int32_t touched, double rate) {
   if (!std::isfinite(rate)) return DJN_ERR_INVALID_ARG;
   return send(e, d, Cmd::Jog, touched != 0, rate);

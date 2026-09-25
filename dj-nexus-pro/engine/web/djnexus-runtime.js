@@ -7,7 +7,8 @@
   // Deck fields exposed by djnw_deck() (see src/web/djnexus_web.cpp).
   var DECK_FIELDS = ["loaded", "playing", "keyLock", "sync", "slip", "reverse", "looping", "master",
     "position", "duration", "trackBpm", "effectiveBpm", "rate", "beatPhase", "loopStart", "loopEnd",
-    "cue", "peakL", "peakR", "slipRoll", "censor"];
+    "cue", "peakL", "peakR", "slipRoll", "censor", "trackId", "stemsLoaded",
+    "stemDrums", "stemBass", "stemVocals", "stemOther"];
   var ENGINE_FIELDS = ["masterPeakL", "masterPeakR", "limiterDb", "dspLoad", "masterDeck", "clockBpm",
     "samplerLoadedLo", "samplerLoadedHi", "samplerPlayingLo", "samplerPlayingHi",
     "colorFx", "colorParam", "macro", "macroTarget", "macroProgress", "macroBeatsLeft"];
@@ -54,9 +55,18 @@
     };
   };
 
+  // Functions the engine calls back into (progress of long jobs).
+  Runtime.prototype.envImports = function () {
+    var self = this;
+    return {
+      djnw_on_progress: function (p) { return self.onProgress && self.onProgress(p) ? 1 : 0; }
+    };
+  };
+
   Runtime.prototype.initWasm = function (bytes, sampleRate) {
     var self = this;
-    return WebAssembly.instantiate(bytes, { wasi_snapshot_preview1: this.wasiImports() }).then(function (r) {
+    return WebAssembly.instantiate(bytes, { wasi_snapshot_preview1: this.wasiImports(), env: this.envImports() })
+      .then(function (r) {
       self.exports = r.instance.exports;
       self.memory = self.exports.memory;
       self.mode = "WebAssembly";
@@ -67,6 +77,8 @@
   Runtime.prototype.initAsm = function (sampleRate) {
     if (typeof globalThis.DJNexusAsm !== "function") throw new Error("JS fallback not loaded");
     var env = this.wasiImports();
+    var extra = this.envImports();
+    for (var k in extra) env[k] = extra[k];
     env.setTempRet0 = function () {};
     env.abort = function () { throw new Error("engine abort"); };
     this.exports = globalThis.DJNexusAsm(env);
@@ -282,6 +294,52 @@
       bpm: num(0), firstBeat: num(1), bpmConfidence: num(2), downbeatConfidence: num(3), tempoStable: !!num(4),
       key: num(5), keyConfidence: num(6), tuningCents: num(7), keyName: str(0), camelot: str(1), openKey: str(2)
     };
+  };
+
+  // ---------------------------------------------------------------- stems
+  // Splits a track into drums, bass and vocals (other = the rest). Blocking:
+  // run it in a Worker. onProgress(0..1) may return true to cancel.
+  // Returns {drums: [L, R], bass: [L, R], vocals: [L, R]} (Float32Arrays).
+  Runtime.prototype.separate = function (left, right, sampleRate, onProgress) {
+    var ex = this.exports, n = left.length, bytes = n * 8;
+    var inPtr = ex.djnw_malloc(bytes), d = ex.djnw_malloc(bytes), b = ex.djnw_malloc(bytes), v = ex.djnw_malloc(bytes);
+    try {
+      if (!inPtr || !d || !b || !v) throw new Error("not enough memory to split this track");
+      var f = new Float32Array(this.memory.buffer, inPtr, n * 2);
+      for (var i = 0, j = 0; i < n; i++, j += 2) { f[j] = left[i]; f[j + 1] = right[i]; }
+      this.onProgress = onProgress || null;
+      var r = ex.djnw_separate(inPtr, n, 2, sampleRate, d, b, v);
+      this.onProgress = null;
+      if (r === -8) throw new Error("cancelled");
+      if (r !== 0) throw new Error("stem separation failed (" + r + ")");
+      var mem = this.memory.buffer;
+      var planar = function (ptr) {
+        var x = new Float32Array(mem, ptr, n * 2), L = new Float32Array(n), R = new Float32Array(n);
+        for (var i = 0, j = 0; i < n; i++, j += 2) { L[i] = x[j]; R[i] = x[j + 1]; }
+        return [L, R];
+      };
+      return { drums: planar(d), bass: planar(b), vocals: planar(v) };
+    } finally {
+      [inPtr, d, b, v].forEach(function (p) { if (p) ex.djnw_free(p); });
+    }
+  };
+
+  // Attaches stems (planar pairs from separate()) to the track on `deck`.
+  Runtime.prototype.loadStems = function (deck, trackId, parts, sampleRate) {
+    var ex = this.exports, n = parts.drums[0].length, ptrs = [];
+    try {
+      ["drums", "bass", "vocals"].forEach(function (k) {
+        var p = ex.djnw_malloc(n * 8);
+        if (!p) throw new Error("not enough memory for stems");
+        ptrs.push(p);
+        var f = new Float32Array(this.memory.buffer, p, n * 2), L = parts[k][0], R = parts[k][1];
+        for (var i = 0, j = 0; i < n; i++, j += 2) { f[j] = L[i]; f[j + 1] = R[i]; }
+      }, this);
+      return ex.djnw_load_stems(this.engine, deck, trackId, ptrs[0], ptrs[1], ptrs[2], n, 2, sampleRate);
+    } finally {
+      ptrs.forEach(function (p) { ex.djnw_free(p); });
+      ex.djn_engine_collect_garbage(this.engine);
+    }
   };
 
   // Packs the current engine state into a Float64Array (see unpack()).

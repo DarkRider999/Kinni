@@ -47,6 +47,8 @@ set(DJN_CORE_SOURCES
   src/midi/midi_capi.cpp
   src/analysis/analysis.cpp
   src/analysis/analysis_capi.cpp
+  src/stems/separator.cpp
+  src/stems/stems_capi.cpp
 )
 
 set(DJN_NEEDS_MINIAUDIO OFF)
@@ -181,11 +183,13 @@ if(DJN_BUILD_TOOLS AND NOT DJN_HOST STREQUAL "android" AND NOT DJN_HOST STREQUAL
   if(WIN32)
     target_link_libraries(djnexus_render PRIVATE shell32)  # CommandLineToArgvW
   endif()
-  add_executable(djnexus_analyze tools/djnexus_analyze.cpp)
-  target_link_libraries(djnexus_analyze PRIVATE djnexus)
-  if(WIN32)
-    target_link_libraries(djnexus_analyze PRIVATE shell32)
-  endif()
+  foreach(tool djnexus_analyze djnexus_stems)
+    add_executable(${tool} tools/${tool}.cpp)
+    target_link_libraries(${tool} PRIVATE djnexus)
+    if(WIN32)
+      target_link_libraries(${tool} PRIVATE shell32)
+    endif()
+  endforeach()
   if(DJN_HOST STREQUAL "desktop")
     add_executable(djnexus_play tools/djnexus_play.cpp)
     target_link_libraries(djnexus_play PRIVATE djnexus)
@@ -198,7 +202,7 @@ endif()
 # Tests reach into internal classes, so they need the static library.
 if(DJN_BUILD_TESTS AND NOT DJN_SHARED AND NOT DJN_HOST STREQUAL "android" AND NOT DJN_HOST STREQUAL "ios")
   enable_testing()
-  add_executable(djnexus_tests tests/test_main.cpp tests/test_engine.cpp tests/test_dsp.cpp tests/test_fx_sampler.cpp tests/test_color_macro.cpp tests/test_midi.cpp tests/test_analysis.cpp)
+  add_executable(djnexus_tests tests/test_main.cpp tests/test_engine.cpp tests/test_dsp.cpp tests/test_fx_sampler.cpp tests/test_color_macro.cpp tests/test_midi.cpp tests/test_analysis.cpp tests/test_stems.cpp)
   target_include_directories(djnexus_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/src/core)
   target_link_libraries(djnexus_tests PRIVATE djnexus)
   add_test(NAME djnexus_tests COMMAND djnexus_tests)

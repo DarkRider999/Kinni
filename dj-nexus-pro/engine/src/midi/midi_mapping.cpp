@@ -118,6 +118,14 @@ bool parseLedState(const std::string& text, Led& led, std::string& err) {
         {"keylock", LedState::KeyLock}, {"slip", LedState::Slip}, {"reverse", LedState::Reverse},
         {"looping", LedState::Looping}, {"master", LedState::Master}, {"beat", LedState::Beat},
         {"sliproll", LedState::SlipRoll}, {"censor", LedState::Censor}, {"vu", LedState::Vu}};
+    static const char* const stemNames[4] = {"drums", "bass", "vocals", "inst"};
+    for (int k = 0; k < 4; ++k) {
+      if (what == stemNames[k] || (k == 3 && what == "other")) {
+        led.state = LedState::Stem;
+        led.arg = k;
+        return true;
+      }
+    }
     if (what == "hotcue") {
       if (wi < 1 || wi > 16) { err = "hot cue must be 1-16"; return false; }
       led.state = LedState::HotCue;
@@ -228,6 +236,16 @@ bool parseAction(const std::string& text, Binding& b, std::string& err) {
         {"volume", Act::Volume, false}, {"trim", Act::Trim, false}, {"low", Act::EqLow, false},
         {"mid", Act::EqMid, false}, {"high", Act::EqHigh, false}, {"color", Act::Color, false},
         {"filter", Act::Color, false}, {"pfl", Act::Pfl, false}};
+    // Stems: drums, bass, vocals, inst (other).
+    static const char* const stemNames[4] = {"drums", "bass", "vocals", "inst"};
+    for (int k = 0; k < 4; ++k) {
+      if (suffix == stemNames[k] || (k == 3 && suffix == "other")) {
+        if (group != "deck") break;
+        b.act = Act::Stem;
+        b.arg = k;
+        return true;
+      }
+    }
     if (what == "hotcue" || what == "clearhotcue") {
       if (group != "deck" || wi < 1 || wi > 16) { err = "hot cues are deckN.hotcue1..16"; return false; }
       b.act = what == "hotcue" ? Act::HotCue : Act::HotCueClear;
