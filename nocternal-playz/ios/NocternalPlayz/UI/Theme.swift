@@ -10,13 +10,13 @@ final class ThemeState: ObservableObject, ThemeManaging, BackgroundManaging {
     @Published var secondary = ThemePresets.nocternalDefault.secondaryAccent.color
     @Published var glow = ThemePresets.nocternalDefault.glowIntensity
     @Published var mode: ThemeMode = .neon
-    @Published var background: BackgroundStyle = .deepSpace
+    @Published var background: NocternalModel.BackgroundStyle = .deepSpace
 
     func setAccentColor(_ c: NeonColor) { onMain { withAnimation(.easeInOut(duration: 0.6)) { self.accent = c.color } } }
     func setSecondaryAccentColor(_ c: NeonColor) { onMain { withAnimation(.easeInOut(duration: 0.6)) { self.secondary = c.color } } }
     func setGlowIntensity(_ v: Double) { onMain { self.glow = v } }
     func setThemeMode(_ m: ThemeMode) { onMain { self.mode = m } }
-    func setStyle(_ s: BackgroundStyle) { onMain { self.background = s } }
+    func setStyle(_ s: NocternalModel.BackgroundStyle) { onMain { self.background = s } }
 
     var backgroundColor: Color {
         switch mode {
@@ -99,7 +99,7 @@ struct SectionTitle: View {
     var body: some View { Text(text.uppercased()).font(.caption.monospaced()).kerning(1.5).foregroundStyle(theme.accent).frame(maxWidth: .infinity, alignment: .leading).padding(.top, 8) }
 }
 
-/// Animated background for the theme's BackgroundStyle.
+/// Animated background for the theme's background style.
 struct NeonBackground: View {
     @EnvironmentObject var theme: ThemeState
     var body: some View {
