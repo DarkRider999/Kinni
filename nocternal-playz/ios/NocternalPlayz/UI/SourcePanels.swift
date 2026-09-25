@@ -62,7 +62,16 @@ struct FmDial: View {
     let onTune: (RadioStation) -> Void
     @State private var dragStart: Double?
 
-    private var tuned: RadioStation? { stations.min { abs(($0.fmFrequency ?? 0) - frequency) < abs(($1.fmFrequency ?? 0) - frequency) }.flatMap { abs(($0.fmFrequency ?? 0) - frequency) <= 0.25 ? $0 : nil } }
+    private var tuned: RadioStation? {
+        var best: RadioStation?
+        var bestDistance = Double.infinity
+        for s in stations {
+            guard let f = s.fmFrequency else { continue }
+            let d = Swift.abs(f - frequency)
+            if d < bestDistance { bestDistance = d; best = s }
+        }
+        return bestDistance <= 0.25 ? best : nil
+    }
 
     var body: some View {
         VStack {
