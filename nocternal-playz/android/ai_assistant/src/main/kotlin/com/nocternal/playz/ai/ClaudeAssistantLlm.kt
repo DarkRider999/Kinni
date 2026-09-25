@@ -18,8 +18,8 @@ import kotlinx.coroutines.withContext
 class ClaudeAssistantLlm(
     apiKey: String,
     private val model: String = DEFAULT_MODEL,
-    private val client: AnthropicClient = AnthropicOkHttpClient.builder().apiKey(apiKey).build(),
 ) : AssistantLlm {
+    private val client: AnthropicClient = AnthropicOkHttpClient.builder().apiKey(apiKey).build()
 
     override suspend fun complete(system: String, turns: List<LlmTurn>): String = withContext(Dispatchers.IO) {
         val builder = MessageCreateParams.builder()
