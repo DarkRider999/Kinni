@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Nocternal" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/amoled</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+    <color name="amoled">#FF000000</color>
+    <color name="neon_cyan">#FF00F0FF</color>
+    <color name="neon_magenta">#FFFF00E5</color>
+</resources>
