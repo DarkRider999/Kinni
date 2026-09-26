@@ -33,7 +33,8 @@ switching, and the dark neon UI — is implemented here.
 subzero/
 ├── docs/            Architecture & security documentation
 ├── android/         Kotlin + Jetpack Compose app (MVVM)
-└── ios/             Swift + SwiftUI app
+├── ios/             Swift + SwiftUI app
+└── server/          Zero-knowledge relay + signaling server (Node.js)
 ```
 
 ## Feature status
@@ -55,6 +56,9 @@ subzero/
 | Encrypted media vault (hidden from Gallery/Photos, encrypted at rest) | ✅ | ✅ |
 | Voice/video call UI + state machine + encrypted signaling model | ✅ | ✅ |
 | Live call media (WebRTC engine + signaling server) | ⚙️ engine seam | ⚙️ engine seam |
+| Relay/signaling server (zero-knowledge, store-and-forward) | ✅ built + tested (`server/`) | — |
+| Client ↔ relay transport | ✅ WebSocketTransport | ⚙️ TODO |
+| Over-the-wire X3DH session handshake | ⚙️ final wiring step | ⚙️ final wiring step |
 
 ✅ = working implementation · ⚙️ = scaffold/interface with TODOs
 

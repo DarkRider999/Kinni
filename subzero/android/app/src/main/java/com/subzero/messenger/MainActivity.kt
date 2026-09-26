@@ -12,7 +12,9 @@ import com.subzero.messenger.call.LoopbackRtcEngine
 import com.subzero.messenger.crypto.CryptoEngine
 import com.subzero.messenger.data.ChatRepository
 import com.subzero.messenger.data.RamMessageBuffer
+import com.subzero.messenger.data.RelayConfig
 import com.subzero.messenger.data.VaultStore
+import com.subzero.messenger.data.WebSocketTransport
 import com.subzero.messenger.identity.AppIdentity
 import com.subzero.messenger.identity.IdentityManager
 import com.subzero.messenger.security.AppLock
@@ -64,7 +66,13 @@ class MainActivity : FragmentActivity() {
 
         identity = IdentityManager(this)
         appLock = AppLock(this)
-        repository = ChatRepository(crypto, buffer, NoopTransport)
+        // Use the relay when configured (RelayConfig.URL set), else stay offline.
+        val transport = if (RelayConfig.enabled) {
+            WebSocketTransport(RelayConfig.URL, RelayConfig.selfAddress, RelayConfig.peerAddress, conversationId)
+        } else {
+            NoopTransport
+        }
+        repository = ChatRepository(crypto, buffer, transport)
         vault = VaultStore(this)
         // Media engine + signaling. The demo engine + no-op signaling let the full
         // call UI run today; swap for WebRtcEngine + an encrypted signaling

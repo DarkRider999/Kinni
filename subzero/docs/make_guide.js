@@ -94,7 +94,15 @@ const doc = new Document({
       P("To get back to the chat: double-tap the top-right corner, or press Volume-Down twice. If SafeZone is left open too long, the app locks itself and asks for your fingerprint again."),
 
       H2("App disguise (identity switching)"),
-      P("You can change what the app looks like on the home screen — its name and icon can become Calculator, Notes, Weather, Gallery, or System Update. It's still fully visible in the phone's Settings (it doesn't hide from the system); it just wears a different face on the home screen."),
+      P("You can change what the app looks like on the home screen — its name and icon can become Calculator, Notes, Weather, Gallery, or System Update, each with its own icon. It's still fully visible in the phone's Settings (it doesn't hide from the system); it just wears a different face on the home screen."),
+
+      H2("Encrypted vault"),
+      P("A private gallery for photos, videos, and files shared in the app. Anything you keep here is encrypted on the phone and does NOT appear in your normal Gallery/Photos or any file manager — it lives only inside SubZero. Open it from the vault button at the top of the chat."),
+      Bullet("Tap “Add photo/video” or “Add file” to bring media in (it's copied in encrypted; the original stays where it was)."),
+      Bullet("Tap any item to view it; tap Delete to remove it."),
+
+      H2("Voice & video calls"),
+      P("Tap the phone or video icon at the top of the chat to start an encrypted call. You'll see the call screen with mute, video on/off, flip-camera, and end-call controls, and a timer once connected. Calls are end-to-end encrypted."),
 
       H1("How to install the app"),
       P("SubZero installs from an APK file (an Android app file). You only need to do this once each."),
@@ -118,10 +126,13 @@ const doc = new Document({
       Bullet("Leaving your phone? Just switch away — SubZero locks itself automatically."),
       Bullet("Want to clear everything now? Use Secure logout — it wipes all messages from memory."),
 
+      H1("Messaging over the internet (optional)"),
+      P("Out of the box the app runs fully on the phone (great for trying every feature). For the two of us to actually send messages to each other over the internet, there's a small free “relay” server that passes along our encrypted messages — it can never read them. It can be deployed in a few minutes to a free host (Render, Railway, or Fly.io), and then the app is pointed at its address. I can set this up whenever you want; ask me and I'll walk you through it."),
+
       H1("Good to know"),
       Bullet("It's built for privacy between us, honestly and simply — strong encryption, nothing stored in the cloud."),
       Bullet("It does NOT try to destroy evidence or hide from a phone inspection — that's on purpose. It protects your messages; it doesn't pretend to defeat a forensic search."),
-      Bullet("Encrypted voice/video calling and the Notes/Weather decoys are planned next."),
+      Bullet("The vault keeps our shared photos/videos out of the normal phone gallery, encrypted."),
 
       new Paragraph({ spacing: { before: 400 }, border: { top: { style: BorderStyle.SINGLE, size: 6, color: NEON, space: 8 } },
         children: [new TextRun({ text: "Made with love. ❄", italics: true, color: GREY })] }),
