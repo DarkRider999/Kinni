@@ -69,7 +69,8 @@ class LibraryRepository(
         _scan.value = ScanStatus(ScanPhase.SCANNING)
         val found = scanner.scan()
         val analysis = _data.value.analysis
-        mutate { d -> d.copy(tracks = found.map { it.withAnalysis(analysis[it.id]) }) }
+        // Free downloads live in app storage (not MediaStore), so keep them across scans while their file exists.
+        mutate { d -> d.copy(tracks = found.map { it.withAnalysis(analysis[it.id]) } + d.tracks.filter { it.isDownload() && it.fileExists() }) }
         val todo = found.filter { it.id !in analysis && !it.isPodcast }
         _scan.value = ScanStatus(ScanPhase.ANALYZING, 0, todo.size)
         todo.forEachIndexed { i, t ->
@@ -82,6 +83,18 @@ class LibraryRepository(
         persist()
         _scan.value = ScanStatus(ScanPhase.DONE, todo.size, todo.size)
     }
+
+    /** Adds (or replaces) a downloaded free track so it plays offline like any local song. */
+    fun addDownload(t: Track) = scope.launch { mutate { d -> d.copy(tracks = d.tracks.filterNot { it.id == t.id } + t) } }
+
+    /** Removes a downloaded track from the library and deletes its file. */
+    fun deleteDownload(id: String) = scope.launch {
+        val t = track(id)?.takeIf { it.isDownload() } ?: return@launch
+        withContext(Dispatchers.IO) { runCatching { File(java.net.URI(t.uri)).delete() } }
+        mutate { d -> d.copy(tracks = d.tracks.filterNot { it.id == id }, favorites = d.favorites - id) }
+    }
+
+    fun downloads(): List<Track> = _data.value.tracks.filter { it.isDownload() }
 
     fun toggleFavorite(id: String) = scope.launch { mutate { d -> d.copy(favorites = if (id in d.favorites) d.favorites - id else d.favorites + id) } }
 
@@ -111,6 +124,11 @@ class LibraryRepository(
             tmp.renameTo(file)
         }
     }
+
+    private fun Track.isDownload() = id.startsWith(DOWNLOAD_PREFIX)
+    private fun Track.fileExists() = runCatching { File(java.net.URI(uri)).exists() }.getOrDefault(false)
+
+    companion object { const val DOWNLOAD_PREFIX = "free:" }
 
     private fun Track.withAnalysis(a: TrackAnalysis?): Track =
         if (a == null) this else copy(bpm = bpm ?: a.bpm, camelotKey = camelotKey ?: a.camelotKey, loudnessDb = a.loudnessDb, energy = a.energy)

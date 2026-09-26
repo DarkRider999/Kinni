@@ -54,6 +54,7 @@ dependencies {
     implementation(project(":ui_player"))
     implementation(project(":ui_youtube_panel"))
     implementation(project(":ui_radio_panel"))
+    implementation(project(":free_music"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

@@ -22,6 +22,7 @@ nocternal-playz/
 │   ├── ui_player            player, EQ & FX, lyrics, album art
 │   ├── ui_youtube_panel     YouTube Music WebView panel
 │   ├── radio_hub            open radio directories: Radio Browser, SomaFM, Icecast; by country & genre
+│   ├── free_music           legal free downloads: Internet Archive + Jamendo (CC / public domain), podcast RSS
 │   ├── ui_radio_panel       Radio Hub screen + FM dial
 │   └── app                  navigation, Home, Lighting, Settings, AI panel, floating bubble
 ├── ios/

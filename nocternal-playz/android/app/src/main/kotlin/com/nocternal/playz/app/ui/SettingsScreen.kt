@@ -70,6 +70,7 @@ fun SettingsScreen(c: AppContainer) {
     val sleepLeft by c.audio.sleepTimer.remainingMs.collectAsStateWithLifecycle()
     val fx by c.audio.fxSettings.collectAsStateWithLifecycle()
     var apiKey by remember(s.assistantApiKey) { mutableStateOf(s.assistantApiKey.orEmpty()) }
+    var jamendoId by remember(s.jamendoClientId) { mutableStateOf(s.jamendoClientId.orEmpty()) }
     var token by remember(auddToken) { mutableStateOf(auddToken.orEmpty()) }
     var restoreStrategy by remember { mutableStateOf(RestoreStrategy.MERGE) }
     fun toast(msg: String) = Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
@@ -183,6 +184,16 @@ fun SettingsScreen(c: AppContainer) {
                     c.settingsRepo.setRecognitionToken(token)
                     toast("Saved")
                 }
+            }
+        }
+
+        item { SectionTitle("Free music") }
+        item {
+            GlowCard(Modifier.fillMaxWidth()) {
+                Text("Internet Archive and podcasts work without setup. For Jamendo's Creative Commons catalogue, paste a free client ID from devportal.jamendo.com.", color = p.muted, style = MaterialTheme.typography.labelSmall)
+                OutlinedTextField(jamendoId, { jamendoId = it }, Modifier.fillMaxWidth(), label = { Text("Jamendo client ID") }, singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = p.accent), shape = RoundedCornerShape(14.dp))
+                NeonChip("Save client ID") { c.settingsRepo.update { it.copy(jamendoClientId = jamendoId.trim().ifBlank { null }) }; toast("Saved") }
             }
         }
 

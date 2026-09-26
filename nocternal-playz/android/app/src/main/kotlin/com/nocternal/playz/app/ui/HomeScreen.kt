@@ -71,7 +71,7 @@ import kotlinx.coroutines.launch
  * Radio Hub — with Continue Listening, AI ideas and genre tiles on the Local panel.
  */
 @Composable
-fun HomeScreen(c: AppContainer, actions: ActionExecutor, onOpenPlayer: () -> Unit) {
+fun HomeScreen(c: AppContainer, actions: ActionExecutor, onOpenPlayer: () -> Unit, onOpenFree: () -> Unit) {
     val p = Neon.palette
     val pager = rememberPagerState { AudioSource.entries.size }
     val scope = rememberCoroutineScope()
@@ -101,7 +101,7 @@ fun HomeScreen(c: AppContainer, actions: ActionExecutor, onOpenPlayer: () -> Uni
             // Edge lighting between panels: a glow line that brightens while swiping.
             Box(Modifier.fillMaxSize()) {
                 when (AudioSource.entries[page]) {
-                    AudioSource.LOCAL -> LocalPanel(c, actions, onOpenPlayer, onGenreRadio = { g -> radioGenre = g; scope.launch { pager.animateScrollToPage(AudioSource.RADIO.ordinal) } })
+                    AudioSource.LOCAL -> LocalPanel(c, actions, onOpenPlayer, onOpenFree, onGenreRadio = { g -> radioGenre = g; scope.launch { pager.animateScrollToPage(AudioSource.RADIO.ordinal) } })
                     AudioSource.YOUTUBE -> if (youtubeOpened) YouTubeMusicPanel(
                         online = online,
                         searchQuery = search?.takeIf { it.first == AudioSource.YOUTUBE }?.second,
@@ -145,7 +145,7 @@ private fun SourceTabs(position: Float, onSelect: (Int) -> Unit) {
 private enum class LibraryTab { SONGS, PLAYLISTS, FOLDERS, HISTORY }
 
 @Composable
-private fun LocalPanel(c: AppContainer, actions: ActionExecutor, onOpenPlayer: () -> Unit, onGenreRadio: (String) -> Unit) {
+private fun LocalPanel(c: AppContainer, actions: ActionExecutor, onOpenPlayer: () -> Unit, onOpenFree: () -> Unit, onGenreRadio: (String) -> Unit) {
     val p = Neon.palette
     val lib by c.library.data.collectAsStateWithLifecycle()
     val scan by c.library.scan.collectAsStateWithLifecycle()
@@ -172,6 +172,19 @@ private fun LocalPanel(c: AppContainer, actions: ActionExecutor, onOpenPlayer: (
             item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(recent, key = { it.id }) { t -> TrackCard(c, t) { play(recent, recent.indexOf(t)) } }
+                }
+            }
+        }
+
+        item {
+            GlowCard(Modifier.fillMaxWidth(), glowColor = p.secondary.copy(alpha = 0.5f), onClick = onOpenFree) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("⬇", color = p.accent, style = MaterialTheme.typography.headlineSmall)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Free music & podcasts", color = p.onBackground, style = MaterialTheme.typography.titleMedium)
+                        Text("Download Creative Commons songs and podcast episodes for offline play", color = p.muted, style = MaterialTheme.typography.labelSmall)
+                    }
                 }
             }
         }

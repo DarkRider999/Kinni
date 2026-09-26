@@ -30,6 +30,10 @@ data class Track(
     val dateAddedEpochMs: Long = 0,
     val source: AudioSource = AudioSource.LOCAL,
     val isPodcast: Boolean = false,
+    /** Licence of a free download, e.g. "CC BY-SA 4.0"; shown as attribution. */
+    val license: String? = null,
+    /** Where the work was published (credit / attribution link). */
+    val attributionUrl: String? = null,
 )
 
 @Serializable

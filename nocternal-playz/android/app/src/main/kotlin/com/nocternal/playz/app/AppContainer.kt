@@ -41,6 +41,8 @@ import com.nocternal.playz.theme.ThemeEvent
 import com.nocternal.playz.theme.ThemeStateStore
 import com.nocternal.playz.theme.ThemeSwitcher
 import com.nocternal.playz.radio.RadioDirectory
+import com.nocternal.playz.freemusic.FreeMusicHub
+import com.nocternal.playz.freemusic.JamendoClient
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -120,6 +122,10 @@ class AppContainer(val context: Context) {
     /** One-line toasts from plugins and background work. */
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 8)
     val messages: SharedFlow<String> = _messages.asSharedFlow()
+
+    /** Legal free music (Creative Commons / public domain) and podcast downloads. */
+    val freeMusic = FreeMusicHub(jamendo = JamendoClient({ settingsRepo.settings.value.jamendoClientId }))
+    val downloads = FreeDownloader(context, scope, library, { offline.canUseNetwork(settingsRepo.settings.value) }) { _messages.tryEmit(it) }
 
     private val pluginStorage = HashMap<String, MutableMap<String, String>>()
     val plugins = PluginRegistry(object : PluginHost {

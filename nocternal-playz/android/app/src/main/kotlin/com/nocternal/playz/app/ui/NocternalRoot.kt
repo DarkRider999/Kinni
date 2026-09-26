@@ -101,7 +101,8 @@ fun NocternalRoot(c: AppContainer, actions: ActionExecutor) {
             Column(Modifier.fillMaxSize()) {
                 Box(Modifier.weight(1f)) {
                     NavHost(nav, startDestination = Tab.HOME.route) {
-                        composable(Tab.HOME.route) { HomeScreen(c, actions, onOpenPlayer = { nav.navigate(Tab.PLAYER.route) }) }
+                        composable(Tab.HOME.route) { HomeScreen(c, actions, onOpenPlayer = { nav.navigate(Tab.PLAYER.route) }, onOpenFree = { nav.navigate("free") }) }
+                        composable("free") { FreeMusicScreen(c, onOpenPlayer = { nav.navigate(Tab.PLAYER.route) }, onBack = { nav.popBackStack() }) }
                         composable(Tab.PLAYER.route) {
                             val track = playback.track
                             PlayerScreen(

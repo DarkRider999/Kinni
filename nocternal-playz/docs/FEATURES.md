@@ -42,6 +42,7 @@ Status: **✅ implemented**, **◐ implemented with a platform limit** (see [Arc
 |---|---|---|
 | Three horizontal panels: Local / YouTube Music / Radio Hub | ✅ | A: `app/.../ui/HomeScreen.kt` (`HorizontalPager`) · i: `UI/HomeView.swift` (paged `TabView`) |
 | YouTube Music (WebView) | ◐ | A: `ui_youtube_panel/.../YouTubeMusicPanel.kt` · i: `UI/SourcePanels.swift` (`YouTubePanel`) |
+| Free music & podcast downloads (Creative Commons / public domain only, licence + credit kept, offline play) | ◐ | A: `free_music/` (`InternetArchiveClient`, `JamendoClient`, `PodcastClient`), `app/.../FreeDownloader.kt`, `app/.../ui/FreeMusicScreen.kt` · i: not yet |
 | Radio Hub (internet radio + FM) | ◐ | A: `ui_radio_panel/` (`RadioBrowserClient`, `RadioHubScreen`, `FmDial`) · i: `UI/SourcePanels.swift` |
 | Neon transitions, edge lighting between panels, mini-player dock | ✅ | `HomeScreen.kt` (edge glow while swiping, animated neon tab indicator), `NocternalRoot.kt` (`MiniPlayerDock`) |
 

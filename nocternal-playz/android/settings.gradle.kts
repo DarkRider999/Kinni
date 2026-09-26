@@ -34,6 +34,7 @@ include(
     ":backup_manager",
     ":fx_engine",
     ":radio_hub",
+    ":free_music",
 )
 
 // Android modules.

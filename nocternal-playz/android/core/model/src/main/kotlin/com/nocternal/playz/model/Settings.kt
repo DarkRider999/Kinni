@@ -33,6 +33,8 @@ data class AppSettings(
     val edgeLighting: EdgeLightingSettings = EdgeLightingSettings(),
     val enabledPlugins: Set<String> = emptySet(),
     val assistantApiKey: String? = null,
+    /** Free Jamendo developer client ID (devportal.jamendo.com) for Creative Commons music search. */
+    val jamendoClientId: String? = null,
 )
 
 @Serializable
