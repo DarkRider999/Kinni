@@ -65,7 +65,11 @@ export async function describeImage(base64: string, mediaType: SupportedMediaTyp
     });
   } catch (err) {
     if (err instanceof Anthropic.RateLimitError) throw new HttpError(429, 'Too many photo descriptions right now. Please try again in a minute.');
-    if (err instanceof Anthropic.BadRequestError) throw new HttpError(422, 'This image could not be read. Try a JPEG or PNG.');
+    // A 400 can mean a bad image, or an account problem such as an empty credit balance.
+    // Only blame the image when the API says so; otherwise log the real reason for the owner.
+    if (err instanceof Anthropic.BadRequestError && /image/i.test(err.message) && !/credit|billing|balance/i.test(err.message)) {
+      throw new HttpError(422, 'This image could not be read. Try a JPEG or PNG.');
+    }
     if (err instanceof Anthropic.AuthenticationError) {
       console.error('Anthropic API key rejected');
       throw serviceUnavailable('Photo descriptions are temporarily unavailable.');

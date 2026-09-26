@@ -93,6 +93,13 @@ describe('describeImage', () => {
     await expect(describeImage(IMAGE, 'image/jpeg')).rejects.toMatchObject({ status: 503 });
   });
 
+  it('only blames the image for image errors; account problems become 503', async () => {
+    parse.mockRejectedValue(new Anthropic.BadRequestError(400, 'Could not process image'));
+    await expect(describeImage(IMAGE, 'image/jpeg')).rejects.toMatchObject({ status: 422 });
+    parse.mockRejectedValue(new Anthropic.BadRequestError(400, 'Your credit balance is too low to access the Anthropic API.'));
+    await expect(describeImage(IMAGE, 'image/jpeg')).rejects.toMatchObject({ status: 503 });
+  });
+
   it('maps rate limits to 429', async () => {
     parse.mockRejectedValue(new Anthropic.RateLimitError(429));
     await expect(describeImage(IMAGE, 'image/jpeg')).rejects.toMatchObject({ status: 429 });
