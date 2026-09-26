@@ -24,7 +24,24 @@ vi.mock('@anthropic-ai/sdk', () => {
   return { default: Anthropic };
 });
 
-const { describeImage } = await import('../lib/server/vision');
+// Fake Google's SDK the same way.
+const generateContent = vi.fn();
+vi.mock('@google/genai', () => {
+  class ApiError extends Error {
+    status: number;
+    constructor(opts: { status: number; message: string }) {
+      super(opts.message);
+      this.status = opts.status;
+    }
+  }
+  class GoogleGenAI {
+    models = { generateContent };
+  }
+  return { GoogleGenAI, ApiError };
+});
+
+const { describeImage, visionProvider } = await import('../lib/server/vision');
+const GenAI = (await import('@google/genai')) as any;
 const analyze = (await import('../pages/api/analyze-image')).default;
 const Anthropic = (await import('@anthropic-ai/sdk')).default as any;
 
@@ -38,6 +55,10 @@ const IMAGE = 'A'.repeat(200);
 const env = { ...process.env };
 beforeEach(() => {
   parse.mockReset();
+  generateContent.mockReset();
+  delete process.env.GEMINI_API_KEY;
+  delete process.env.GEMINI_MODEL;
+  delete process.env.VISION_PROVIDER;
   process.env.ANTHROPIC_API_KEY = 'sk-test';
   delete process.env.VISION_MODEL;
   delete process.env.DATABASE_URL;
@@ -103,6 +124,58 @@ describe('describeImage', () => {
   it('maps rate limits to 429', async () => {
     parse.mockRejectedValue(new Anthropic.RateLimitError(429));
     await expect(describeImage(IMAGE, 'image/jpeg')).rejects.toMatchObject({ status: 429 });
+  });
+});
+
+describe('Gemini (free tier)', () => {
+  beforeEach(() => {
+    process.env.GEMINI_API_KEY = 'gm-test';
+  });
+
+  it('is preferred when its key is set, unless VISION_PROVIDER says otherwise', () => {
+    expect(visionProvider()).toBe('gemini');
+    process.env.VISION_PROVIDER = 'anthropic';
+    expect(visionProvider()).toBe('anthropic');
+    delete process.env.VISION_PROVIDER;
+    delete process.env.GEMINI_API_KEY;
+    expect(visionProvider()).toBe('anthropic');
+    delete process.env.ANTHROPIC_API_KEY;
+    expect(visionProvider()).toBeNull();
+  });
+
+  it('sends the image with a JSON schema and parses the reply', async () => {
+    generateContent.mockResolvedValue({ text: JSON.stringify(DESCRIPTION) });
+    await expect(describeImage(IMAGE, 'image/jpeg')).resolves.toEqual(DESCRIPTION);
+    const req = generateContent.mock.calls[0][0];
+    expect(req.model).toBe('gemini-flash-latest');
+    expect(req.contents[0].parts[0]).toEqual({ inlineData: { mimeType: 'image/jpeg', data: IMAGE } });
+    expect(req.config.responseMimeType).toBe('application/json');
+    expect(req.config.responseJsonSchema.$schema).toBeUndefined();
+    expect(req.config.responseJsonSchema.required).toContain('prompt');
+    expect(parse).not.toHaveBeenCalled();
+  });
+
+  it('lets the owner pick the Gemini model', async () => {
+    process.env.GEMINI_MODEL = 'gemini-2.5-flash-lite';
+    generateContent.mockResolvedValue({ text: JSON.stringify(DESCRIPTION) });
+    await describeImage(IMAGE, 'image/png');
+    expect(generateContent.mock.calls[0][0].model).toBe('gemini-2.5-flash-lite');
+  });
+
+  it('explains the free-tier limit on 429', async () => {
+    generateContent.mockRejectedValue(new GenAI.ApiError({ status: 429, message: 'quota' }));
+    await expect(describeImage(IMAGE, 'image/jpeg')).rejects.toMatchObject({ status: 429, message: expect.stringContaining('free') });
+  });
+
+  it('handles blocked, invalid and failed replies', async () => {
+    generateContent.mockResolvedValue({ promptFeedback: { blockReason: 'SAFETY' } });
+    await expect(describeImage(IMAGE, 'image/jpeg')).rejects.toMatchObject({ status: 422 });
+    generateContent.mockResolvedValue({ text: 'not json' });
+    await expect(describeImage(IMAGE, 'image/jpeg')).rejects.toMatchObject({ status: 503 });
+    generateContent.mockResolvedValue({ text: JSON.stringify({ subject: 'only this' }) });
+    await expect(describeImage(IMAGE, 'image/jpeg')).rejects.toMatchObject({ status: 503 });
+    generateContent.mockRejectedValue(new GenAI.ApiError({ status: 400, message: 'API key not valid' }));
+    await expect(describeImage(IMAGE, 'image/jpeg')).rejects.toMatchObject({ status: 503 });
   });
 });
 
