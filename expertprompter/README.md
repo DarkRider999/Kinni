@@ -10,7 +10,7 @@ Type any idea or task in plain words. ExpertPrompter:
 6. lets you attach files: an **Upload file** (the document or code to work on) and **Reference files** (examples of the style you want),
 7. gives every account 5 free prompts, then offers Premium for $10/month (Stripe), with sign-in through Google, Facebook, GitHub or email.
 
-All generation logic is **pure, deterministic TypeScript**. No external AI API is called, so the app has no per-request cost and no API keys.
+All prompt generation is **pure, deterministic TypeScript**. When you attach a photo, a free AI model running **in the visitor's browser** describes it so the prompt can recreate it (see §5c). No API key or server AI is needed.
 
 ---
 
@@ -164,6 +164,7 @@ All routes are served by the app itself (`http://localhost:3000` locally). Error
 | GET | `/api/auth/providers` | none | Enabled sign-in providers, and whether billing is set up |
 | GET | `/api/auth/oauth/:provider` | none | Start Google / Facebook / GitHub sign-in |
 | GET | `/api/auth/oauth/:provider/callback` | none | Provider redirect target |
+| POST | `/api/analyze-image` | required* | `{ image: base64, mediaType }` → `{ description }` (Claude vision). *Open when no database is configured |
 | POST | `/api/billing/checkout` | required | Stripe Checkout URL for Premium |
 | POST | `/api/billing/portal` | required | Stripe Billing Portal URL (change card or cancel) |
 | POST | `/api/billing/webhook` | Stripe signature | Subscription sync |
@@ -211,6 +212,34 @@ Rate limits: generation is limited to 60 requests/min per IP and sign-in/registr
   - **Images** are listed so you attach them in your AI tool. Image prompts add Midjourney `--sref` and ChatGPT instructions, and video prompts use a source image as the first frame.
   - The summary paragraph names the attached files.
 - **API:** `POST /api/generate-prompt` accepts `attachments: [{ name, role, kind: "text"|"image"|"other", size?, text? }]`, at most 8 files, with a 1 MB request limit. Regenerate reuses the same files.
+
+## 5c. Photo descriptions ("recreate this photo")
+
+**No AI, always:** when an image is attached, the browser measures:
+- the exact aspect ratio (e.g. `4:5`);
+- the colour palette as plain names (`lib/imageStats.ts`);
+- the lighting: bright or dark, warm or cool, and the contrast.
+
+These go into the prompt straight away.
+
+**On-device AI (default, free, private):**
+- **The model:** `public/photo-ai-worker.js` runs **Florence-2 base** (`onnx-community/Florence-2-base-ft`, task `<MORE_DETAILED_CAPTION>`) in a Web Worker through transformers.js, loaded from jsDelivr. It uses WebGPU when the browser has it and WebAssembly otherwise.
+- **The download:** 4-bit weights with 8-bit embeddings, about **215 MB**, downloaded once from Hugging Face and cached by the browser.
+- **Consent:** the first time, each visitor taps **Describe with AI** to agree to the download. After that it runs automatically.
+- **The photo never leaves the device.**
+- **Speed and quality:** tested on a server CPU, it took about 3.5 seconds per photo. Captions are basic and occasionally wrong.
+- **How it's used:** the cleaned caption, with repeated sentences removed, becomes the recreate prompt, followed by the measured light and palette.
+
+**Server AI (optional, better quality):** set `GEMINI_API_KEY` (Google AI Studio free tier) or `ANTHROPIC_API_KEY` to describe photos on the server instead, using structured JSON with subject, details, setting, composition, camera, lighting, colours, style, mood, text and a recreate prompt. `VISION_PROVIDER=browser` forces on-device mode even when a key is set. The server path requires sign-in, and free accounts get it only while they have free prompts left. It is rate-limited, and the Privacy page says photos go to Google or Anthropic.
+
+**How descriptions are used:**
+- **Uploaded photo:** the first line of the image prompt becomes the recreate prompt, with any change the user typed in front, and the aspect ratio matches the photo.
+- **Reference photos:** they drive the style, light and palette.
+- **Text tasks:** they include the description as source material.
+- **Every image prompt with a photo** gets steps for giving the photo itself to the tool, since that matters most for an exact match:
+  - Midjourney: image URL + `--iw 2`, `--oref`/`--cref` for the same person, `--sref` for style;
+  - ChatGPT / Gemini: attach and say "recreate";
+  - Stable Diffusion: img2img at denoising strength 0.3–0.5 + ControlNet.
 
 ## 6. Prompt generation algorithm (`promptGenerationService.ts`)
 
@@ -327,7 +356,7 @@ npm run dev                               # UI + API on http://localhost:3000
 Quality checks:
 
 ```bash
-cd web && npm run typecheck && npm test && npm run build   # 60 tests without a DB
+cd web && npm run typecheck && npm test && npm run build   # 100 tests without a DB (the Claude and Gemini SDKs are mocked)
 # With a migrated local DB, 10 more integration tests run (free-run limit, master, username sign-in, OAuth linking, Stripe webhook):
 DATABASE_URL=... DIRECT_URL=... npm test
 ```
@@ -341,6 +370,7 @@ DATABASE_URL=... DIRECT_URL=... npm test
   - `JWT_SECRET`: a long random string
   - `APP_URL`: `https://expertprompter.vercel.app`
   - `MASTER_EMAILS`: the owner's email(s)
+  - Optional: `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` for server-side photo descriptions (otherwise they run on the visitor's device); `VISION_PROVIDER=browser` forces on-device
   - Sign-in and billing credentials: see below
 - **Database role:** the app connects as a dedicated `expertprompter_app` role that owns the `expertprompter` schema. It is not the Supabase `postgres` admin, and its tables are outside the `public` schema that the Supabase Data API serves.
 ### Setting up sign-in providers

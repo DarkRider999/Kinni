@@ -1,9 +1,9 @@
-import { type FormEvent } from 'react';
+import { useRef, type FormEvent } from 'react';
 import type { PromptOptions, PromptStyle } from '@/lib/types';
 import { STYLE_OPTIONS } from '@/lib/types';
 import AdvancedOptionsPanel from './AdvancedOptionsPanel';
-import FileUploadPanel, { type UiAttachment } from './FileUploadPanel';
-import { SparklesIcon, SpinnerIcon } from './Icons';
+import FileUploadPanel, { type AttachmentRole, type UiAttachment } from './FileUploadPanel';
+import { PlusIcon, SparklesIcon, SpinnerIcon } from './Icons';
 
 export interface InputState {
   rawInput: string;
@@ -34,20 +34,24 @@ const EXAMPLES = [
 export default function InputPanel({ value, onChange, onAttachmentsChange, onGenerate, loading }: InputPanelProps) {
   const tooShort = value.rawInput.trim().length < 3;
   const reading = value.attachments.some((a) => a.status === 'reading');
+  const describing = value.attachments.some((a) => a.status === 'describing');
+  const busyFiles = reading || describing;
+  const openPicker = useRef<((role: AttachmentRole) => void) | null>(null);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!tooShort && !loading && !reading) onGenerate();
+    if (!tooShort && !loading && !busyFiles) onGenerate();
   };
 
   return (
     <form onSubmit={submit} className="card space-y-4" aria-label="Prompt input">
       <div>
         <label htmlFor="raw-input" className="label">Your idea or task</label>
+        <div className="relative">
         <textarea
           id="raw-input"
           rows={6}
-          className="input resize-y text-base leading-relaxed"
+          className="input resize-y pb-12 text-base leading-relaxed"
           placeholder="Type your idea or task… e.g. “Summarise the attached report for my manager”"
           value={value.rawInput}
           maxLength={MAX_CHARS}
@@ -58,13 +62,25 @@ export default function InputPanel({ value, onChange, onAttachmentsChange, onGen
           }}
           disabled={loading}
         />
+          {/* Quick attach: opens the "Upload file" picker (photos, PDFs, documents, code). */}
+          <button
+            type="button"
+            onClick={() => openPicker.current?.('source')}
+            disabled={loading}
+            className="absolute bottom-3 left-3 inline-flex h-8 items-center gap-1 rounded-full border border-slate-300 bg-white px-2.5 text-xs font-medium text-slate-600 shadow-sm transition hover:border-brand-500 hover:text-brand-700 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-brand-300"
+            aria-label="Attach a photo or file"
+            title="Attach a photo or file"
+          >
+            <PlusIcon width={16} height={16} /> Photo or file
+          </button>
+        </div>
         <div className="mt-1 flex justify-between text-xs text-slate-400">
           <span>Tip: press Ctrl/⌘ + Enter to generate</span>
           <span>{value.rawInput.length}/{MAX_CHARS}</span>
         </div>
       </div>
 
-      <FileUploadPanel value={value.attachments} onChange={onAttachmentsChange} disabled={loading} />
+      <FileUploadPanel value={value.attachments} onChange={onAttachmentsChange} disabled={loading} pickerRef={openPicker} />
 
       <div className="flex flex-wrap gap-2" aria-label="Examples">
         {EXAMPLES.map((ex) => (
@@ -113,9 +129,9 @@ export default function InputPanel({ value, onChange, onAttachmentsChange, onGen
 
       <AdvancedOptionsPanel value={value.options} onChange={(options) => onChange({ ...value, options })} disabled={loading} />
 
-      <button type="submit" className="btn-primary w-full py-3 text-base" disabled={tooShort || loading || reading}>
-        {loading || reading ? <SpinnerIcon /> : <SparklesIcon />}
-        {loading ? 'Generating…' : reading ? 'Reading files…' : 'Generate expert prompt'}
+      <button type="submit" className="btn-primary w-full py-3 text-base" disabled={tooShort || loading || busyFiles}>
+        {loading || busyFiles ? <SpinnerIcon /> : <SparklesIcon />}
+        {loading ? 'Generating…' : describing ? 'Describing photos…' : reading ? 'Reading files…' : 'Generate expert prompt'}
       </button>
     </form>
   );

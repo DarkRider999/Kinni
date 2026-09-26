@@ -18,7 +18,10 @@ export interface RunGenerationInput {
 
 export function runGeneration(input: RunGenerationInput): GeneratePromptResult & { title: string; templateKey: string } {
   const detection = scoreCategories(input.rawInput);
-  const category = input.categoryOverride ?? detection.category;
+  // A vague request ("recreate this") with an uploaded photo is an image task.
+  const hasSourceImage = (input.attachments ?? []).some((a) => a.role === 'source' && a.kind === 'image');
+  const category =
+    input.categoryOverride ?? (detection.category === 'GENERAL_WRITING' && hasSourceImage ? 'IMAGE' : detection.category);
   const promptStyle = input.promptStyle ?? 'PROFESSIONAL';
   const variation = input.variation ?? 0;
 

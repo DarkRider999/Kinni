@@ -42,6 +42,25 @@ export interface Attachment {
   kind: 'text' | 'image' | 'other';
   size?: number;
   text?: string;
+  /** Pixel size of images, used to match the aspect ratio. */
+  width?: number;
+  height?: number;
+  /** AI description of an image (see lib/server/vision.ts). */
+  description?: PhotoDescription;
+}
+
+export interface PhotoDescription {
+  subject: string;
+  details: string;
+  setting: string;
+  composition: string;
+  camera: string;
+  lighting: string;
+  colors: string[];
+  style: string;
+  mood: string;
+  text: string;
+  prompt: string;
 }
 
 export const CATEGORY_LABELS: Record<Category, string> = {

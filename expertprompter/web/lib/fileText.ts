@@ -1,3 +1,5 @@
+import { analyzePixels, type PixelStats } from './imageStats';
+
 // Reads attached files in the browser. Only extracted text (plus name and
 // size) is sent to the API; the files themselves never leave the device.
 
@@ -100,4 +102,56 @@ export function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** Longest side sent for AI description: enough detail, ~1,500 input tokens. */
+const ANALYSIS_MAX_SIDE = 1024;
+
+export interface PreparedImage {
+  width: number;
+  height: number;
+  /** JPEG, base64 without the data: prefix (for the server AI). */
+  base64: string;
+  /** The same JPEG as a Blob (for the on-device AI). */
+  blob: Blob;
+  /** Colour palette, lighting and contrast measured from the pixels. */
+  stats: PixelStats;
+}
+
+/**
+ * Reads an image's size, measures its colours and light, and makes a small JPEG
+ * copy for AI description. Returns null when the browser can't decode the
+ * format (e.g. HEIC outside Safari).
+ */
+export async function prepareImage(file: File): Promise<PreparedImage | null> {
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    return null;
+  }
+  const { width, height } = bitmap;
+  const scale = Math.min(1, ANALYSIS_MAX_SIDE / Math.max(width, height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(width * scale));
+  canvas.height = Math.max(1, Math.round(height * scale));
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  ctx.fillStyle = '#fff'; // transparent PNGs become white, not black
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+  // A 64px copy is plenty for colour statistics.
+  const small = document.createElement('canvas');
+  small.width = 64;
+  small.height = Math.max(1, Math.round((64 * height) / width));
+  const sctx = small.getContext('2d');
+  sctx?.drawImage(bitmap, 0, 0, small.width, small.height);
+  const stats = analyzePixels(sctx ? sctx.getImageData(0, 0, small.width, small.height).data : []);
+  bitmap.close();
+
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+  if (!blob) return null;
+  return { width, height, base64: dataUrl.slice(dataUrl.indexOf(',') + 1), blob, stats };
 }

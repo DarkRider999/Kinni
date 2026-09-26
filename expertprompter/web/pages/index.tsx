@@ -18,7 +18,12 @@ import { CATEGORY_LABELS } from '@/lib/types';
 function toPayload(attachments: UiAttachment[]): AttachmentPayload[] {
   return attachments
     .filter((a) => a.status === 'ready')
-    .map(({ name, role, kind, size, text }) => ({ name, role, kind, size, ...(text ? { text } : {}) }));
+    .map(({ name, role, kind, size, text, width, height, description }) => ({
+      name, role, kind, size,
+      ...(text ? { text } : {}),
+      ...(width && height ? { width, height } : {}),
+      ...(description ? { description } : {}),
+    }));
 }
 
 /** Drops empty option fields so the request stays clean. */
@@ -292,7 +297,7 @@ export default function Home() {
       </main>
 
       <footer className="mx-auto max-w-7xl px-4 pb-10 pt-4 text-xs text-slate-400 sm:px-6">
-        ExpertPrompter generates prompts with deterministic, rule-based logic. No data is sent to third-party AI services.
+        ExpertPrompter writes prompts with its own rule-based logic. Photos you attach are described by an AI running on your own device.
         {' · '}<a href="/privacy" className="underline">Privacy</a>{' · '}<a href="/terms" className="underline">Terms</a>
       </footer>
 
