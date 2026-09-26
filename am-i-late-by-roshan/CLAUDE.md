@@ -12,7 +12,7 @@
 
 ## Tech stack (do not change without being asked)
 
-- **Frontend:** Flutter (Dart), Material 3, `google_maps_flutter`
+- **Frontend:** Flutter (Dart), Material 3, `flutter_map` with OpenStreetMap tiles (switched from `google_maps_flutter` at the owner's request so maps need no API key or billing)
 - **Backend:** Node.js + Express 5, TypeScript
 - **Database:** PostgreSQL + PostGIS (geography columns for all lat/lng data)
 - **Real-time:** Redis pub/sub (`ioredis`) for traffic updates + notification fan-out (in-process bus when `REDIS_URL` is empty)
@@ -27,7 +27,7 @@ Working end to end and tested; free to run (every paid API is optional).
 
 - Backend: JWT auth (user id always derived server-side), real Directions (OSRM/Google/Mapbox with polylines, turn-by-turn steps and lane data; haversine fallback), Salik/DARB pricing, PostGIS school zones and events, Open-Meteo/OpenWeather weather, OSM place search/speed limits/car parks, SSE notifications over Redis, FCM push, rule-based or Claude assistant, privacy export/delete, rate limiting, structured logging (pino), migrations applied on boot. `npx tsc --noEmit` clean; 83 vitest tests (unit + PostGIS integration).
 - AI service: `/predict/traffic`, `/predict/eta`, `/score/disruption`, `/score/driver-state`; 40 pytest tests. The backend mirrors these heuristics locally (`ai_client.ts`) and falls back to them if the service is down.
-- Flutter: login, home (map, place search, arrive-by, commutes, recent trips, assistant), trip result (verdict, 3 routes, ETA confidence, parking), navigation (turn-by-turn, lane arrows, speed vs limit, off-route re-route, periodic re-plan, crowd speed reports, fatigue overlay), settings (profile, commutes, privacy, server URL), notification settings + inbox. `flutter analyze` clean; 18 tests. Android/iOS platform projects configured (permissions, Maps key injection, desugaring).
+- Flutter: login, home (map, place search, arrive-by, commutes, recent trips, assistant), trip result (verdict, 3 routes, ETA confidence, parking), navigation (turn-by-turn, lane arrows, speed vs limit, off-route re-route, periodic re-plan, crowd speed reports, fatigue overlay), settings (profile, commutes, privacy, server URL), notification settings + inbox. `flutter analyze` clean; 19 tests. Android/iOS platform projects configured (permissions, Maps key injection, desugaring).
 - `docker-compose.yml` brings up PostGIS, Redis, AI service and backend. CI: `.github/workflows/am-i-late.yml` (backend on PostGIS, pytest, docker build, flutter analyze/test + release APK artifact).
 
 ## Project structure
@@ -38,7 +38,7 @@ am-i-late-by-roshan/
 ├── flutter_app/lib/
 │   ├── main.dart, app_scope.dart
 │   ├── screens/   login, home, trip_result, navigation, settings (+ commute editor), notification_settings
-│   ├── widgets/   route_card, eta_confidence_widget, speed_indicator_widget, sleep_alert_overlay,
+│   ├── widgets/   app_map (OSM map, pins), route_card, eta_confidence_widget, speed_indicator_widget, sleep_alert_overlay,
 │   │              place_search_field, assistant_sheet
 │   ├── services/  api_client, location_service, sensor_service, notification_service
 │   ├── models/    trip, route_option, driver_profile (+ CommuteProfile), notification_preference (+ AppNotification), place
@@ -61,7 +61,7 @@ am-i-late-by-roshan/
 
 ## Environment variables
 
-See `backend/.env.example` (fully commented) and `ai-service/.env.example`. Flutter: `--dart-define=API_BASE_URL=...` or the in-app server setting; Maps key via `android/local.properties` / `ios/Flutter/Secrets.xcconfig` (`MAPS_API_KEY`); Firebase config files are optional and git-ignored.
+See `backend/.env.example` (fully commented) and `ai-service/.env.example`. Flutter: `--dart-define=API_BASE_URL=...` or the in-app server setting; map tiles default to OpenStreetMap, overridable with `--dart-define=MAP_TILE_URL=...`; Firebase config files are optional and git-ignored.
 
 ## Remaining next steps (priority order)
 

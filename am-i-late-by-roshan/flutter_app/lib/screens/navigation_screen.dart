@@ -2,7 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../app_scope.dart';
 import '../models/driver_profile.dart';
@@ -11,6 +12,7 @@ import '../models/route_option.dart';
 import '../models/trip.dart';
 import '../utils/format.dart';
 import '../utils/geo.dart';
+import '../widgets/app_map.dart';
 import '../widgets/route_card.dart';
 import '../widgets/sleep_alert_overlay.dart';
 import '../widgets/speed_indicator_widget.dart';
@@ -35,7 +37,8 @@ class _NavigationScreenState extends State<NavigationScreen> {
   late RouteType _routeType = widget.routeType;
   RouteOption get _route => _plan.route(_routeType);
 
-  GoogleMapController? _map;
+  final _map = MapController();
+  bool _mapReady = false;
   AppScope? _scope;
   StreamSubscription<Position>? _posSub;
   Position? _pos;
@@ -96,7 +99,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
     _replanTimer?.cancel();
     _bannerTimer?.cancel();
     _scope?.sensors.stop();
-    _map?.dispose();
+    _map.dispose();
     super.dispose();
   }
 
@@ -119,7 +122,7 @@ class _NavigationScreenState extends State<NavigationScreen> {
       _stepIndex = _currentStep(here);
     });
     if (_followUser) {
-      _map?.animateCamera(CameraUpdate.newCameraPosition(CameraPosition(target: here, zoom: 16, bearing: p.heading >= 0 ? p.heading : 0, tilt: 45)));
+      if (_mapReady) _map.move(here, 16.5);
     }
 
     if (distanceM(here, _plan.destination.latLng) < _arrivalM) {
@@ -391,18 +394,22 @@ class _NavigationScreenState extends State<NavigationScreen> {
       child: Scaffold(
         body: Stack(
           children: [
-            GoogleMap(
-              initialCameraPosition: CameraPosition(target: _plan.origin.latLng, zoom: 15),
-              myLocationEnabled: true,
-              myLocationButtonEnabled: false,
-              zoomControlsEnabled: false,
-              compassEnabled: false,
-              polylines: {
-                if (_route.points.length > 1) Polyline(polylineId: const PolylineId('route'), points: _route.points, color: color, width: 8),
+            AppMap(
+              controller: _map,
+              initialCenter: here ?? _plan.origin.latLng,
+              initialZoom: 16,
+              polylines: [
+                if (_route.points.length > 1)
+                  Polyline(points: _route.points, color: color, strokeWidth: 7, borderStrokeWidth: 2, borderColor: Colors.white),
+              ],
+              markers: [
+                pinMarker(_plan.destination.latLng, const Color(0xFFE53935)),
+                if (here != null) userMarker(here, headingDegrees: _pos!.heading >= 0 ? _pos!.heading : 0),
+              ],
+              onReady: () => _mapReady = true,
+              onUserGesture: () {
+                if (_followUser) setState(() => _followUser = false);
               },
-              markers: {Marker(markerId: const MarkerId('dest'), position: _plan.destination.latLng)},
-              onMapCreated: (c) => _map = c,
-              onTap: (_) => setState(() => _followUser = false),
             ),
             SafeArea(
               child: Column(
@@ -463,7 +470,10 @@ class _NavigationScreenState extends State<NavigationScreen> {
                 bottom: 150,
                 child: FloatingActionButton.small(
                   heroTag: 'recenter',
-                  onPressed: () => setState(() => _followUser = true),
+                  onPressed: () {
+                    setState(() => _followUser = true);
+                    if (_pos != null && _mapReady) _map.move(LatLng(_pos!.latitude, _pos!.longitude), 16.5);
+                  },
                   child: const Icon(Icons.navigation),
                 ),
               ),

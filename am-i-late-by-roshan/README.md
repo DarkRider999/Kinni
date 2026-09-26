@@ -13,7 +13,7 @@ An AI-powered UAE mobility assistant for iOS and Android. Tell it where you're g
 | Weather | Open-Meteo, no key | OpenWeather |
 | Push alerts | In-app live stream + inbox | Firebase Cloud Messaging (free tier) |
 | Assistant | Built-in rules | Claude via `LLM_API_KEY` |
-| Map display in the app | Google Maps SDK (mobile map loads cost $0; needs a free key) | - |
+| Map display in the app | OpenStreetMap tiles via `flutter_map`, no key or billing | Any tile provider via `--dart-define=MAP_TILE_URL=...` |
 
 ## Features
 
@@ -28,7 +28,7 @@ An AI-powered UAE mobility assistant for iOS and Android. Tell it where you're g
 ## Architecture
 
 ```
-flutter_app/   Flutter (Material 3, google_maps_flutter)  -> talks to backend with a JWT
+flutter_app/   Flutter (Material 3, flutter_map + OSM)    -> talks to backend with a JWT
 backend/       Node.js + Express + TypeScript              -> Postgres/PostGIS, Redis, AI service, OSM/Google/Mapbox
 ai-service/    Python FastAPI                              -> heuristic traffic / ETA / disruption / fatigue models
 database/      SQL migrations 001..012 (applied automatically by the backend)
@@ -51,11 +51,7 @@ For anything beyond local testing set a real `JWT_SECRET` (and a DB password) fi
 ## Run the mobile app
 
 1. Install Flutter (stable) and Android Studio or Xcode.
-2. Get a free Google Maps SDK key (Google Cloud console, enable "Maps SDK for Android" / "Maps SDK for iOS").
-   - Android: add `MAPS_API_KEY=your-key` to `flutter_app/android/local.properties`.
-   - iOS: create `flutter_app/ios/Flutter/Secrets.xcconfig` containing `MAPS_API_KEY=your-key`.
-   Without a key the app still works; the map area is just blank.
-3. Run:
+2. Run (maps use free OpenStreetMap tiles, so no API key is needed):
    ```bash
    cd flutter_app
    flutter pub get
@@ -64,7 +60,7 @@ For anything beyond local testing set a real `JWT_SECRET` (and a DB password) fi
    ```
    You can also change the server address on the sign-in screen or in Settings.
 
-**Just want the APK?** Every push runs the `Am I Late` GitHub Actions workflow, which builds `am-i-late-apk` (download it from the workflow run's Artifacts). Set the repository variable `AM_I_LATE_API_BASE_URL` to your server URL and the secret `MAPS_API_KEY` to bake them in.
+**Just want the APK?** Every push runs the `Am I Late` GitHub Actions workflow, which builds `am-i-late-apk` (download it from the workflow run's Artifacts). Set the repository variable `AM_I_LATE_API_BASE_URL` to your server URL to bake it in.
 
 ### Optional: push notifications when the app is closed
 
@@ -110,6 +106,14 @@ All routes except `/health`, `/auth/register`, `/auth/login` and the public look
 | `GET /privacy/export`, `DELETE /privacy/account` | Your data |
 
 AI service: `POST /predict/traffic`, `POST /predict/eta`, `POST /score/disruption`, `POST /score/driver-state` (interactive docs at `/docs`).
+
+## Map tiles
+
+The app shows OpenStreetMap's public tiles, which are fine for personal and light use (the app sends its own User-Agent and shows the required "OpenStreetMap contributors" credit; see the [OSM tile usage policy](https://operations.osmfoundation.org/policies/tiles/)). For heavier or commercial use, point the app at another tile provider or your own tile server at build time:
+
+```bash
+flutter build apk --dart-define=MAP_TILE_URL=https://your-tile-server/{z}/{x}/{y}.png
+```
 
 ## Data notes
 

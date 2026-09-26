@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
 
 import '../app_scope.dart';
 import '../models/route_option.dart';
 import '../models/trip.dart';
 import '../utils/format.dart';
-import '../utils/polyline.dart';
+import '../widgets/app_map.dart';
 import '../widgets/eta_confidence_widget.dart';
 import '../widgets/route_card.dart';
 import 'navigation_screen.dart';
@@ -114,30 +114,27 @@ class _TripResultScreenState extends State<TripResultScreen> {
           ),
           SizedBox(
             height: 240,
-            child: GoogleMap(
+            child: AppMap(
               key: ValueKey(_selected),
-              initialCameraPosition: CameraPosition(target: plan.origin.latLng, zoom: 11),
-              zoomControlsEnabled: false,
-              polylines: {
-                for (final r in plan.routes.reversed)
+              initialCenter: plan.origin.latLng,
+              initialZoom: 11,
+              fitPoints: points.length > 1 ? points : [plan.origin.latLng, plan.destination.latLng],
+              polylines: [
+                // Selected route drawn last so it sits on top.
+                for (final r in [...plan.routes.where((r) => r.routeType != _selected), route])
                   if (r.points.length > 1)
                     Polyline(
-                      polylineId: PolylineId(r.routeType.apiName),
                       points: r.points,
-                      width: r.routeType == _selected ? 7 : 4,
-                      color: routeColors[r.routeType]!.withValues(alpha: r.routeType == _selected ? 1 : 0.35),
-                      zIndex: r.routeType == _selected ? 2 : 1,
+                      strokeWidth: r.routeType == _selected ? 6 : 4,
+                      color: routeColors[r.routeType]!.withValues(alpha: r.routeType == _selected ? 1 : 0.4),
+                      borderStrokeWidth: r.routeType == _selected ? 1.5 : 0,
+                      borderColor: Colors.white,
                     ),
-              },
-              markers: {
-                Marker(markerId: const MarkerId('o'), position: plan.origin.latLng, icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure)),
-                Marker(markerId: const MarkerId('d'), position: plan.destination.latLng),
-              },
-              onMapCreated: (c) {
-                if (points.length > 1) {
-                  Future.delayed(const Duration(milliseconds: 300), () => c.animateCamera(CameraUpdate.newLatLngBounds(boundsOf(points), 40)));
-                }
-              },
+              ],
+              markers: [
+                pinMarker(plan.origin.latLng, const Color(0xFF1E88E5)),
+                pinMarker(plan.destination.latLng, const Color(0xFFE53935)),
+              ],
             ),
           ),
           Padding(

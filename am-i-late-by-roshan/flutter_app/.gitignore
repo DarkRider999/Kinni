@@ -47,7 +47,6 @@ app.*.map.json
 # Widget Preview related
 .widget_preview/
 
-# Local secrets (Maps API key, Firebase config)
-ios/Flutter/Secrets.xcconfig
+# Local secrets (Firebase config)
 android/app/google-services.json
 ios/Runner/GoogleService-Info.plist

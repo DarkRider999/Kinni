@@ -1,4 +1,5 @@
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 /// Decodes a Google/OSRM encoded polyline (precision 5).
 List<LatLng> decodePolyline(String encoded) {
@@ -29,13 +30,4 @@ List<LatLng> decodePolyline(String encoded) {
 }
 
 /// Bounds covering all points (for fitting the camera).
-LatLngBounds boundsOf(Iterable<LatLng> points) {
-  var minLat = 90.0, maxLat = -90.0, minLng = 180.0, maxLng = -180.0;
-  for (final p in points) {
-    if (p.latitude < minLat) minLat = p.latitude;
-    if (p.latitude > maxLat) maxLat = p.latitude;
-    if (p.longitude < minLng) minLng = p.longitude;
-    if (p.longitude > maxLng) maxLng = p.longitude;
-  }
-  return LatLngBounds(southwest: LatLng(minLat, minLng), northeast: LatLng(maxLat, maxLng));
-}
+LatLngBounds boundsOf(Iterable<LatLng> points) => LatLngBounds.fromPoints(points.toList());

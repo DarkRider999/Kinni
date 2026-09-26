@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:am_i_late/app_scope.dart';
 import 'package:am_i_late/models/route_option.dart';
+import 'package:am_i_late/models/trip.dart';
+import 'package:am_i_late/screens/trip_result_screen.dart';
 import 'package:am_i_late/screens/login_screen.dart';
 import 'package:am_i_late/services/api_client.dart';
 import 'package:am_i_late/services/location_service.dart';
@@ -11,6 +13,7 @@ import 'package:am_i_late/widgets/eta_confidence_widget.dart';
 import 'package:am_i_late/widgets/route_card.dart';
 import 'package:am_i_late/widgets/speed_indicator_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -103,6 +106,27 @@ void main() {
     );
     await api.init();
     expect(() => api.startTrip('x', RouteType.fastest), throwsA(isA<ApiException>().having((e) => e.message, 'message', 'Trip not found')));
+  });
+
+  testWidgets('TripResultScreen draws routes and pins on the OpenStreetMap map', (tester) async {
+    SharedPreferences.setMockInitialValues({'auth_token': 't'});
+    final api = ApiClient(httpClient: MockClient((req) async => http.Response('{"tariff":{"free":true,"note":"Free"},"carParks":[]}', 200)));
+    await api.init();
+    await tester.pumpWidget(AppScope(
+      api: api,
+      notifications: NotificationService(api),
+      location: LocationService(),
+      sensors: SensorService(),
+      child: MaterialApp(home: TripResultScreen(plan: TripPlan.fromJson(samplePlanJson()))),
+    ));
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(find.byType(FlutterMap), findsOneWidget);
+    final polylines = tester.widget<PolylineLayer>(find.byType(PolylineLayer)).polylines;
+    expect(polylines, hasLength(3));
+    expect(polylines.last.strokeWidth, 6); // selected route on top
+    expect(tester.widget<MarkerLayer>(find.byType(MarkerLayer)).markers, hasLength(2));
+    expect(find.text('OpenStreetMap contributors'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
   });
 
   test('SensorService variance', () {

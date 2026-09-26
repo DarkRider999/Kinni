@@ -93,8 +93,6 @@ jobs:
       - run: flutter test
       - name: Build release APK (debug-signed, installable for testing)
         run: flutter build apk --release --dart-define=API_BASE_URL=${{ vars.AM_I_LATE_API_BASE_URL || 'http://10.0.2.2:3000' }}
-        env:
-          MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
       - uses: actions/upload-artifact@v4
         with:
           name: am-i-late-apk

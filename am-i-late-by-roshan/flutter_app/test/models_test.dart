@@ -6,7 +6,7 @@ import 'package:am_i_late/utils/format.dart';
 import 'package:am_i_late/utils/geo.dart';
 import 'package:am_i_late/utils/polyline.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 
 import 'fixtures.dart';
 
@@ -19,8 +19,8 @@ void main() {
 
     test('bounds cover all points', () {
       final b = boundsOf(const [LatLng(25, 55), LatLng(25.2, 55.3), LatLng(24.9, 55.1)]);
-      expect(b.southwest, const LatLng(24.9, 55));
-      expect(b.northeast, const LatLng(25.2, 55.3));
+      expect(b.southWest, const LatLng(24.9, 55));
+      expect(b.northEast, const LatLng(25.2, 55.3));
     });
   });
 

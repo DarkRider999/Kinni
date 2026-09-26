@@ -1,13 +1,15 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../app_scope.dart';
 import '../models/driver_profile.dart';
 import '../models/place.dart';
 import '../models/trip.dart';
 import '../utils/format.dart';
+import '../widgets/app_map.dart';
 import '../widgets/assistant_sheet.dart';
 import '../widgets/place_search_field.dart';
 import 'notification_settings_screen.dart';
@@ -22,9 +24,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  static const _dubai = CameraPosition(target: LatLng(25.2048, 55.2708), zoom: 11);
+  static const _dubai = LatLng(25.2048, 55.2708);
 
-  GoogleMapController? _map;
+  final _map = MapController();
+  bool _mapReady = false;
   Place? _origin;
   Place? _destination;
   TimeOfDay? _arriveBy;
@@ -67,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void dispose() {
     _incomingSub?.cancel();
-    _map?.dispose();
+    _map.dispose();
     super.dispose();
   }
 
@@ -92,7 +95,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final p = await _currentPlace();
       if (!mounted || p == null) return;
       setState(() => _origin ??= p);
-      _map?.animateCamera(CameraUpdate.newLatLngZoom(p.latLng, 13));
+      _moveMap(p.latLng);
     } catch (e) {
       if (!silent) _toast(e.toString());
     }
@@ -138,11 +141,18 @@ class _HomeScreenState extends State<HomeScreen> {
     if (t != null) setState(() => _arriveBy = t);
   }
 
-  Set<Marker> get _markers => {
-        if (_origin != null)
-          Marker(markerId: const MarkerId('origin'), position: _origin!.latLng, infoWindow: InfoWindow(title: _origin!.label), icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure)),
-        if (_destination != null) Marker(markerId: const MarkerId('destination'), position: _destination!.latLng, infoWindow: InfoWindow(title: _destination!.label)),
-      };
+  void _moveMap(LatLng target) {
+    if (_mapReady) _map.move(target, 13);
+  }
+
+  List<Marker> get _markers {
+    final me = AppScope.of(context).location.lastKnown;
+    return [
+      if (me != null) userMarker(LatLng(me.latitude, me.longitude)),
+      if (_origin != null) pinMarker(_origin!.latLng, const Color(0xFF1E88E5)),
+      if (_destination != null) pinMarker(_destination!.latLng, const Color(0xFFE53935)),
+    ];
+  }
 
   Future<void> _onMapLongPress(LatLng p) async {
     final api = AppScope.of(context).api;
@@ -197,14 +207,35 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             SizedBox(
               height: 220,
-              child: GoogleMap(
-                initialCameraPosition: _dubai,
-                myLocationEnabled: true,
-                myLocationButtonEnabled: true,
-                zoomControlsEnabled: false,
-                markers: _markers,
-                onMapCreated: (c) => _map = c,
-                onLongPress: _onMapLongPress,
+              child: Stack(
+                children: [
+                  AppMap(
+                    controller: _map,
+                    initialCenter: _origin?.latLng ?? _dubai,
+                    initialZoom: 11,
+                    markers: _markers,
+                    onLongPress: _onMapLongPress,
+                    onReady: () => _mapReady = true,
+                  ),
+                  Positioned(
+                    right: 10,
+                    top: 10,
+                    child: IconButton.filledTonal(
+                      tooltip: 'My location',
+                      icon: const Icon(Icons.my_location),
+                      onPressed: () async {
+                        try {
+                          final p = await AppScope.of(context).location.current();
+                          if (!mounted) return;
+                          setState(() {});
+                          _moveMap(LatLng(p.latitude, p.longitude));
+                        } catch (e) {
+                          _toast(e.toString());
+                        }
+                      },
+                    ),
+                  ),
+                ],
               ),
             ),
             Padding(
@@ -226,7 +257,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     value: _destination,
                     onSelected: (p) {
                       setState(() => _destination = p);
-                      _map?.animateCamera(CameraUpdate.newLatLngZoom(p.latLng, 13));
+                      _moveMap(p.latLng);
                     },
                   ),
                   const SizedBox(height: 10),

@@ -1,6 +1,6 @@
 import 'dart:math' as math;
 
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:latlong2/latlong.dart';
 
 const _earthRadiusM = 6371008.8;
 double _rad(double deg) => deg * math.pi / 180;

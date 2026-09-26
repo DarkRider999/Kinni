@@ -36,11 +36,6 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
-        <!-- Google Maps SDK key, injected from android/local.properties (MAPS_API_KEY=...)
-             or the MAPS_API_KEY environment variable. Mobile map loads are free. -->
-        <meta-data
-            android:name="com.google.android.geo.API_KEY"
-            android:value="${mapsApiKey}" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="commute_alerts" />
