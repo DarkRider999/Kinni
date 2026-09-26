@@ -30,6 +30,20 @@ export interface PromptOptions {
   language?: string;
 }
 
+/**
+ * A file the user attached. Files are read in the browser; only their text
+ * (and basic metadata) reaches the server, and nothing is stored separately.
+ *   source    - the material the task is about ("summarise this report")
+ *   reference - examples to match for style, tone or visual direction
+ */
+export interface Attachment {
+  name: string;
+  role: 'source' | 'reference';
+  kind: 'text' | 'image' | 'other';
+  size?: number;
+  text?: string;
+}
+
 export const CATEGORY_LABELS: Record<Category, string> = {
   WRITING: 'Writing',
   BUSINESS: 'Business',

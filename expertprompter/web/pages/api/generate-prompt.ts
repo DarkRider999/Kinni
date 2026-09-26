@@ -6,7 +6,8 @@ import { consumeRun, type Entitlement } from '@/lib/server/services/entitlementS
 import { GenerateSchema } from '@/lib/server/schemas';
 import { runGeneration } from '@/lib/server/services/expertPrompterService';
 
-export const config = { api: { bodyParser: { sizeLimit: '200kb' } } };
+// Attached file text can make requests larger than a typical JSON body.
+export const config = { api: { bodyParser: { sizeLimit: '1mb' } } };
 
 // POST /api/generate-prompt
 // With a database (production): sign-in required, and each call uses one of the
@@ -35,6 +36,7 @@ export default apiHandler(
         options: body.options,
         variation: body.variation,
         categoryOverride: body.category,
+        attachments: body.attachments,
       });
 
       let savedPromptId: string | undefined;

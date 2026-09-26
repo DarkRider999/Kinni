@@ -96,8 +96,18 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
 
         <form onSubmit={submit} className={`space-y-3 ${socials.length ? '' : 'mt-4'}`}>
           <div>
-            <label className="label" htmlFor="auth-email">Email</label>
-            <input id="auth-email" type="email" autoComplete="email" required className="input" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <label className="label" htmlFor="auth-email">{mode === 'login' ? 'Email or username' : 'Email'}</label>
+            <input
+              id="auth-email"
+              type={mode === 'login' ? 'text' : 'email'}
+              autoComplete={mode === 'login' ? 'username' : 'email'}
+              autoCapitalize="none"
+              spellCheck={false}
+              required
+              className="input"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
           </div>
           <div>
             <label className="label" htmlFor="auth-password">Password</label>
@@ -105,7 +115,7 @@ export default function AuthModal({ open, onClose, reason }: AuthModalProps) {
               id="auth-password"
               type="password"
               required
-              minLength={8}
+              minLength={mode === 'register' ? 8 : undefined}
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
               className="input"
               value={password}

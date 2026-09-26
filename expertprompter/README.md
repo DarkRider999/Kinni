@@ -7,7 +7,8 @@ Type any idea or task in plain words. ExpertPrompter:
 3. recommends the AI tools best suited to the task (ChatGPT, Claude, GitHub Copilot, Midjourney, Suno…),
 4. lets you pick a prompt style and constraints (tone, length, format, audience, language),
 5. offers one-click copy, regenerate, download, and saved history,
-6. gives every account 5 free prompts, then offers Premium for $10/month (Stripe), with sign-in through Google, Facebook, GitHub or email.
+6. lets you attach files: an **Upload file** (the document or code to work on) and **Reference files** (examples of the style you want),
+7. gives every account 5 free prompts, then offers Premium for $10/month (Stripe), with sign-in through Google, Facebook, GitHub or email.
 
 All generation logic is **pure, deterministic TypeScript**. No external AI API is called, so the app has no per-request cost and no API keys.
 
@@ -30,7 +31,7 @@ All generation logic is **pure, deterministic TypeScript**. No external AI API i
 
 | Plan | Who | Limit |
 |---|---|---|
-| **Master** | Emails listed in `MASTER_EMAILS`, but only after Google/Facebook/GitHub has confirmed the email | Unlimited, free |
+| **Master** | Accounts an admin flagged `isMaster` in the database (e.g. a shared username/password login), or emails in `MASTER_EMAILS` once Google/Facebook/GitHub has confirmed the email | Unlimited, free |
 | **Premium** | Accounts with an `active` or `trialing` Stripe subscription | Unlimited, $10/month |
 | **Free** | Everyone else | 5 generations in total (Generate, Regenerate and category switches each count as one) |
 
@@ -39,6 +40,14 @@ All generation logic is **pure, deterministic TypeScript**. No external AI API i
 - **Protected master access:** typing the owner's email into the password sign-up never grants Master. When the real owner signs in with a provider that has confirmed the email, the account is linked, and any password set by someone else stops working.
 - **Local and preview builds:** without `DATABASE_URL`, guests can still generate freely for development.
 - **Sessions:** JWTs are stateless (HS256, 7-day expiry by default), and passwords are hashed with bcrypt (12 rounds).
+
+**Username sign-in:** the sign-in form accepts an email *or* a username. Usernames are only set by an admin, typically for a shared master account that has no personal email. Sign-up never sets `isMaster`, and an admin creates a shared master account like this (run in the database):
+
+```sql
+-- password hash from: node -e "console.log(require('bcryptjs').hashSync('<password>', 12))"
+insert into expertprompter."User" (id, email, username, "isMaster", "passwordHash", "updatedAt")
+values ('master-shared', 'shared-master@users.expertprompter.invalid', 'teammaster', true, '<bcrypt hash>', now());
+```
 
 **Sign-in flow:** `/api/auth/oauth/<provider>` stores a random state value in an HttpOnly cookie and redirects to the provider. The callback checks the state, exchanges the code, and finds or links the user. It then redirects to `/#auth=<token>`. The URL fragment is never sent to servers, so the token stays out of logs.
 
@@ -106,7 +115,7 @@ expertprompter/
     │       ├── billing/           #   checkout, portal, webhook
     │       └── prompts/           #   list, save, [id] (get/delete), [id]/favorite
     ├── lib/
-    │   ├── api.ts · auth.tsx · useTheme.ts · types.ts      # browser side
+    │   ├── api.ts · auth.tsx · useTheme.ts · types.ts · fileText.ts   # browser side
     │   └── server/                                         # server side only
     │       ├── http.ts            # apiHandler, auth helpers, error mapping
     │       ├── env.ts · prisma.ts · schemas.ts · httpError.ts · rateLimit.ts
@@ -114,10 +123,11 @@ expertprompter/
     │       ├── types.ts           # Category, PromptStyle, result types
     │       └── services/          # inputAnalysis, categoryDetection, promptTemplates,
     │                              # promptGeneration, aiRecommendation, expertPrompter,
-    │                              # auth, entitlement, billing
+    │                              # auth, entitlement, billing, attachmentSections
     ├── components/                # Header, ThemeToggle, InputPanel, AdvancedOptionsPanel,
     │                              # CategoryBadge, PromptCard, AIRecommendationPanel,
-    │                              # HistoryPanel, AuthModal, PaywallModal, LegalPage, Icons
+    │                              # HistoryPanel, AuthModal, PaywallModal, FileUploadPanel,
+    │                              # LegalPage, Icons
     ├── styles/globals.css
     ├── public/favicon.svg
     └── tests/                     # services, api, plans, db.integration (needs DATABASE_URL)
@@ -129,7 +139,7 @@ expertprompter/
 
 Defined in `web/prisma/schema.prisma`. In production the tables live in a dedicated `expertprompter` schema, which Supabase's public Data API does not serve:
 
-- **User**: `id`, `email` (unique), `passwordHash?` (null for provider-only accounts), `name?`, `image?`, `emailVerified?`, `freeRunsUsed`, `stripeCustomerId?` (unique), `stripeSubscriptionId?`, `subscriptionStatus?`, `currentPeriodEnd?`, `createdAt`, `updatedAt`.
+- **User**: `id`, `email` (unique), `username?` (unique), `isMaster` (admin-only), `passwordHash?` (null for provider-only accounts), `name?`, `image?`, `emailVerified?`, `freeRunsUsed`, `stripeCustomerId?` (unique), `stripeSubscriptionId?`, `subscriptionStatus?`, `currentPeriodEnd?`, `createdAt`, `updatedAt`.
 - **Account**: one linked sign-in provider per row: `provider` + `providerAccountId` (unique together), `userId`.
 - **Prompt**: `id`, `userId?` (cascade delete), `rawInput`, `detectedCategory` (enum), `promptStyle` (enum), `options` (JSON: tone, length, format, audience, language), `generatedPrompt`, `recommendedTools` (`String[]`), `title`, `isFavorite`, `createdAt`.
   - Index `(userId, createdAt DESC)` serves the history query, and `(detectedCategory)` serves category filters.
@@ -183,6 +193,24 @@ All routes are served by the app itself (`http://localhost:3000` locally). Error
 Rate limits: generation is limited to 60 requests/min per IP and sign-in/registration to 10/min per IP. The limiter keeps its counts in memory, so on Vercel each function instance counts separately. For strict global limits, switch it to a shared store such as Upstash Redis.
 
 ---
+
+## 5b. File attachments
+
+- **Two kinds of file:** the input form has two drop zones.
+  - **Upload file** (`role: "source"`, up to 3): the material the task is about.
+  - **Reference files** (`role: "reference"`, up to 5): examples of the wanted style, tone or look.
+- **Reading happens in the browser** (`lib/fileText.ts`):
+  - text and code files are read directly;
+  - PDFs through `pdfjs-dist` (first 60 pages);
+  - `.docx` files through `mammoth`;
+  - images are recognised but not read.
+  Only the extracted text (at most 40,000 characters per file), the name and the size are sent. The files themselves never leave the device and are not stored.
+- **Prompt output** (`lib/server/services/attachmentSections.ts`):
+  - **Source text** goes into a `## Source Material` section, in a code fence longer than any backticks the file contains, trimmed to 12,000 characters per file and 30,000 in total, with a note when trimmed.
+  - **Reference text** becomes a 2,000-character quoted excerpt under `## Reference Files`, with an instruction not to copy it.
+  - **Images** are listed so you attach them in your AI tool. Image prompts add Midjourney `--sref` and ChatGPT instructions, and video prompts use a source image as the first frame.
+  - The summary paragraph names the attached files.
+- **API:** `POST /api/generate-prompt` accepts `attachments: [{ name, role, kind: "text"|"image"|"other", size?, text? }]`, at most 8 files, with a 1 MB request limit. Regenerate reuses the same files.
 
 ## 6. Prompt generation algorithm (`promptGenerationService.ts`)
 
@@ -299,8 +327,8 @@ npm run dev                               # UI + API on http://localhost:3000
 Quality checks:
 
 ```bash
-cd web && npm run typecheck && npm test && npm run build   # 50 tests without a DB
-# With a migrated local DB, 8 more integration tests run (free-run limit, master, OAuth linking, Stripe webhook):
+cd web && npm run typecheck && npm test && npm run build   # 60 tests without a DB
+# With a migrated local DB, 10 more integration tests run (free-run limit, master, username sign-in, OAuth linking, Stripe webhook):
 DATABASE_URL=... DIRECT_URL=... npm test
 ```
 

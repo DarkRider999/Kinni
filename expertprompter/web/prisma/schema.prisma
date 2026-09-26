@@ -47,6 +47,10 @@ enum TemplateSource {
 model User {
   id                   String     @id @default(cuid())
   email                String     @unique
+  /// Optional sign-in name (lower-case), e.g. for a shared account with no personal email.
+  username             String?    @unique
+  /// Unlimited free access. Set only by an admin directly in the database; never via sign-up.
+  isMaster             Boolean    @default(false)
   /// Null for accounts created through Google/Facebook/GitHub only.
   passwordHash         String?
   name                 String?

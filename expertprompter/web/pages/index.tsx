@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Header from '@/components/Header';
 import InputPanel, { type InputState } from '@/components/InputPanel';
+import type { UiAttachment } from '@/components/FileUploadPanel';
 import CategoryBadge from '@/components/CategoryBadge';
 import PromptCard from '@/components/PromptCard';
 import AIRecommendationPanel from '@/components/AIRecommendationPanel';
@@ -10,8 +11,15 @@ import PaywallModal from '@/components/PaywallModal';
 import { SparklesIcon } from '@/components/Icons';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
-import type { Category, GenerateRequest, GenerateResponse, PromptOptions, RecommendedTool, SavedPrompt } from '@/lib/types';
+import type { AttachmentPayload, Category, GenerateRequest, GenerateResponse, PromptOptions, RecommendedTool, SavedPrompt } from '@/lib/types';
 import { CATEGORY_LABELS } from '@/lib/types';
+
+/** Ready files only, reduced to what the API needs. */
+function toPayload(attachments: UiAttachment[]): AttachmentPayload[] {
+  return attachments
+    .filter((a) => a.status === 'ready')
+    .map(({ name, role, kind, size, text }) => ({ name, role, kind, size, ...(text ? { text } : {}) }));
+}
 
 /** Drops empty option fields so the request stays clean. */
 function compactOptions(options: PromptOptions): PromptOptions {
@@ -20,7 +28,7 @@ function compactOptions(options: PromptOptions): PromptOptions {
 
 export default function Home() {
   const { user, entitlement, providers, setEntitlement, refresh, oauthError, clearOauthError } = useAuth();
-  const [input, setInput] = useState<InputState>({ rawInput: '', promptStyle: 'PROFESSIONAL', options: {} });
+  const [input, setInput] = useState<InputState>({ rawInput: '', promptStyle: 'PROFESSIONAL', options: {}, attachments: [] });
   const [result, setResult] = useState<GenerateResponse | null>(null);
   const [lastRequest, setLastRequest] = useState<GenerateRequest | null>(null);
   const [loading, setLoading] = useState(false);
@@ -111,7 +119,13 @@ export default function Home() {
 
   const generate = () =>
     run(
-      { rawInput: input.rawInput.trim(), promptStyle: input.promptStyle, options: compactOptions(input.options), variation: 0 },
+      {
+        rawInput: input.rawInput.trim(),
+        promptStyle: input.promptStyle,
+        options: compactOptions(input.options),
+        variation: 0,
+        attachments: toPayload(input.attachments),
+      },
       'generate',
     );
 
@@ -146,7 +160,7 @@ export default function Home() {
   // tool cards come from the catalog by name.
   const openSaved = async (p: SavedPrompt) => {
     const request: GenerateRequest = { rawInput: p.rawInput, promptStyle: p.promptStyle, options: p.options, category: p.detectedCategory, variation: 0 };
-    setInput({ rawInput: p.rawInput, promptStyle: p.promptStyle, options: p.options ?? {} });
+    setInput({ rawInput: p.rawInput, promptStyle: p.promptStyle, options: p.options ?? {}, attachments: [] });
     setError(null);
     const catalog = await api.meta().then((m) => m.tools).catch(() => []);
     const toolDetails: RecommendedTool[] = p.recommendedTools.flatMap((name, i) => {
@@ -188,7 +202,14 @@ export default function Home() {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
           {/* Left column: input + history */}
           <div className="space-y-6">
-            <InputPanel value={input} onChange={setInput} onGenerate={generate} loading={loading} />
+            <InputPanel
+              value={input}
+              // Files are owned by onAttachmentsChange, so a keystroke can't undo a file that just finished reading.
+              onChange={(next) => setInput((prev) => ({ ...next, attachments: prev.attachments }))}
+              onAttachmentsChange={(update) => setInput((prev) => ({ ...prev, attachments: update(prev.attachments) }))}
+              onGenerate={generate}
+              loading={loading}
+            />
             {user ? (
               <HistoryPanel refreshKey={historyKey} onSelect={(p) => void openSaved(p)} />
             ) : (

@@ -2,17 +2,21 @@ import { type FormEvent } from 'react';
 import type { PromptOptions, PromptStyle } from '@/lib/types';
 import { STYLE_OPTIONS } from '@/lib/types';
 import AdvancedOptionsPanel from './AdvancedOptionsPanel';
+import FileUploadPanel, { type UiAttachment } from './FileUploadPanel';
 import { SparklesIcon, SpinnerIcon } from './Icons';
 
 export interface InputState {
   rawInput: string;
   promptStyle: PromptStyle;
   options: PromptOptions;
+  attachments: UiAttachment[];
 }
 
 interface InputPanelProps {
   value: InputState;
   onChange: (next: InputState) => void;
+  /** Functional updates, because file reads finish after later edits. */
+  onAttachmentsChange: (update: (prev: UiAttachment[]) => UiAttachment[]) => void;
   onGenerate: () => void;
   loading: boolean;
 }
@@ -27,12 +31,13 @@ const EXAMPLES = [
   'Amazon KDP ebook about gardening for beginners',
 ];
 
-export default function InputPanel({ value, onChange, onGenerate, loading }: InputPanelProps) {
+export default function InputPanel({ value, onChange, onAttachmentsChange, onGenerate, loading }: InputPanelProps) {
   const tooShort = value.rawInput.trim().length < 3;
+  const reading = value.attachments.some((a) => a.status === 'reading');
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
-    if (!tooShort && !loading) onGenerate();
+    if (!tooShort && !loading && !reading) onGenerate();
   };
 
   return (
@@ -43,7 +48,7 @@ export default function InputPanel({ value, onChange, onGenerate, loading }: Inp
           id="raw-input"
           rows={6}
           className="input resize-y text-base leading-relaxed"
-          placeholder="Type your idea or task…"
+          placeholder="Type your idea or task… e.g. “Summarise the attached report for my manager”"
           value={value.rawInput}
           maxLength={MAX_CHARS}
           onChange={(e) => onChange({ ...value, rawInput: e.target.value })}
@@ -58,6 +63,8 @@ export default function InputPanel({ value, onChange, onGenerate, loading }: Inp
           <span>{value.rawInput.length}/{MAX_CHARS}</span>
         </div>
       </div>
+
+      <FileUploadPanel value={value.attachments} onChange={onAttachmentsChange} disabled={loading} />
 
       <div className="flex flex-wrap gap-2" aria-label="Examples">
         {EXAMPLES.map((ex) => (
@@ -106,9 +113,9 @@ export default function InputPanel({ value, onChange, onGenerate, loading }: Inp
 
       <AdvancedOptionsPanel value={value.options} onChange={(options) => onChange({ ...value, options })} disabled={loading} />
 
-      <button type="submit" className="btn-primary w-full py-3 text-base" disabled={tooShort || loading}>
-        {loading ? <SpinnerIcon /> : <SparklesIcon />}
-        {loading ? 'Generating…' : 'Generate expert prompt'}
+      <button type="submit" className="btn-primary w-full py-3 text-base" disabled={tooShort || loading || reading}>
+        {loading || reading ? <SpinnerIcon /> : <SparklesIcon />}
+        {loading ? 'Generating…' : reading ? 'Reading files…' : 'Generate expert prompt'}
       </button>
     </form>
   );
