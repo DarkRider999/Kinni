@@ -2,6 +2,8 @@
 
 An AI-powered UAE mobility assistant for iOS and Android. Tell it where you're going and when you need to be there; it tells you **whether you're late, when to leave, and which route to take**, accounting for UAE rush hours, Salik/DARB tolls, weather, events and school zones. While you drive it guides you turn by turn (with lane guidance), watches your speed against the limit, warns you when you seem tired, and re-routes when traffic changes.
 
+📘 **User guide (PDF, with screenshots):** [docs/Am-I-Late-User-Guide.pdf](docs/Am-I-Late-User-Guide.pdf)
+
 **Runs free out of the box.** Every paid service is optional:
 
 | Need | Free default | Optional upgrade |
