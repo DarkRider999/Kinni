@@ -59,3 +59,20 @@ class AutoMixTest {
         }
     }
 }
+
+class CrossfadeTimingTest {
+    @Test fun overlapNeverLeavesAGap() {
+        val overlap = CrossfadeTiming.overlapMs(4000, 200_000, 180_000)
+        assertEquals(4000L, overlap)
+        assertEquals(false, CrossfadeTiming.shouldStart(195_000, 200_000, overlap))
+        assertEquals(true, CrossfadeTiming.shouldStart(196_500, 200_000, overlap))
+        // Combined power stays constant through the whole blend: no dip, no silence.
+        for (pos in 196_000L..200_000L step 250) {
+            val g = CrossfadeTiming.gains(pos, 200_000, overlap)
+            assertEquals(1f, g.outgoing * g.outgoing + g.incoming * g.incoming, 1e-3f)
+        }
+        // Short songs get a shorter blend.
+        assertEquals(10_000L, CrossfadeTiming.overlapMs(12_000, 30_000, 200_000))
+        assertEquals(0L, CrossfadeTiming.overlapMs(0, 200_000, 200_000))
+    }
+}

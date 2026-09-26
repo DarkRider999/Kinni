@@ -17,6 +17,14 @@ import com.nocternal.playz.lyrics.EmbeddedLyricsProvider
 import com.nocternal.playz.lyrics.LrcLibProvider
 import com.nocternal.playz.lyrics.Lyrics
 import com.nocternal.playz.lyrics.LyricsRepository
+import com.nocternal.playz.lyrics.LyricWeaver
+import com.nocternal.playz.lyrics.LyricsGenerator
+import com.nocternal.playz.lyrics.LyricsOrigin
+import com.nocternal.playz.lyrics.LyricsQuery
+import com.nocternal.playz.lyrics.LyricsTiming
+import com.nocternal.playz.ai.LlmRole
+import com.nocternal.playz.ai.LlmTurn
+import com.nocternal.playz.model.Track
 import com.nocternal.playz.model.AudioSource
 import com.nocternal.playz.model.PlayEvent
 import com.nocternal.playz.offline.FileLyricsCache
@@ -76,8 +84,31 @@ class AppContainer(val context: Context) {
         cache = lyricsCache,
         offline = listOf(EmbeddedLyricsProvider { null }),
         online = listOf(LrcLibProvider()),
-        isOnlineAllowed = { offline.network.value.online && !settingsRepo.settings.value.privateMode },
+        isOnlineAllowed = { offline.canUseNetwork(settingsRepo.settings.value) },
+        generators = listOf(ClaudeLyricsGenerator(), LyricWeaver()),
     )
+    private val _lyricsLoading = MutableStateFlow(false)
+    val lyricsLoading: StateFlow<Boolean> = _lyricsLoading.asStateFlow()
+
+    /** Writes original lyrics with Claude when a key is set and no real lyrics exist (cached for offline). */
+    private inner class ClaudeLyricsGenerator : LyricsGenerator {
+        override val cacheable = true
+        override suspend fun find(track: Track): Lyrics? {
+            val s = settingsRepo.settings.value
+            val key = s.assistantApiKey?.takeIf { it.isNotBlank() } ?: return null
+            if (!offline.canUseNetwork(s)) return null
+            val (title, artist) = LyricsQuery.of(track)
+            val genre = genreDetector.detect(track)?.genre?.displayName ?: "pop"
+            val mood = moodDetector.detect(track)?.mood?.label ?: "any"
+            val prompt = "Write ORIGINAL song lyrics for a song titled \"$title\"" + (artist?.let { " (artist: $it)" } ?: "") +
+                ", genre $genre, mood $mood. Do not reproduce, quote or paraphrase the real lyrics of any existing song; " +
+                "write new words inspired only by the title and mood. If the title is Hindi or Hinglish, write in Hinglish (Latin script). " +
+                "18 to 26 short lines with verse and chorus. Output only the lyric lines, one per line, no headings or notes."
+            val text = ClaudeAssistantLlm(key).complete("You write song lyrics.", listOf(LlmTurn(LlmRole.USER, prompt)))
+            val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("[") && !it.startsWith("#") && !it.startsWith("(") }.take(40)
+            return if (lines.size < 4) null else LyricsTiming.spread(lines, track.durationMs, LyricsOrigin.AI_GENERATED)
+        }
+    }
     private val _lyrics = MutableStateFlow<Lyrics?>(null)
     val lyrics: StateFlow<Lyrics?> = _lyrics.asStateFlow()
 
@@ -124,22 +155,12 @@ class AppContainer(val context: Context) {
         }
 
         scope.launch {
-            var first = true
             settingsRepo.settings.collect { s ->
-                if (first && s != com.nocternal.playz.model.AppSettings()) {
-                    // Restore the user's saved lighting choices once; later the theme switcher drives them.
-                    first = false
-                    lighting.setLightBarAnimation(s.lightBar.animation)
-                    lighting.setEdgeMode(s.edgeLighting.mode)
-                    lighting.setEdgeStyle(s.edgeLighting.thickness, s.edgeLighting.brightness)
-                }
                 audio.applySettings(s)
                 library.privateMode = s.privateMode
                 plugins.syncEnabled(s.enabledPlugins)
-                lighting.update { it.copy(
-                    lightBarEnabled = s.lightBar.enabled, lightBarColor = s.lightBar.color, lightBarGlow = s.lightBar.glowIntensity,
-                    edgeEnabled = s.edgeLighting.enabled,
-                ) }
+                // User-set lighting values are pinned so genre themes can't reset them.
+                lighting.applyUserSettings(s.edgeLighting, s.lightBar)
                 themeStore.setThemeMode(s.themeMode)
                 s.customAccent?.let(themeStore::setAccentColor)
                 offline.scheduleAutoDownload(s)
@@ -155,7 +176,12 @@ class AppContainer(val context: Context) {
                         moodDetector.detect(e.track, hour())?.let { themeSwitcher.onEvent(ThemeEvent.MoodDetected(it.mood, it.confidence, hour())) }
                         plugins.dispatchTrackStarted(e.track)
                         _lyrics.value = null
-                        if (e.track.source == AudioSource.LOCAL) launch { _lyrics.value = lyricsRepo.lyricsFor(e.track) }
+                        if (e.track.source == AudioSource.LOCAL) launch {
+                            _lyricsLoading.value = true
+                            val l = lyricsRepo.lyricsFor(e.track)
+                            if (audio.state.value.track?.id == e.track.id) _lyrics.value = l
+                            _lyricsLoading.value = false
+                        }
                     }
                     is PlaybackEvent.TrackFinished -> {
                         library.recordPlay(PlayEvent(e.track.id, System.currentTimeMillis() - e.listenedMs, e.listenedMs, e.track.source, completed = e.track.durationMs > 0 && e.listenedMs >= e.track.durationMs * 0.8))

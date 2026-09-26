@@ -21,16 +21,31 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nocternal.playz.designsystem.Neon
 import com.nocternal.playz.lyrics.Lyrics
+import com.nocternal.playz.lyrics.LyricsOrigin
 import com.nocternal.playz.lyrics.LyricsSync
 
 /** Scrolling synced lyrics with karaoke word highlight (spec §11.3). */
 @Composable
-fun LyricsView(lyrics: Lyrics?, positionMs: Long, modifier: Modifier = Modifier, onLineClick: (Long) -> Unit = {}) {
+fun LyricsView(lyrics: Lyrics?, positionMs: Long, modifier: Modifier = Modifier, loading: Boolean = false, onLineClick: (Long) -> Unit = {}) {
     val p = Neon.palette
     if (lyrics == null) {
-        Text("No lyrics yet — they download automatically when you're online.", modifier.padding(24.dp), color = p.muted, textAlign = TextAlign.Center)
+        Text(if (loading) "Finding lyrics…" else "No lyrics for this track.", modifier.padding(24.dp), color = p.muted, textAlign = TextAlign.Center)
         return
     }
+    if (lyrics.origin == LyricsOrigin.AI_GENERATED) {
+        androidx.compose.foundation.layout.Column(modifier) {
+            Text("✨ AI-generated lyrics — no official lyrics were found for this song", Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+                color = p.accent, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
+            SyncedLyrics(lyrics, positionMs, Modifier.weight(1f), onLineClick)
+        }
+        return
+    }
+    SyncedLyrics(lyrics, positionMs, modifier, onLineClick)
+}
+
+@Composable
+private fun SyncedLyrics(lyrics: Lyrics, positionMs: Long, modifier: Modifier, onLineClick: (Long) -> Unit) {
+    val p = Neon.palette
     val pos = LyricsSync.at(lyrics, positionMs)
     val state = rememberLazyListState()
     LaunchedEffect(pos.lineIndex) { if (pos.lineIndex >= 0) state.animateScrollToItem((pos.lineIndex - 2).coerceAtLeast(0)) }

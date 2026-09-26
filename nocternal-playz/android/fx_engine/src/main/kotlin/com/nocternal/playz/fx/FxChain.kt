@@ -70,7 +70,7 @@ class FxChain {
     fun process(buffer: FloatArray, frames: Int) {
         val s = pending
         if (s !== applied) { apply(s); applied = s }
-        fader.target = faderLevel.coerceIn(0f, 1f).let { it * it } // perceptual curve
+        fader.target = faderLevel.coerceIn(0f, 1f) // callers pass equal-power / perceptual gains
         normalization.process(buffer, frames)
         noise.process(buffer, frames)
         vocal.process(buffer, frames)

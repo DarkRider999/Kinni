@@ -37,18 +37,21 @@ class OfflineManager(private val context: Context, val connectivity: Connectivit
 
     fun start() = connectivity.start()
 
+    /** True when online features may use the current connection, given the Wi-Fi / mobile-data choices. */
+    fun canUseNetwork(settings: AppSettings): Boolean = allowed(network.value, settings)
+
     /** True when a source can be used right now. */
     fun isAvailable(source: AudioSource, settings: AppSettings): Boolean =
-        source == AudioSource.LOCAL || !settings.smartOfflineMode || network.value.online
+        source == AudioSource.LOCAL || !settings.smartOfflineMode || canUseNetwork(settings)
 
     fun canDownloadNow(settings: AppSettings): Boolean =
-        network.value.online && (!settings.autoDownloadOnWifiOnly || network.value.unmetered)
+        canUseNetwork(settings) && (!settings.autoDownloadOnWifiOnly || network.value.unmetered)
 
     fun scheduleAutoDownload(settings: AppSettings) {
         val wm = WorkManager.getInstance(context)
         if (!settings.autoDownloadLyrics) { wm.cancelUniqueWork(WORK); return }
         val constraints = Constraints.Builder()
-            .setRequiredNetworkType(if (settings.autoDownloadOnWifiOnly) NetworkType.UNMETERED else NetworkType.CONNECTED)
+            .setRequiredNetworkType(if (settings.autoDownloadOnWifiOnly || !settings.useMobileData) NetworkType.UNMETERED else NetworkType.CONNECTED)
             .setRequiresBatteryNotLow(true)
             .build()
         val req = PeriodicWorkRequestBuilder<AutoDownloadWorker>(12, TimeUnit.HOURS).setConstraints(constraints).build()
@@ -57,6 +60,12 @@ class OfflineManager(private val context: Context, val connectivity: Connectivit
 
     companion object {
         const val WORK = "nocternal-auto-download"
+
+        fun allowed(n: NetworkState, s: AppSettings): Boolean = n.online && when {
+            n.wifi -> s.useWifi
+            n.cellular -> s.useMobileData
+            else -> s.useWifi || s.useMobileData // ethernet/VPN/unknown
+        }
         /** Set by the app so the worker can read the current candidates without a DI framework. */
         @Volatile var candidates: () -> List<Track> = { emptyList() }
     }

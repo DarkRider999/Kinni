@@ -88,6 +88,7 @@ fun PlayerScreen(
     lighting: LightingState,
     lyrics: Lyrics?,
     isFavorite: Boolean,
+    lyricsLoading: Boolean = false,
     artSpec: NeonArtSpec?,
     sleepRemainingMs: Long?,
     callbacks: PlayerCallbacks,
@@ -113,7 +114,7 @@ fun PlayerScreen(
 
             AnimatedContent(targetState = showLyrics, label = "art-lyrics", modifier = Modifier.weight(1f)) { lyricsMode ->
                 if (lyricsMode) {
-                    LyricsView(lyrics, state.positionMs, Modifier.fillMaxSize(), onLineClick = callbacks.seek)
+                    LyricsView(lyrics, state.positionMs, Modifier.fillMaxSize(), loading = lyricsLoading, onLineClick = callbacks.seek)
                 } else {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         NeonFrame(spectrum.bass, Modifier.fillMaxWidth(0.86f).aspectRatio(1f)) {

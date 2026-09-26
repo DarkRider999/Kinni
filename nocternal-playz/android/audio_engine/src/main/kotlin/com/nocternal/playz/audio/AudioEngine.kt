@@ -16,7 +16,7 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
-import com.nocternal.playz.automix.AutoFader
+import com.nocternal.playz.automix.CrossfadeTiming
 import com.nocternal.playz.automix.AutoMixPlanner
 import com.nocternal.playz.fx.EnhancerMode
 import com.nocternal.playz.fx.FxChain
@@ -65,7 +65,8 @@ sealed interface PlaybackEvent {
 }
 
 /**
- * The audio engine (spec §2): ExoPlayer + the Kotlin FX chain, with gapless playback, the 3 s auto-fader,
+ * The audio engine (spec §2): ExoPlayer + the Kotlin FX chain, with gapless playback, overlapping crossfades
+ * (the next song starts before the current one ends — no gap),
  * crossfade duration, smart normalization, sleep timer, speaker boost/safe mode, DJ auto-mix queueing and a
  * live spectrum for the lighting. One instance per process, created by the Application on the main thread.
  */
@@ -91,6 +92,25 @@ class AudioEngine(
         .setWakeMode(C.WAKE_MODE_NETWORK)
         .build()
 
+    /**
+     * Second player used only during crossfades: it starts the next song while the current one is ending, so
+     * the two overlap and there is never a gap. It has its own copy of the FX chain and never takes audio focus.
+     */
+    private val ghostFx = FxChain()
+    private val ghostProcessor = FxAudioProcessor(ghostFx)
+    private val ghost: ExoPlayer = ExoPlayer.Builder(context, object : DefaultRenderersFactory(context) {
+        override fun buildAudioSink(context: Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean): AudioSink =
+            DefaultAudioSink.Builder(context).setAudioProcessors(arrayOf<AudioProcessor>(ghostProcessor)).build()
+    })
+        .setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(), false)
+        .build()
+
+    private enum class Xfade { IDLE, OVERLAP, HANDOFF }
+    private var xfade = Xfade.IDLE
+    private var xfadeTrackId: String? = null
+    private var xfadeOverlapMs = 0L
+    private var handoffStartedAt = 0L
+
     private val _state = MutableStateFlow(PlaybackState())
     val state: StateFlow<PlaybackState> = _state.asStateFlow()
 
@@ -107,7 +127,6 @@ class AudioEngine(
     val route get() = routeMonitor.route
 
     private var settings = AppSettings()
-    private val autoFader = AutoFader()
     private val planner = AutoMixPlanner()
     private val queueTracks = LinkedHashMap<String, Track>()
     private var listenedMs = 0L
@@ -133,6 +152,7 @@ class AudioEngine(
 
     fun playQueue(tracks: List<Track>, startIndex: Int = 0, queueGenreId: String? = null, source: AudioSource = AudioSource.LOCAL) {
         if (tracks.isEmpty()) return
+        cancelCrossfade()
         finishCurrent()
         queueTracks.clear()
         tracks.forEach { queueTracks[it.id] = it }
@@ -151,10 +171,10 @@ class AudioEngine(
     fun togglePlay() = if (player.isPlaying) player.pause() else { if (player.playbackState == Player.STATE_IDLE) player.prepare(); player.play() }
     fun play() = player.play()
     fun pause() = player.pause()
-    fun next() = player.seekToNextMediaItem()
-    fun previous() = player.seekToPrevious()
-    fun seekTo(ms: Long) = player.seekTo(ms)
-    fun skipTo(index: Int) = player.seekTo(index, 0L)
+    fun next() { cancelCrossfade(); player.seekToNextMediaItem() }
+    fun previous() { cancelCrossfade(); player.seekToPrevious() }
+    fun seekTo(ms: Long) { cancelCrossfade(); player.seekTo(ms) }
+    fun skipTo(index: Int) { cancelCrossfade(); player.seekTo(index, 0L) }
 
     fun setShuffle(on: Boolean) { player.shuffleModeEnabled = on; _state.update { it.copy(shuffle = on) } }
     fun cycleRepeat() {
@@ -180,7 +200,10 @@ class AudioEngine(
         val next = block(_fxSettings.value)
         _fxSettings.value = next
         fx.update(next)
+        ghostFx.update(next.copy(normalizationGainDb = ghostNormalizationDb))
     }
+
+    private var ghostNormalizationDb = 0f
 
     override fun applyPreset(preset: EqPreset) = updateFx { it.withEqPreset(preset) }
 
@@ -188,8 +211,7 @@ class AudioEngine(
 
     fun applySettings(s: AppSettings) {
         settings = s
-        autoFader.fadeOutMs = if (s.autoFaderEnabled) (s.crossfadeSeconds * 1000).toLong() else 0
-        autoFader.fadeInMs = autoFader.fadeOutMs
+        crossfadeMs = if (s.autoFaderEnabled) (s.crossfadeSeconds * 1000).toLong() else 0L
         updateFx { it.copy(safeMode = s.speakerSafeMode) }
         applyNormalization(_state.value.track)
     }
@@ -201,6 +223,16 @@ class AudioEngine(
     private fun onTrackChanged() {
         finishCurrent()
         val id = player.currentMediaItem?.mediaId
+        if (xfade == Xfade.OVERLAP && id != null && id == xfadeTrackId) {
+            // The outgoing song ended: continue the incoming song on the main player where the ghost is now.
+            // The main player stays silent until it is actually playing, then the ghost is stopped.
+            xfade = Xfade.HANDOFF
+            handoffStartedAt = System.currentTimeMillis()
+            fx.faderLevel = 0f
+            player.seekTo(ghost.currentPosition + HANDOFF_LEAD_MS)
+        } else if (xfade != Xfade.IDLE) {
+            cancelCrossfade()
+        }
         val track = id?.let { queueTracks[it] }
         _state.update { it.copy(track = track, index = player.currentMediaItemIndex, durationMs = 0, positionMs = 0, queue = currentQueue(), error = null) }
         // Beat-match the auto-mixed track to the previous tempo (time-stretch keeps the pitch).
@@ -236,8 +268,7 @@ class AudioEngine(
         val alreadyNext = nextIndex < player.mediaItemCount && player.getMediaItemAt(nextIndex).mediaId == pick.track.id
         if (!alreadyNext) addNext(pick.track)
         val plan = planner.plan(current, pick.track, defaultFadeMs = (settings.crossfadeSeconds * 1000).toLong())
-        autoFader.fadeOutMs = plan.durationMs.coerceAtMost(12_000)
-        autoFader.fadeInMs = autoFader.fadeOutMs
+        autoMixOverlapMs = plan.durationMs.coerceAtMost(12_000)
         pendingTempo = pick.track.id to plan.tempoRatio
     }
 
@@ -252,16 +283,86 @@ class AudioEngine(
             lastTick = now
             val pos = player.currentPosition
             val dur = player.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: 0L
-            // Fader = auto-fader envelope × sleep fade. Streams and gapless mode skip the envelope.
-            val t = _state.value.track
-            val envelope = if (t != null && t.source == AudioSource.LOCAL && dur > 0 && autoFader.fadeOutMs > 0) autoFader.volumeAt(pos, dur) else 1f
-            fx.faderLevel = envelope * sleepTimer.fadeLevel
+            tickCrossfade(pos, dur)
             processor.analyzer?.let { a ->
                 _spectrum.value = if (player.isPlaying) a.compute(now) else decay(_spectrum.value)
             }
             if (frame++ % 8 == 0) _state.update { it.copy(positionMs = pos, durationMs = dur) }
             delay(33)
         }
+    }
+
+    // ---- Crossfade -----------------------------------------------------------------------------------
+
+    private var crossfadeMs = 3000L
+    private var autoMixOverlapMs = 0L
+
+    /** Called every 33 ms: starts, blends and finishes overlapping crossfades. */
+    private fun tickCrossfade(pos: Long, dur: Long) {
+        val sleep = sleepTimer.fadeLevel
+        when (xfade) {
+            Xfade.IDLE -> {
+                fx.faderLevel = sleep
+                ghostFx.faderLevel = 0f
+                val t = _state.value.track ?: return
+                val setting = if (_state.value.autoMix && autoMixOverlapMs > 0) autoMixOverlapMs else crossfadeMs
+                if (setting <= 0 || t.source != AudioSource.LOCAL || !player.isPlaying || dur <= 0) return
+                val nextIndex = player.nextMediaItemIndex
+                if (nextIndex == C.INDEX_UNSET) return
+                val nextItem = player.getMediaItemAt(nextIndex)
+                val next = queueTracks[nextItem.mediaId] ?: return
+                if (next.source != AudioSource.LOCAL) return
+                val overlap = CrossfadeTiming.overlapMs(setting, dur, next.durationMs)
+                if (CrossfadeTiming.shouldStart(pos, dur, overlap) && dur - pos > 400) startCrossfade(nextItem, next, dur - pos)
+            }
+            Xfade.OVERLAP -> {
+                // Seeked back out of the blend (e.g. from the lock screen): drop the incoming song.
+                if (dur - pos > xfadeOverlapMs + 1000) { cancelCrossfade(); return }
+                if (!player.playWhenReady) { ghost.pause(); return } else if (!ghost.playWhenReady) ghost.play()
+                val g = CrossfadeTiming.gains(pos, dur, xfadeOverlapMs)
+                fx.faderLevel = g.outgoing * sleep
+                ghostFx.faderLevel = g.incoming * sleep
+            }
+            Xfade.HANDOFF -> {
+                val ready = player.playbackState == Player.STATE_READY && player.isPlaying
+                val elapsed = System.currentTimeMillis() - handoffStartedAt
+                if ((ready && elapsed >= HANDOFF_LEAD_MS) || elapsed > 2000) {
+                    fx.faderLevel = sleep
+                    stopGhost()
+                } else {
+                    fx.faderLevel = 0f
+                    ghostFx.faderLevel = sleep
+                }
+            }
+        }
+    }
+
+    private fun startCrossfade(item: MediaItem, next: Track, remainingMs: Long) {
+        xfade = Xfade.OVERLAP
+        xfadeTrackId = next.id
+        xfadeOverlapMs = remainingMs
+        ghostNormalizationDb = if (settings.normalization) LoudnessNormalizer.gainDb(next.replayGainDb, next.loudnessDb) else 0f
+        ghostFx.update(_fxSettings.value.copy(normalizationGainDb = ghostNormalizationDb))
+        ghostFx.faderLevel = 0f
+        val ratio = pendingTempo?.takeIf { it.first == next.id }?.second ?: 1f
+        ghost.playbackParameters = if (ratio != 1f) PlaybackParameters(ratio) else PlaybackParameters.DEFAULT
+        ghost.setMediaItem(item)
+        ghost.prepare()
+        ghost.play()
+    }
+
+    private fun stopGhost() {
+        ghostFx.faderLevel = 0f
+        ghost.stop()
+        ghost.clearMediaItems()
+        xfade = Xfade.IDLE
+        xfadeTrackId = null
+    }
+
+    /** User skipped, seeked or changed the queue mid-blend: drop the incoming song, restore full volume. */
+    private fun cancelCrossfade() {
+        if (xfade != Xfade.IDLE) stopGhost()
+        fx.faderLevel = sleepTimer.fadeLevel
     }
 
     private fun decay(f: SpectrumFrame) = SpectrumFrame(FloatArray(f.bands.size) { f.bands[it] * 0.85f }, f.bass * 0.85f, f.mid * 0.85f, f.treble * 0.85f, f.level * 0.85f, false, f.timestampMs)
@@ -286,6 +387,12 @@ class AudioEngine(
 
     fun release() {
         routeMonitor.stop()
+        ghost.release()
         player.release()
+    }
+
+    private companion object {
+        /** How far ahead of the ghost the main player seeks, to cover its seek/buffer latency. */
+        const val HANDOFF_LEAD_MS = 150L
     }
 }

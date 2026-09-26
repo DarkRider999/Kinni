@@ -10,7 +10,11 @@ data class KaraokeWord(val startMs: Long, val text: String)
 data class LyricsLine(val startMs: Long, val text: String, val words: List<KaraokeWord> = emptyList())
 
 @Serializable
-enum class LyricsOrigin { EMBEDDED, SIDECAR_LRC, ONLINE, CACHE }
+enum class LyricsOrigin {
+    EMBEDDED, SIDECAR_LRC, ONLINE, CACHE,
+    /** Written by AI because no real lyrics were found. Always labelled as such in the UI. */
+    AI_GENERATED,
+}
 
 @Serializable
 data class Lyrics(

@@ -88,11 +88,18 @@ fun LightingScreen(c: AppContainer, spectrum: SpectrumFrame, playing: Boolean) {
                 ToggleRow("Enabled", lighting.edgeEnabled) { on -> settings { it.copy(edgeLighting = it.edgeLighting.copy(enabled = on)) } }
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(EdgeLightingMode.entries.filter { it != EdgeLightingMode.OFF }) { m ->
-                        NeonChip(m.label, selected = lighting.edgeMode == m) { c.lighting.setEdgeMode(m); settings { it.copy(edgeLighting = it.edgeLighting.copy(mode = m)) } }
+                        NeonChip(m.label, selected = lighting.edgeMode == m) { settings { it.copy(edgeLighting = it.edgeLighting.copy(mode = m, customMode = true)) } }
                     }
                 }
-                LabeledSlider("Thickness", lighting.edgeThickness, 1f..12f) { v -> c.lighting.setEdgeStyle(v, lighting.edgeBrightness); settings { it.copy(edgeLighting = it.edgeLighting.copy(thickness = v)) } }
-                LabeledSlider("Brightness", lighting.edgeBrightness, 0f..1f) { v -> c.lighting.setEdgeStyle(lighting.edgeThickness, v); settings { it.copy(edgeLighting = it.edgeLighting.copy(brightness = v)) } }
+                LabeledSlider("Thickness", lighting.edgeThickness, 1f..12f, { "%.1f dp".format(it) }) { v ->
+                    settings { it.copy(edgeLighting = it.edgeLighting.copy(thickness = v, brightness = lighting.edgeBrightness, customStyle = true)) }
+                }
+                LabeledSlider("Brightness", lighting.edgeBrightness, 0f..1f, { "${(it * 100).toInt()}%" }) { v ->
+                    settings { it.copy(edgeLighting = it.edgeLighting.copy(brightness = v, thickness = lighting.edgeThickness, customStyle = true)) }
+                }
+                if (appSettings.edgeLighting.customStyle || appSettings.edgeLighting.customMode) {
+                    NeonChip("Follow genre theme again") { settings { it.copy(edgeLighting = it.edgeLighting.copy(customStyle = false, customMode = false)) } }
+                }
             }
         }
 
@@ -104,7 +111,7 @@ fun LightingScreen(c: AppContainer, spectrum: SpectrumFrame, playing: Boolean) {
                     Column(
                         Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(Color.Black)
                             .border(if (selected) 2.dp else 1.dp, if (selected) p.accent else p.muted.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
-                            .clickable { c.lighting.setLightBarAnimation(a); settings { it.copy(lightBar = it.lightBar.copy(animation = a)) } },
+                            .clickable { settings { it.copy(lightBar = it.lightBar.copy(animation = a, customAnimation = true)) } },
                     ) {
                         LightingCanvas(a, preview, Modifier.fillMaxWidth().aspectRatio(1.4f), intensity = 0.9f)
                         Text(a.label, Modifier.padding(8.dp), color = if (selected) p.accent else p.onBackground, style = MaterialTheme.typography.labelSmall)
@@ -112,6 +119,9 @@ fun LightingScreen(c: AppContainer, spectrum: SpectrumFrame, playing: Boolean) {
                 }
                 if (row.size == 1) Spacer(Modifier.weight(1f))
             }
+        }
+        if (appSettings.lightBar.customAnimation) item {
+            NeonChip("Light bar: follow genre theme again") { settings { it.copy(lightBar = it.lightBar.copy(customAnimation = false)) } }
         }
         item {
             ToggleRow("Full-screen visualizer behind the player", lighting.backdropAnimation != null) { on ->

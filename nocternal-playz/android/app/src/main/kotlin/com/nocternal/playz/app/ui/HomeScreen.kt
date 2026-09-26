@@ -76,6 +76,8 @@ fun HomeScreen(c: AppContainer, actions: ActionExecutor, onOpenPlayer: () -> Uni
     val pager = rememberPagerState { AudioSource.entries.size }
     val scope = rememberCoroutineScope()
     val network by c.offline.network.collectAsStateWithLifecycle()
+    val appSettings by c.settingsRepo.settings.collectAsStateWithLifecycle()
+    val online = com.nocternal.playz.offline.OfflineManager.allowed(network, appSettings)
     val requested by c.requestedSource.collectAsStateWithLifecycle()
     val search by c.panelSearch.collectAsStateWithLifecycle()
     var youtubeOpened by remember { mutableStateOf(false) }
@@ -101,12 +103,12 @@ fun HomeScreen(c: AppContainer, actions: ActionExecutor, onOpenPlayer: () -> Uni
                 when (AudioSource.entries[page]) {
                     AudioSource.LOCAL -> LocalPanel(c, actions, onOpenPlayer, onGenreRadio = { g -> radioGenre = g; scope.launch { pager.animateScrollToPage(AudioSource.RADIO.ordinal) } })
                     AudioSource.YOUTUBE -> if (youtubeOpened) YouTubeMusicPanel(
-                        online = network.online,
+                        online = online,
                         searchQuery = search?.takeIf { it.first == AudioSource.YOUTUBE }?.second,
                         active = pager.settledPage == AudioSource.YOUTUBE.ordinal,
                     ) else YouTubePanelPlaceholder({ youtubeOpened = true })
                     AudioSource.RADIO -> RadioHubScreen(
-                        client = c.radio, online = network.online,
+                        client = c.radio, online = online,
                         externalQuery = search?.takeIf { it.first == AudioSource.RADIO }?.second,
                         initialGenreId = radioGenre,
                         onPlay = { st, genreId ->
@@ -151,6 +153,7 @@ private fun LocalPanel(c: AppContainer, actions: ActionExecutor, onOpenPlayer: (
     val scope = rememberCoroutineScope()
     var tab by remember { mutableStateOf(LibraryTab.SONGS) }
     var folderPath by remember { mutableStateOf("") }
+    var expanded by remember { mutableStateOf(setOf<String>()) }
     val snapshot = remember(lib) { c.library.snapshot() }
     val recent = remember(snapshot) { c.smartPlaylists.recentlyPlayed(snapshot, 15).trackIds.mapNotNull(c.library::track) }
     val genrePlaylists = remember(snapshot) { c.smartPlaylists.genrePlaylists(snapshot).associateBy { it.genreId } }
@@ -204,10 +207,27 @@ private fun LocalPanel(c: AppContainer, actions: ActionExecutor, onOpenPlayer: (
             LibraryTab.SONGS -> items(lib.tracks.take(500), key = { it.id }) { t -> TrackRow(c, t, t.id in lib.favorites) { play(lib.tracks, lib.tracks.indexOf(t)) } }
             LibraryTab.PLAYLISTS -> {
                 val lists = c.smartPlaylists.all(snapshot).filter { it.trackIds.isNotEmpty() } + lib.playlists
-                items(lists, key = { it.id }) { pl ->
-                    GlowCard(Modifier.fillMaxWidth(), glowColor = p.accent.copy(alpha = 0.3f), onClick = { actions.playPlaylist(pl); onOpenPlayer() }) {
-                        Text(pl.name, color = p.onBackground, style = MaterialTheme.typography.titleMedium)
-                        Text("${pl.trackIds.size} songs · ${pl.description}", color = p.muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                lists.forEach { pl ->
+                    val open = pl.id in expanded
+                    item(key = "pl_" + pl.id) {
+                        GlowCard(Modifier.fillMaxWidth(), glowColor = p.accent.copy(alpha = if (open) 0.8f else 0.3f), onClick = { expanded = if (open) expanded - pl.id else expanded + pl.id }) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(pl.name, color = p.onBackground, style = MaterialTheme.typography.titleMedium)
+                                    Text("${pl.trackIds.size} songs · ${pl.description}", color = p.muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                                NeonChip("▶ Play") { actions.playPlaylist(pl); onOpenPlayer() }
+                                Text(if (open) "  ▲" else "  ▼", color = p.accent)
+                            }
+                        }
+                    }
+                    if (open) {
+                        val tracks = pl.trackIds.mapNotNull(c.library::track)
+                        items(tracks, key = { "pl_" + pl.id + "_" + it.id }) { t ->
+                            Box(Modifier.padding(start = 16.dp)) {
+                                TrackRow(c, t, t.id in lib.favorites) { actions.playPlaylist(pl, tracks.indexOf(t)); onOpenPlayer() }
+                            }
+                        }
                     }
                 }
             }

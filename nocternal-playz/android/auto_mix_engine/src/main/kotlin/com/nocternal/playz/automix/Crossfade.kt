@@ -34,3 +34,27 @@ class AutoFader(var fadeOutMs: Long = 3000, var fadeInMs: Long = 3000) {
         return minOf(fadeIn, fadeOut).coerceIn(0f, 1f)
     }
 }
+
+/**
+ * Overlapping crossfade timing: the next song starts [overlapMs] before the current one ends and both play
+ * together, so there is never a quiet gap. Equal-power curves keep the loudness constant through the blend.
+ */
+object CrossfadeTiming {
+    /** Overlap length for this pair: the setting, but never more than a third of either song. */
+    fun overlapMs(settingMs: Long, currentDurationMs: Long, nextDurationMs: Long): Long {
+        if (settingMs <= 0 || currentDurationMs <= 0) return 0
+        val limitNext = if (nextDurationMs > 0) nextDurationMs / 3 else settingMs
+        return minOf(settingMs, currentDurationMs / 3, limitNext).coerceAtLeast(0)
+    }
+
+    /** True when the incoming song should start now. */
+    fun shouldStart(positionMs: Long, durationMs: Long, overlapMs: Long): Boolean =
+        overlapMs > 0 && durationMs > 0 && durationMs - positionMs in 1..overlapMs
+
+    /** Gains while both songs play, from the outgoing song's position. */
+    fun gains(positionMs: Long, durationMs: Long, overlapMs: Long, curve: CrossfadeCurve = CrossfadeCurve.EQUAL_POWER): FadeGains {
+        if (overlapMs <= 0) return FadeGains(1f, 0f)
+        val progress = 1f - (durationMs - positionMs).toFloat() / overlapMs
+        return Crossfade.gains(progress, curve)
+    }
+}

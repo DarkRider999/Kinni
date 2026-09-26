@@ -17,8 +17,24 @@ class GenreDetectorTest {
         assertEquals("trance", detector.detect(t("x", tag = "Psytrance"))!!.genre.id)
     }
 
+    @Test fun storeTagFamilies() {
+        val y = { tag: String, year: Int?, energy: Float? -> detector.detect(Track("x", "", "x", genreTag = tag, year = year, energy = energy))!!.genre.id }
+        assertEquals("hindi_classics", y("Bollywood", 1975, null))
+        assertEquals("romantic", y("Bollywood", 2015, 0.4f))
+        assertEquals("party_mix", y("Hindi", 2019, 0.8f))
+        assertEquals("workout", y("Hip-Hop/Rap", null, null))
+        assertEquals("workout", y("Alternative Rock", null, null))
+        assertEquals("chillout", y("Jazz", null, null))
+        assertEquals("party_mix", y("Punjabi", null, null))
+        assertEquals("morning_vibes", y("Pop", null, 0.4f))
+        assertEquals("instrumental", y("Soundtrack", null, null))
+        assertNull(detector.detect(Track("x", "", "x", genreTag = "Other")))
+    }
+
     @Test fun keywordsAreWholeWords() {
-        assertEquals("sleep", detector.detect(t("Gentle rain for sleeping", folder = "Music/Nature"))!!.genre.id)
+        assertEquals("sleep", detector.detect(t("Gentle rain", folder = "Music/Sleep Sounds"))!!.genre.id)
+        // Everyday words in a title are not genre evidence.
+        assertNull(detector.detect(t("Purple Rain", artist = "Prince")))
         // "rain" must not match inside "trance"; "chill" must not match "chillhop".
         assertEquals("trance", detector.detect(t("Trance Nation 04"))!!.genre.id)
         assertEquals("lofi", detector.detect(t("Chillhop Essentials"))!!.genre.id)
@@ -29,6 +45,8 @@ class GenreDetectorTest {
         assertEquals("trance", detector.detect(t("untitled", bpm = 140f, energy = 0.8f))!!.genre.id)
         assertEquals("workout", detector.detect(t("untitled", bpm = 172f, energy = 0.9f))!!.genre.id)
         assertNull(detector.detect(t("untitled")))
+        // Every analysed song gets a genre.
+        assertEquals("lofi", detector.detect(t("untitled", bpm = 85f, energy = 0.5f))!!.genre.id)
         assertEquals("podcast_mode", detector.detect(t("Episode", podcast = true))!!.genre.id)
     }
 }

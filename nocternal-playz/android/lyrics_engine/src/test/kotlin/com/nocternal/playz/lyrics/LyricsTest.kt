@@ -60,3 +60,34 @@ class LyricsTest {
         assertEquals(1, onlineCalls)
     }
 }
+
+class LyricsFallbackTest {
+    @Test fun searchFallbackAndQueryCleaning() = kotlinx.coroutines.test.runTest {
+        val (title, artist) = LyricsQuery.of(com.nocternal.playz.model.Track("1", "", "03 - Arijit Singh - Tum Hi Ho (Official Video)", "Unknown artist"))
+        org.junit.Assert.assertEquals("Tum Hi Ho", title)
+        org.junit.Assert.assertEquals("Arijit Singh", artist)
+        val urls = mutableListOf<String>()
+        val p = LrcLibProvider(httpGet = { u -> urls += u; if ("/api/get" in u) null else """[{"duration":260,"plainLyrics":"a"},{"duration":262,"syncedLyrics":"[00:01.00]Hello"}]""" })
+        val l = p.find(com.nocternal.playz.model.Track("1", "", "Tum Hi Ho", "Arijit Singh", durationMs = 262_000))!!
+        org.junit.Assert.assertTrue(l.synced)
+        org.junit.Assert.assertTrue(urls.first().contains("/api/get"))
+    }
+
+    @Test fun everySongGetsLyricsAndRealOnesReplaceAi() = kotlinx.coroutines.test.runTest {
+        val cache = InMemoryLyricsCache()
+        var online = false
+        val claude = object : LyricsGenerator {
+            override val cacheable = true
+            override suspend fun find(track: com.nocternal.playz.model.Track) = LyricsTiming.spread(listOf("one", "two", "three", "four"), 200_000, LyricsOrigin.AI_GENERATED)
+        }
+        val real = LrcLibProvider(httpGet = { """{"syncedLyrics":"[00:01.00]Real"}""" })
+        val repo = LyricsRepository(cache, emptyList(), listOf(real), { online }, listOf(claude, LyricWeaver()))
+        val t = com.nocternal.playz.model.Track("id", "", "Song", "Artist", durationMs = 200_000)
+        org.junit.Assert.assertEquals(LyricsOrigin.AI_GENERATED, repo.lyricsFor(t)!!.origin)
+        online = true
+        org.junit.Assert.assertEquals("Real", repo.lyricsFor(t)!!.lines.single().text)
+        org.junit.Assert.assertEquals(LyricsOrigin.CACHE, repo.lyricsFor(t)!!.origin)
+        // On-device writer always produces something.
+        org.junit.Assert.assertTrue(LyricWeaver().find(t).lines.size >= 8)
+    }
+}

@@ -85,6 +85,7 @@ fun NocternalRoot(c: AppContainer, actions: ActionExecutor) {
     val lighting by c.lighting.state.collectAsStateWithLifecycle()
     val library by c.library.data.collectAsStateWithLifecycle()
     val lyrics by c.lyrics.collectAsStateWithLifecycle()
+    val lyricsLoading by c.lyricsLoading.collectAsStateWithLifecycle()
     val sleepLeft by c.audio.sleepTimer.remainingMs.collectAsStateWithLifecycle()
     val fx by c.audio.fxSettings.collectAsStateWithLifecycle()
     val nav = rememberNavController()
@@ -104,7 +105,7 @@ fun NocternalRoot(c: AppContainer, actions: ActionExecutor) {
                         composable(Tab.PLAYER.route) {
                             val track = playback.track
                             PlayerScreen(
-                                state = playback, spectrum = spectrum, lighting = lighting, lyrics = lyrics,
+                                state = playback, spectrum = spectrum, lighting = lighting, lyrics = lyrics, lyricsLoading = lyricsLoading,
                                 isFavorite = track?.id in library.favorites,
                                 artSpec = remember(track?.id) { track?.let(c.artGenerator::generate) },
                                 sleepRemainingMs = sleepLeft,

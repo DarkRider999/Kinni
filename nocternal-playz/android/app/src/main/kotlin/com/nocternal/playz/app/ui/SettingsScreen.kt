@@ -128,9 +128,9 @@ fun SettingsScreen(c: AppContainer) {
         item { SectionTitle("Playback") }
         item {
             GlowCard(Modifier.fillMaxWidth()) {
-                ToggleRow("Auto-fader (fade out + fade in)", s.autoFaderEnabled) { on -> c.settingsRepo.update { it.copy(autoFaderEnabled = on) } }
-                LabeledSlider("Crossfade duration", s.crossfadeSeconds, 0f..12f, { "%.0f s".format(it) }) { v -> c.settingsRepo.update { it.copy(crossfadeSeconds = Math.round(v).toFloat()) } }
-                ToggleRow("True gapless playback", s.gapless) { on -> c.settingsRepo.update { it.copy(gapless = on) } }
+                ToggleRow("Crossfade (next song overlaps, no gaps)", s.autoFaderEnabled) { on -> c.settingsRepo.update { it.copy(autoFaderEnabled = on) } }
+                LabeledSlider("Crossfade overlap", s.crossfadeSeconds, 0f..12f, { if (it < 0.5f) "gapless" else "%.0f s".format(it) }) { v -> c.settingsRepo.update { it.copy(crossfadeSeconds = Math.round(v).toFloat()) } }
+                Text("Recommended: 4–6 s for playlists and mixes · 0 s (gapless) for live albums and DJ sets", color = p.muted, style = MaterialTheme.typography.labelSmall)
                 ToggleRow("Smart audio normalization", s.normalization) { on -> c.settingsRepo.update { it.copy(normalization = on) } }
                 ToggleRow("Speaker boost", fx.speakerBoost) { on -> c.audio.setSpeakerBoost(on) }
                 ToggleRow("Hearing & speaker safe mode", s.speakerSafeMode) { on -> c.settingsRepo.update { it.copy(speakerSafeMode = on) } }
@@ -161,8 +161,11 @@ fun SettingsScreen(c: AppContainer) {
             GlowCard(Modifier.fillMaxWidth()) {
                 ToggleRow("Private mode (no history, no scrobbles)", s.privateMode) { on -> c.settingsRepo.update { it.copy(privateMode = on) } }
                 ToggleRow("Smart offline mode", s.smartOfflineMode) { on -> c.settingsRepo.update { it.copy(smartOfflineMode = on) } }
+                Text("Connections for lyrics, radio, YouTube Music and AI", color = p.muted, style = MaterialTheme.typography.labelSmall)
+                ToggleRow("Use Wi-Fi", s.useWifi) { on -> c.settingsRepo.update { it.copy(useWifi = on) } }
+                ToggleRow("Use mobile data", s.useMobileData) { on -> c.settingsRepo.update { it.copy(useMobileData = on) } }
                 ToggleRow("Auto-download lyrics", s.autoDownloadLyrics) { on -> c.settingsRepo.update { it.copy(autoDownloadLyrics = on) } }
-                ToggleRow("Downloads on Wi-Fi only", s.autoDownloadOnWifiOnly) { on -> c.settingsRepo.update { it.copy(autoDownloadOnWifiOnly = on) } }
+                ToggleRow("Background downloads on Wi-Fi only", s.autoDownloadOnWifiOnly) { on -> c.settingsRepo.update { it.copy(autoDownloadOnWifiOnly = on) } }
                 NeonChip("Clear playback history") { c.library.clearHistory(); toast("History cleared") }
             }
         }
