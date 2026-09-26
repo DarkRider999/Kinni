@@ -12,9 +12,10 @@ import com.subzero.messenger.call.LoopbackRtcEngine
 import com.subzero.messenger.crypto.CryptoEngine
 import com.subzero.messenger.data.ChatRepository
 import com.subzero.messenger.data.RamMessageBuffer
-import com.subzero.messenger.data.RelayConfig
+import com.subzero.messenger.data.RelaySettings
 import com.subzero.messenger.data.VaultStore
 import com.subzero.messenger.data.WebSocketTransport
+import com.subzero.messenger.ui.settings.SetupScreen
 import com.subzero.messenger.identity.AppIdentity
 import com.subzero.messenger.identity.IdentityManager
 import com.subzero.messenger.security.AppLock
@@ -57,8 +58,9 @@ class MainActivity : FragmentActivity() {
     private lateinit var safeZone: SafeZoneController
     private lateinit var vault: VaultStore
     private lateinit var callManager: CallManager
+    private lateinit var relaySettings: RelaySettings
 
-    private enum class AppScreen { CHAT, VAULT, CALL }
+    private enum class AppScreen { CHAT, VAULT, CALL, SETUP }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -66,11 +68,12 @@ class MainActivity : FragmentActivity() {
 
         identity = IdentityManager(this)
         appLock = AppLock(this)
-        // Use the relay when configured (RelayConfig.URL set), else stay offline
+        // Use the relay when configured on the setup screen, else stay offline
         // (messages shown locally only). The relay client is both the transport
         // and the prekey directory.
-        if (RelayConfig.enabled) {
-            val ws = WebSocketTransport(RelayConfig.URL, RelayConfig.selfAddress, RelayConfig.peerAddress)
+        relaySettings = RelaySettings(this)
+        if (relaySettings.enabled) {
+            val ws = WebSocketTransport(relaySettings.url, relaySettings.selfAddress, relaySettings.peerAddress)
             repository = ChatRepository(crypto, buffer, ws, ws, conversationId, relayEnabled = true)
         } else {
             repository = ChatRepository(crypto, buffer, NoopTransport, NoopDirectory, conversationId, relayEnabled = false)
@@ -112,12 +115,18 @@ class MainActivity : FragmentActivity() {
                         manager = callManager,
                         onFinished = { callManager.reset(); appScreenState.value = AppScreen.CHAT },
                     )
+                    appScreen == AppScreen.SETUP -> SetupScreen(
+                        settings = relaySettings,
+                        onSaved = { recreate() },   // rebuild with the new connection settings
+                        onBack = { appScreenState.value = AppScreen.CHAT },
+                    )
                     else -> ChatScreen(
                         viewModel = chatViewModel,
                         onSafeZone = { safeZone.activate(conversationId) },
                         onVoiceCall = { callManager.placeCall("Contact", CallType.AUDIO); appScreenState.value = AppScreen.CALL },
                         onVideoCall = { callManager.placeCall("Contact", CallType.VIDEO); appScreenState.value = AppScreen.CALL },
                         onOpenVault = { appScreenState.value = AppScreen.VAULT },
+                        onOpenSettings = { appScreenState.value = AppScreen.SETUP },
                     )
                 }
             }

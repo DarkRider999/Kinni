@@ -36,6 +36,7 @@ fun ChatScreen(
     onVoiceCall: () -> Unit = {},
     onVideoCall: () -> Unit = {},
     onOpenVault: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsState()
 
@@ -50,6 +51,7 @@ fun ChatScreen(
             TopAction("📞", onVoiceCall)
             TopAction("🎥", onVideoCall)
             TopAction("🗄", onOpenVault)
+            TopAction("⚙", onOpenSettings)
         }
         LazyColumn(
             modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp),

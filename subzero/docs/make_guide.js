@@ -127,7 +127,13 @@ const doc = new Document({
       Bullet("Want to clear everything now? Use Secure logout — it wipes all messages from memory."),
 
       H1("Messaging over the internet (optional)"),
-      P("Out of the box the app runs fully on the phone (great for trying every feature). For the two of us to actually send messages to each other over the internet, there's a small free “relay” server that passes along our encrypted messages — it can never read them. It can be deployed in a few minutes to a free host (Render, Railway, or Fly.io), and then the app is pointed at its address. I can set this up whenever you want; ask me and I'll walk you through it."),
+      P("Out of the box the app runs fully on the phone (great for trying every feature). For the two of us to actually send messages to each other over the internet, there's a small free “relay” server that passes along our encrypted messages — it can never read them. It's deployed once to a free host (Render, Railway, or Fly.io)."),
+      P("Then it's set up right inside the app — no code:"),
+      Step("Tap the gear (⚙) icon at the top of the chat."),
+      Step("Paste the relay address (looks like wss://…) into “Relay URL”."),
+      Step("Put your name in “Your address” and mine in “Their address” (we each do the opposite on our own phone)."),
+      Step("Tap “Save & connect.” That's it — messages now go between us, still end-to-end encrypted."),
+      P("I can deploy the relay for you and give you the exact address to paste; just ask."),
 
       H1("Good to know"),
       Bullet("It's built for privacy between us, honestly and simply — strong encryption, nothing stored in the cloud."),
