@@ -16,6 +16,8 @@ import com.subzero.messenger.security.ScreenSecurity
 import com.subzero.messenger.ui.chat.ChatScreen
 import com.subzero.messenger.ui.chat.ChatViewModel
 import com.subzero.messenger.ui.decoy.CalculatorScreen
+import com.subzero.messenger.ui.decoy.NotesScreen
+import com.subzero.messenger.ui.decoy.WeatherScreen
 import com.subzero.messenger.ui.safezone.*
 import com.subzero.messenger.ui.safezone.games.GameRegistry
 import com.subzero.messenger.ui.theme.SubZeroTheme
@@ -99,8 +101,9 @@ class MainActivity : FragmentActivity() {
     private fun SafeZoneHost(screen: SafeZoneScreen, onReturn: () -> Unit) {
         if (screen.isGame) GameRegistry.render(screen)
         else when (screen) {
-            SafeZoneScreen.CALCULATOR -> CalculatorScreen()
-            else -> CalculatorScreen() // TODO(subzero): Notes/Weather decoys
+            SafeZoneScreen.NOTES -> NotesScreen()
+            SafeZoneScreen.WEATHER -> WeatherScreen()
+            else -> CalculatorScreen()
         }
     }
 

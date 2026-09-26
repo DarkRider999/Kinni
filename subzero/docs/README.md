@@ -49,7 +49,7 @@ subzero/
 | Biometric app lock | ✅ | ✅ |
 | SafeZone quick-hide | ✅ | ✅ |
 | Mini-games (all 10: 2048, Snake, Sudoku, Tic-Tac-Toe, Memory, Sliding Tiles, Quick Math, Pattern Match, Word Shuffle, Bubble Pop) | ✅ all playable | ⚙️ Tic-Tac-Toe |
-| Decoy calculator / notes / weather | ✅ calculator | ⚙️ calculator |
+| Decoy calculator / notes / weather | ✅ all three | ✅ all three |
 | Identity (name + icon) switching | ✅ launcher aliases | ⚙️ alternate icons |
 | Rooted/jailbroken device awareness | ✅ | ✅ |
 | Encrypted voice/video (WebRTC) | ⚙️ interface scaffold | ⚙️ interface scaffold |

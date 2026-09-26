@@ -102,8 +102,10 @@ struct SafeZoneHostView: View {
     @ViewBuilder private var content: some View {
         switch screen {
         case .calculator: CalculatorView()
+        case .notes: NotesView()
+        case .weather: WeatherView()
         case .ticTacToe: TicTacToeView()
-        // TODO(subzero): 2048, Snake, Memory, etc. + Notes/Weather decoys.
+        // TODO(subzero): 2048, Snake, Memory, etc. remaining game views.
         default: CalculatorView()
         }
     }
