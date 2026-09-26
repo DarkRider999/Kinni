@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Gallery: white photo frame with a sun and mountain range. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <group>
+        <!-- frame -->
+        <path android:strokeColor="#FFFFFF" android:strokeWidth="4"
+            android:pathData="M34,30 h40 v48 h-40 z" />
+        <!-- sun -->
+        <path android:fillColor="#FFD23F" android:pathData="M45,42 a5,5 0 1,0 0.1,0 z" />
+        <!-- mountains -->
+        <path android:fillColor="#FFFFFF"
+            android:pathData="M36,74 L50,54 L58,64 L66,50 L72,74 z" />
+    </group>
+</vector>

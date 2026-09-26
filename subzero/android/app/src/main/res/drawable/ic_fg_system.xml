@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- System Update: white download arrow into a tray. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <group>
+        <!-- arrow shaft -->
+        <path android:strokeColor="#FFFFFF" android:strokeWidth="7"
+            android:strokeLineCap="round" android:pathData="M54,30 L54,60" />
+        <!-- arrow head -->
+        <path android:fillColor="#FFFFFF" android:pathData="M42,54 L66,54 L54,70 z" />
+        <!-- tray -->
+        <path android:strokeColor="#FFFFFF" android:strokeWidth="6"
+            android:strokeLineCap="round" android:pathData="M40,78 L68,78" />
+    </group>
+</vector>

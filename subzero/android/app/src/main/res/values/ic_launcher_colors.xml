@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Adaptive-icon background colors, one per disguise identity. -->
+    <color name="ic_bg_subzero">#0B0F14</color>
+    <color name="ic_bg_calc">#2A2A2E</color>
+    <color name="ic_bg_notes">#F7CE46</color>
+    <color name="ic_bg_weather">#4AA3F0</color>
+    <color name="ic_bg_gallery">#5B8DEF</color>
+    <color name="ic_bg_system">#3C4043</color>
+</resources>
