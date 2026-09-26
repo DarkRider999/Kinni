@@ -12,7 +12,7 @@ export default apiHandler({
     const user = await prisma.user.findUnique({ where: { id: auth.id } });
     if (!user) throw unauthorized('Account not found');
     res.json({
-      user: { id: user.id, email: user.email, name: user.name, image: user.image },
+      user: { id: user.id, email: user.email, username: user.username, name: user.name, image: user.image },
       entitlement: entitlementFor(user),
     });
   },

@@ -43,8 +43,10 @@ export async function register(email: string, password: string) {
   return { user: authUser, token: signToken(authUser) };
 }
 
-export async function login(email: string, password: string) {
-  const user = await prisma.user.findUnique({ where: { email: email.trim().toLowerCase() } });
+/** `identifier` is an email address or a username. */
+export async function login(identifier: string, password: string) {
+  const key = identifier.trim().toLowerCase();
+  const user = await prisma.user.findUnique({ where: key.includes('@') ? { email: key } : { username: key } });
   // Accounts created with Google/Facebook/GitHub have no password.
   const ok = await bcrypt.compare(password, user?.passwordHash ?? getDummyHash());
   if (!user || !user.passwordHash || !ok) throw unauthorized('Invalid email or password');

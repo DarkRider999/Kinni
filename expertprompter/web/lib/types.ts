@@ -32,6 +32,16 @@ export interface GenerateRequest {
   category?: Category;
   /** Logged-in users auto-save unless this is false. */
   save?: boolean;
+  attachments?: AttachmentPayload[];
+}
+
+/** What the API receives for each attached file (text is extracted in the browser). */
+export interface AttachmentPayload {
+  name: string;
+  role: 'source' | 'reference';
+  kind: 'text' | 'image' | 'other';
+  size?: number;
+  text?: string;
 }
 
 export interface GenerateResponse {
@@ -66,6 +76,7 @@ export interface SavedPrompt {
 export interface AuthUser {
   id: string;
   email: string;
+  username?: string | null;
   name?: string | null;
   image?: string | null;
 }

@@ -20,6 +20,18 @@ const StyleSchema = z
   .transform((s) => s.trim().toUpperCase())
   .pipe(z.enum(PROMPT_STYLES));
 
+export const MAX_ATTACHMENTS = 8;
+/** Text accepted per file; the prompt builder trims further to keep prompts usable. */
+export const MAX_ATTACHMENT_TEXT = 40_000;
+
+const AttachmentSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  role: z.enum(['source', 'reference']),
+  kind: z.enum(['text', 'image', 'other']),
+  size: z.number().int().nonnegative().optional(),
+  text: z.string().max(MAX_ATTACHMENT_TEXT).optional(),
+});
+
 export const GenerateSchema = z.object({
   rawInput: z.string().trim().min(3, 'Please describe your task (at least 3 characters)').max(5000),
   promptStyle: StyleSchema.optional(),
@@ -28,12 +40,13 @@ export const GenerateSchema = z.object({
   category: z.string().transform((s) => s.trim().toUpperCase().replace(/\s+/g, '_')).pipe(z.enum(CATEGORIES)).optional(),
   /** Logged-in users auto-save by default; pass false to skip. */
   save: z.boolean().optional(),
+  attachments: z.array(AttachmentSchema).max(MAX_ATTACHMENTS, `Attach at most ${MAX_ATTACHMENTS} files`).default([]),
 });
 export type GenerateBody = z.infer<typeof GenerateSchema>;
 
 export const SavePromptSchema = z.object({
   rawInput: z.string().trim().min(1).max(5000),
-  generatedPrompt: z.string().trim().min(1).max(50_000),
+  generatedPrompt: z.string().trim().min(1).max(100_000),
   detectedCategory: z.enum(CATEGORIES),
   promptStyle: StyleSchema.default('PROFESSIONAL'),
   recommendedTools: z.array(z.string().max(80)).max(20).default([]),
@@ -41,6 +54,12 @@ export const SavePromptSchema = z.object({
   title: z.string().trim().max(160).optional(),
 });
 export type SavePromptBody = z.infer<typeof SavePromptSchema>;
+
+/** Sign-in accepts an email address or a username. */
+export const LoginSchema = z.object({
+  email: z.string().trim().min(1, 'Enter your email or username').max(254),
+  password: z.string().min(1, 'Enter your password').max(128),
+});
 
 export const CredentialsSchema = z.object({
   email: z.email('Enter a valid email').max(254),

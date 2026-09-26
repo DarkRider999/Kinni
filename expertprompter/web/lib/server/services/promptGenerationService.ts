@@ -25,7 +25,8 @@
 
 import { analyzeInput, type InputAnalysis } from './inputAnalysisService';
 import { selectTemplate, type TaskTemplate } from './promptTemplates';
-import type { Category, PromptOptions, PromptStyle } from '../types';
+import { attachmentSections, attachmentSummary, mediaReferenceParameters } from './attachmentSections';
+import type { Attachment, Category, PromptOptions, PromptStyle } from '../types';
 
 export interface GeneratePromptInput {
   rawInput: string;
@@ -33,6 +34,8 @@ export interface GeneratePromptInput {
   promptStyle?: PromptStyle;
   options?: PromptOptions;
   variation?: number;
+  /** Files the user attached (text extracted in the browser). */
+  attachments?: Attachment[];
 }
 
 export interface StyleProfile {
@@ -237,6 +240,7 @@ function buildTextPrompt(
   options: PromptOptions,
   rng: () => number,
   variation: number,
+  files: Attachment[] = [],
 ): string {
   const profile = STYLE_PROFILES[style];
   const taskSentence = buildTaskSentence(analysis, template, style);
@@ -249,6 +253,7 @@ function buildTextPrompt(
     taskSentence.split('\n')[0],
     `The tone should be ${joinList(tones)}.`,
     `Include ${joinList(template.sections.map((sec) => sec.label))}.`,
+    ...attachmentSummary(files),
     `Format it as ${withArticle(format)}.`,
   ];
   if (options.audience) summary.push(`Write it for ${options.audience.trim()}.`);
@@ -264,6 +269,7 @@ function buildTextPrompt(
   const context = contextLines(analysis, options);
   if (context.length) out.push('', ...context.map((c) => `- ${c}`));
   out.push('');
+  out.push(...attachmentSections(files, 'text'));
 
   out.push('## What to Include');
   template.sections.forEach((sec, i) => out.push(`${i + 1}. ${sec.detail}`));
@@ -316,7 +322,7 @@ function aspectFromFormat(format: string | undefined, fallback: string): string 
   return fallback;
 }
 
-function buildImagePrompt(analysis: InputAnalysis, template: TaskTemplate, style: PromptStyle, options: PromptOptions, rng: () => number, variation: number): string {
+function buildImagePrompt(analysis: InputAnalysis, template: TaskTemplate, style: PromptStyle, options: PromptOptions, rng: () => number, variation: number, files: Attachment[] = []): string {
   const profile = STYLE_PROFILES[style];
   const subject = extractSubject(analysis.task);
   const mood = uniq([...splitTone(options.tone), ...template.defaultTone]);
@@ -341,19 +347,21 @@ function buildImagePrompt(analysis: InputAnalysis, template: TaskTemplate, style
     '',
     '## Subject', capitalize(subject) + (options.audience ? ` (designed for ${options.audience.trim()})` : ''), '',
     '## Style', `- Visual style: ${profile.imageStyle.join(', ')}`, `- Mood: ${mood.join(', ')}`, '',
+    ...attachmentSections(files, 'image'),
     ...(template.flatGraphic ? [] : ['## Composition & Lighting', `- ${capitalize(composition)}`, `- ${capitalize(lighting)}`, '']),
     '## Parameters',
     `- Aspect ratio: ${aspect}`,
     `- Midjourney: append \`--ar ${aspect} --style raw --v 7\``,
     '- DALL·E / ChatGPT: paste the image prompt and state the aspect ratio in words.',
-    '- Stable Diffusion: 30–40 steps, CFG 6–8.', '',
+    '- Stable Diffusion: 30–40 steps, CFG 6–8.',
+    ...mediaReferenceParameters(files, 'image'), '',
     '## Negative Prompt', 'blurry, low resolution, distorted anatomy, extra fingers, watermark, jpeg artifacts, cluttered background, misspelled text', '',
     '## Quality Checklist', ...template.qualityChecks.map((q) => `- ${q}`),
     '- Generate 4 variations, pick the best, then upscale or iterate on it.',
   ].join('\n');
 }
 
-function buildVideoPrompt(analysis: InputAnalysis, template: TaskTemplate, style: PromptStyle, options: PromptOptions, rng: () => number, variation: number): string {
+function buildVideoPrompt(analysis: InputAnalysis, template: TaskTemplate, style: PromptStyle, options: PromptOptions, rng: () => number, variation: number, files: Attachment[] = []): string {
   const profile = STYLE_PROFILES[style];
   const subject = extractSubject(analysis.task);
   const mood = uniq([...splitTone(options.tone), ...template.defaultTone]);
@@ -369,14 +377,16 @@ function buildVideoPrompt(analysis: InputAnalysis, template: TaskTemplate, style
     '',
     '## Shot Description', `- Subject & action: ${subject}`, `- Camera: ${camera}`, `- Lighting: ${lighting}`, `- Mood: ${mood.join(', ')}`,
     ...template.sections.map((sec) => `- ${capitalize(sec.detail)}`), '',
-    '## Technical Settings', `- Aspect ratio: ${aspect}`, `- Duration: ${duration}`, '- One continuous shot; describe motion, not cuts.', '',
+    ...attachmentSections(files, 'video'),
+    '## Technical Settings', `- Aspect ratio: ${aspect}`, `- Duration: ${duration}`, '- One continuous shot; describe motion, not cuts.',
+    ...mediaReferenceParameters(files, 'video'), '',
     '## Audio (optional)', '- Ambient sound design matching the mood; add voiceover separately (e.g. ElevenLabs).', '',
     '## Avoid', 'morphing faces, flickering, warped hands, text artifacts, sudden cuts', '',
     '## Quality Checklist', ...template.qualityChecks.map((q) => `- ${q}`),
   ].join('\n');
 }
 
-function buildMusicPrompt(analysis: InputAnalysis, template: TaskTemplate, style: PromptStyle, options: PromptOptions, rng: () => number, variation: number): string {
+function buildMusicPrompt(analysis: InputAnalysis, template: TaskTemplate, style: PromptStyle, options: PromptOptions, rng: () => number, variation: number, files: Attachment[] = []): string {
   const subject = extractSubject(analysis.task);
   const mood = uniq([...splitTone(options.tone), ...template.defaultTone]).slice(0, 3);
   const tempo = pick(MUSIC_TEMPOS, rng, variation);
@@ -390,6 +400,7 @@ function buildMusicPrompt(analysis: InputAnalysis, template: TaskTemplate, style
     '---',
     '',
     '## Song Brief', `Write an original song about: ${subject}.`, options.audience ? `Audience: ${options.audience.trim()}.` : '', '',
+    ...attachmentSections(files, 'music'),
     '## Lyrics Requirements', `- Language: ${language}`, ...template.sections.map((sec) => `- ${capitalize(sec.detail)}`),
     '- Mark every section with tags like [Verse 1], [Chorus] so Suno/Udio follow the structure.', '',
     '## Sound', `- Genre: ${genre}`, `- Mood: ${mood.join(', ')}`, `- Tempo: ${tempo}`, '- Instrumentation: describe 2–4 lead instruments that fit the genre.', '',
@@ -416,7 +427,7 @@ export function generatePromptDetailed(input: GeneratePromptInput): GeneratedPro
   const rng = createRng(hashString(analysis.task) + variation * 7919);
 
   const builders = { text: buildTextPrompt, image: buildImagePrompt, video: buildVideoPrompt, music: buildMusicPrompt };
-  const prompt = builders[template.mode](analysis, template, style, options, rng, variation);
+  const prompt = builders[template.mode](analysis, template, style, options, rng, variation, input.attachments ?? []);
 
   const words = analysis.task.split(/\s+/);
   const title = words.slice(0, 10).join(' ') + (words.length > 10 ? '…' : '');

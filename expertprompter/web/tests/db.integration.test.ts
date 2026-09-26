@@ -95,6 +95,24 @@ describe.skipIf(!hasDb)('accounts, free runs and billing (database)', async () =
     expect(await prisma.account.count()).toBe(1);
   });
 
+  it('signs in with a username (case-insensitive) and gives isMaster accounts unlimited runs', async () => {
+    const bcrypt = (await import('bcryptjs')).default;
+    await prisma.user.create({
+      data: { email: 'shared@users.expertprompter.invalid', username: 'teammaster', isMaster: true, passwordHash: await bcrypt.hash('correct-horse-9', 4) },
+    });
+    await expect(login('teammaster', 'wrong-password')).rejects.toThrow('Invalid email or password');
+    const session = await login('  TeamMaster ', 'correct-horse-9');
+    const statuses: number[] = [];
+    for (let i = 0; i < 7; i++) statuses.push((await call(generate, { body, headers: bearer(session.user) })).status);
+    expect(statuses.every((s) => s === 200)).toBe(true);
+    expect((await prisma.user.findUniqueOrThrow({ where: { username: 'teammaster' } })).freeRunsUsed).toBe(0);
+  });
+
+  it('never grants master through normal sign-up', async () => {
+    const { user } = await register('someone@example.com', 'supersecret1');
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).isMaster).toBe(false);
+  });
+
   it('refuses to link an unverified provider email to an existing account', async () => {
     await register('taken@example.com', 'supersecret1');
     await expect(

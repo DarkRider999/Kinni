@@ -10,6 +10,7 @@ export default function Privacy() {
       <ul>
         <li><strong>Account details:</strong> your email address, and your name and profile picture if you sign in with Google, Facebook or GitHub. We never receive your password for those services.</li>
         <li><strong>Your prompts:</strong> the ideas you type and the prompts we generate, saved to your history.</li>
+        <li><strong>Files you attach:</strong> files are read in your browser. Only their text is sent to build your prompt, and the files themselves are never uploaded or stored. The text becomes part of the generated prompt, so it is saved in your history with that prompt.</li>
         <li><strong>Usage:</strong> how many free prompts you have used.</li>
         <li><strong>Billing:</strong> if you subscribe, Stripe processes your payment. We store your subscription status, never your card details.</li>
       </ul>

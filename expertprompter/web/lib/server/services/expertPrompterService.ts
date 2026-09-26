@@ -4,7 +4,7 @@
 import { scoreCategories } from './categoryDetectionService';
 import { generatePromptDetailed } from './promptGenerationService';
 import { recommendToolDetails } from './aiRecommendationService';
-import { CATEGORY_LABELS, type Category, type GeneratePromptResult, type PromptOptions, type PromptStyle } from '../types';
+import { CATEGORY_LABELS, type Attachment, type Category, type GeneratePromptResult, type PromptOptions, type PromptStyle } from '../types';
 
 export interface RunGenerationInput {
   rawInput: string;
@@ -13,6 +13,7 @@ export interface RunGenerationInput {
   variation?: number;
   /** Lets the UI override detection when the user picks a different category. */
   categoryOverride?: Category;
+  attachments?: Attachment[];
 }
 
 export function runGeneration(input: RunGenerationInput): GeneratePromptResult & { title: string; templateKey: string } {
@@ -27,6 +28,7 @@ export function runGeneration(input: RunGenerationInput): GeneratePromptResult &
     promptStyle,
     options: input.options,
     variation,
+    attachments: input.attachments,
   });
   const toolDetails = recommendToolDetails(category, {
     rawInput: input.rawInput,

@@ -1,5 +1,6 @@
 // Decides who may generate prompts:
-//   MASTER  - owner emails in MASTER_EMAILS, once the email is verified by a provider
+//   MASTER  - accounts flagged isMaster by an admin, or owner emails in
+//             MASTER_EMAILS once the email is verified by a provider
 //   PREMIUM - an active or trialing Stripe subscription
 //   FREE    - everyone else, limited to FREE_RUN_LIMIT generations in total
 
@@ -20,11 +21,14 @@ export interface Entitlement {
   currentPeriodEnd: string | null;
 }
 
-type EntitlementUser = Pick<User, 'email' | 'emailVerified' | 'freeRunsUsed' | 'subscriptionStatus' | 'currentPeriodEnd'>;
+type EntitlementUser = Pick<User, 'email' | 'emailVerified' | 'freeRunsUsed' | 'subscriptionStatus' | 'currentPeriodEnd'> & {
+  isMaster?: boolean;
+};
 
 const PREMIUM_STATUSES = new Set(['active', 'trialing']);
 
 export function planFor(user: EntitlementUser, now = new Date()): Plan {
+  if (user.isMaster) return 'MASTER';
   if (user.emailVerified && masterEmails().includes(user.email.toLowerCase())) return 'MASTER';
   if (
     user.subscriptionStatus &&

@@ -62,7 +62,7 @@ export default function Header({ onSignIn, onUpgrade }: HeaderProps) {
           {ready && user ? (
             <>
               <PlanBadge />
-              <span className="hidden max-w-[14rem] truncate text-sm text-slate-600 lg:inline dark:text-slate-300">{user.email}</span>
+              <span className="hidden max-w-[14rem] truncate text-sm text-slate-600 lg:inline dark:text-slate-300">{user.username ?? user.email}</span>
               {entitlement?.plan === 'FREE' && (
                 <button type="button" className="btn-primary !px-2.5 sm:!px-3" onClick={onUpgrade}>Upgrade</button>
               )}
