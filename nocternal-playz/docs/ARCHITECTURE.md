@@ -41,7 +41,7 @@ MediaStore / stream URL
 ```
 
 - `FxChain` swaps an immutable `FxSettings` snapshot atomically; the audio thread applies it at the next buffer, so UI changes never lock the audio thread.
-- The **fader** stage is driven by `AudioEngine`'s 30 Hz ticker: auto-fader envelope (3 s fade-out + 3 s fade-in by default, crossfade length configurable 0–12 s) × sleep-timer fade.
+- **Crossfade** (Android): `CrossfadeTiming.overlapMs` seconds before a song ends, a second ExoPlayer (own FX chain, no audio focus) starts the next song; the two faders follow equal-power curves so loudness stays constant. When the first song ends, the main player continues the new song at the second player's position (a 150 ms lead covers seek latency) and the second player stops. 0 s = ExoPlayer gapless. The fader stage also carries the sleep-timer fade.
 - **Safe mode** caps total added gain (loudness + speaker boost + positive normalization) at 6 dB and sets the limiter ceiling to −1 dBFS.
 - `PlaybackService` (Media3 `MediaSessionService`) owns the MediaSession, which provides the notification, lock-screen, Bluetooth and Android Auto controls. `MainActivity` binds a `MediaController` so the service runs while the app is visible, and Media3 keeps it in the foreground while playing.
 - **DJ auto-mix** re-queues the best key/tempo match next and time-stretches it (pitch preserved) to the previous tempo when within ±8 %.

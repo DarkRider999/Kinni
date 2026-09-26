@@ -26,7 +26,7 @@ Status: **✅ implemented**, **◐ implemented with a platform limit** (see [Arc
 | Smart audio normalization | ✅ | `fx_engine/.../analysis/TrackAnalyzer.kt` (`LoudnessMeter`, `LoudnessNormalizer`) → normalization stage |
 | Reverb, flanger, phaser, compressor, stereo widening, pitch shift | ✅ | A: `dsp/Spatial.kt`, `dsp/Modulation.kt`, `dsp/Dynamics.kt` · i: `AVAudioUnitReverb`, `AVAudioUnitTimePitch`, DynamicsProcessor, `FXEngine/DSP.swift` |
 | AI vocal remover | ◐ | `dsp/Dynamics.kt` (`VocalRemover`), `FXEngine/DSP.swift` — centre-cancel DSP; ML model pluggable via `plugin_api` |
-| Auto-fader 3 s out + 3 s in, crossfade duration | ✅ | `auto_mix_engine/.../Crossfade.kt` (`AutoFader`) driven by the engine ticker; Settings slider 0–12 s |
+| Auto-fader / crossfade duration | ✅ | Android: overlapping crossfade — the next song starts on a second player before the current ends, equal-power blend, then hand-over (`AudioEngine.tickCrossfade`, `CrossfadeTiming`); 0–12 s, default 5 s. iOS: gapless back-to-back scheduling, no dip |
 | Background playback, lock-screen + notification controls | ✅ | A: `audio_engine/.../PlaybackService.kt` (Media3 MediaSession) · i: `UIBackgroundModes: audio`, `MPRemoteCommandCenter` |
 | Sleep timer (with fade, end-of-track) | ✅ | A: `audio_engine/.../SleepTimer.kt` · i: `AudioEngine.setSleepTimer` |
 | Floating mini-player bubble | ◐ | A: `app/.../bubble/FloatingBubbleService.kt` (over other apps) · i: `FloatingBubble` in `UI/RootView.swift` (in-app) |
@@ -97,7 +97,7 @@ Status: **✅ implemented**, **◐ implemented with a platform limit** (see [Arc
 |---|---|---|---|
 | 1 | Smart audio normalization | ✅ | `LoudnessNormalizer` + ReplayGain / measured loudness |
 | 2 | True gapless playback | ✅ | ExoPlayer / chained AVAudioFile scheduling |
-| 3 | Lyrics engine (online + offline + karaoke) | ✅ | `lyrics_engine/` (LRC + enhanced LRC words, sidecar `.lrc`, cache, LRCLIB), `LyricsView` |
+| 3 | Lyrics engine (online + offline + karaoke) | ✅ | `lyrics_engine/` (LRC + enhanced LRC words, sidecar `.lrc`, cache, LRCLIB exact + fuzzy search); when nothing exists, AI-written lyrics (Claude, or on-device `LyricWeaver`), labelled, replaced once real lyrics appear |
 | 4 | AI mood detection | ✅ | `MoodDetector` |
 | 5 | Floating mini-player bubble | ◐ | `FloatingBubbleService` / in-app bubble on iOS |
 | 6 | Smart offline mode | ✅ | `offline_manager/.../OfflineManager.kt` (`ConnectivityMonitor`), panels show offline state |
