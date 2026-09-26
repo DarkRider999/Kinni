@@ -1,8 +1,8 @@
-import { useRef, type FormEvent } from 'react';
-import type { PromptOptions, PromptStyle } from '@/lib/types';
+import { useRef, useState, type FormEvent } from 'react';
+import type { PromptOptions, PromptStyle, SavedPrompt } from '@/lib/types';
 import { STYLE_OPTIONS } from '@/lib/types';
 import AdvancedOptionsPanel from './AdvancedOptionsPanel';
-import FileUploadPanel, { type AttachmentRole, type UiAttachment } from './FileUploadPanel';
+import FileUploadPanel, { type FilePicker, type UiAttachment } from './FileUploadPanel';
 import { PlusIcon, SparklesIcon, SpinnerIcon } from './Icons';
 
 export interface InputState {
@@ -19,24 +19,20 @@ interface InputPanelProps {
   onAttachmentsChange: (update: (prev: UiAttachment[]) => UiAttachment[]) => void;
   onGenerate: () => void;
   loading: boolean;
+  /** The signed-in user's last few requests, newest first. */
+  recent?: SavedPrompt[];
+  onPickRecent?: (prompt: SavedPrompt) => void;
 }
 
 const MAX_CHARS = 5000;
-const EXAMPLES = [
-  'Create a business plan for a cloud kitchen in Dubai.',
-  'Write a resignation letter for a logistics coordinator.',
-  'YouTube video script about 5 AI tools for students',
-  'Logo for a coffee shop called Bean There',
-  'Fix a TypeError in my Python function',
-  'Amazon KDP ebook about gardening for beginners',
-];
 
-export default function InputPanel({ value, onChange, onAttachmentsChange, onGenerate, loading }: InputPanelProps) {
+export default function InputPanel({ value, onChange, onAttachmentsChange, onGenerate, loading, recent = [], onPickRecent }: InputPanelProps) {
   const tooShort = value.rawInput.trim().length < 3;
   const reading = value.attachments.some((a) => a.status === 'reading');
   const describing = value.attachments.some((a) => a.status === 'describing');
   const busyFiles = reading || describing;
-  const openPicker = useRef<((role: AttachmentRole) => void) | null>(null);
+  const picker = useRef<FilePicker | null>(null);
+  const [dragOver, setDragOver] = useState(false);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -47,12 +43,26 @@ export default function InputPanel({ value, onChange, onAttachmentsChange, onGen
     <form onSubmit={submit} className="card space-y-4" aria-label="Prompt input">
       <div>
         <label htmlFor="raw-input" className="label">Your idea or task</label>
-        <div className="relative">
+        <div
+          className={`relative rounded-xl ${dragOver ? 'ring-2 ring-brand-500' : ''}`}
+          onDragOver={(e) => {
+            if (!e.dataTransfer.types.includes('Files')) return;
+            e.preventDefault();
+            if (!loading) setDragOver(true);
+          }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => {
+            if (!e.dataTransfer.files.length) return;
+            e.preventDefault();
+            setDragOver(false);
+            if (!loading) picker.current?.add(e.dataTransfer.files);
+          }}
+        >
         <textarea
           id="raw-input"
           rows={6}
           className="input resize-y pb-12 text-base leading-relaxed"
-          placeholder="Type your idea or task… e.g. “Summarise the attached report for my manager”"
+          placeholder="Type your idea or task… e.g. “Give me a prompt to recreate the attached photo”"
           value={value.rawInput}
           maxLength={MAX_CHARS}
           onChange={(e) => onChange({ ...value, rawInput: e.target.value })}
@@ -62,10 +72,10 @@ export default function InputPanel({ value, onChange, onAttachmentsChange, onGen
           }}
           disabled={loading}
         />
-          {/* Quick attach: opens the "Upload file" picker (photos, PDFs, documents, code). */}
+          {/* Attach photos, PDFs, documents or code; files can also be dropped on the box. */}
           <button
             type="button"
-            onClick={() => openPicker.current?.('source')}
+            onClick={() => picker.current?.open()}
             disabled={loading}
             className="absolute bottom-3 left-3 inline-flex h-8 items-center gap-1 rounded-full border border-slate-300 bg-white px-2.5 text-xs font-medium text-slate-600 shadow-sm transition hover:border-brand-500 hover:text-brand-700 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:text-brand-300"
             aria-label="Attach a photo or file"
@@ -80,21 +90,27 @@ export default function InputPanel({ value, onChange, onAttachmentsChange, onGen
         </div>
       </div>
 
-      <FileUploadPanel value={value.attachments} onChange={onAttachmentsChange} disabled={loading} pickerRef={openPicker} />
+      <FileUploadPanel value={value.attachments} onChange={onAttachmentsChange} disabled={loading} pickerRef={picker} />
 
-      <div className="flex flex-wrap gap-2" aria-label="Examples">
-        {EXAMPLES.map((ex) => (
-          <button
-            key={ex}
-            type="button"
-            className="rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 transition hover:border-brand-400 hover:text-brand-700 dark:border-slate-700 dark:text-slate-300 dark:hover:border-brand-500 dark:hover:text-brand-300"
-            onClick={() => onChange({ ...value, rawInput: ex })}
-            disabled={loading}
-          >
-            {ex}
-          </button>
-        ))}
-      </div>
+      {recent.length > 0 && (
+        <div>
+          <p className="label">Recent prompts</p>
+          <div className="flex flex-wrap gap-2">
+            {recent.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className="max-w-full truncate rounded-full border border-slate-200 px-3 py-1 text-xs text-slate-600 transition hover:border-brand-400 hover:text-brand-700 dark:border-slate-700 dark:text-slate-300 dark:hover:border-brand-500 dark:hover:text-brand-300"
+                onClick={() => onPickRecent?.(p)}
+                disabled={loading}
+                title={p.rawInput}
+              >
+                {p.rawInput}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <fieldset>
         <legend className="label">Prompt style</legend>

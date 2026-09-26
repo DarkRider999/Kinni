@@ -1,11 +1,11 @@
-import { useId, useRef, useState, type DragEvent } from 'react';
+import { useRef, useState } from 'react';
 import { ACCEPT, formatBytes, prepareImage, readAttachment, type AttachmentKind } from '@/lib/fileText';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import type { PhotoDescription } from '@/lib/types';
 import { buildLocalDescription, type PixelStats } from '@/lib/imageStats';
 import { MODEL_DOWNLOAD_MB, describeOnDevice, giveConsent, hasConsent, isModelCached, photoAiSupported } from '@/lib/photoAi';
-import { FileIcon, ImageIcon, PaperclipIcon, SpinnerIcon, XIcon } from './Icons';
+import { FileIcon, ImageIcon, SpinnerIcon, XIcon } from './Icons';
 
 export type AttachmentRole = 'source' | 'reference';
 
@@ -32,21 +32,21 @@ export interface UiAttachment {
   pixelStats?: PixelStats;
 }
 
-export const MAX_SOURCE_FILES = 3;
-export const MAX_REFERENCE_FILES = 5;
+/** Files attached with the "+ Photo or file" button next to the text box. */
+export const MAX_FILES = 5;
+
+/** Lets the text box's "+" button open the picker and accept dropped files. */
+export interface FilePicker {
+  open: () => void;
+  add: (files: FileList | File[]) => void;
+}
 
 interface FileUploadPanelProps {
   value: UiAttachment[];
   onChange: (update: (prev: UiAttachment[]) => UiAttachment[]) => void;
   disabled?: boolean;
-  /** Lets a parent (the "+" button) open a file picker. */
-  pickerRef?: { current: ((role: AttachmentRole) => void) | null };
+  pickerRef: { current: FilePicker | null };
 }
-
-const ZONES: Array<{ role: AttachmentRole; title: string; hint: string; max: number }> = [
-  { role: 'source', title: 'Upload file', hint: 'The document or code to work on (PDF, Word, text, code, images)', max: MAX_SOURCE_FILES },
-  { role: 'reference', title: 'Reference files', hint: 'Examples of the style, tone or look you want', max: MAX_REFERENCE_FILES },
-];
 
 function statusLine(a: UiAttachment) {
   if (a.status === 'reading') return 'Reading…';
@@ -69,11 +69,8 @@ export default function FileUploadPanel({ value, onChange, disabled, pickerRef }
   // Server AI (Gemini/Claude key set) needs a signed-in user when accounts are on;
   // otherwise photos are described by the free on-device AI.
   const useServer = Boolean(providers?.visionEnabled && (!providers.accountsEnabled || user));
-  const id = useId();
-  const inputs = useRef<Record<AttachmentRole, HTMLInputElement | null>>({ source: null, reference: null });
-  const [dragOver, setDragOver] = useState<AttachmentRole | null>(null);
+  const input = useRef<HTMLInputElement | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  if (pickerRef) pickerRef.current = (role) => inputs.current[role]?.click();
 
   const update = (id: string, patch: Partial<UiAttachment>) => onChange((prev) => prev.map((a) => (a.id === id ? { ...a, ...patch } : a)));
 
@@ -131,19 +128,18 @@ export default function FileUploadPanel({ value, onChange, disabled, pickerRef }
     }
   };
 
-  const add = (role: AttachmentRole, files: FileList | File[]) => {
-    const zone = ZONES.find((z) => z.role === role)!;
-    const current = value.filter((a) => a.role === role).length;
+  const add = (files: FileList | File[]) => {
     const list = [...files];
-    const accepted = list.slice(0, Math.max(0, zone.max - current));
-    setMessage(accepted.length < list.length ? `You can attach up to ${zone.max} ${zone.title.toLowerCase()}.` : null);
+    const accepted = list.slice(0, Math.max(0, MAX_FILES - value.length));
+    setMessage(accepted.length < list.length ? `You can attach up to ${MAX_FILES} files.` : null);
 
     for (const file of accepted) {
       const entry: UiAttachment = {
         id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
         name: file.name,
         size: file.size,
-        role,
+        // The file the prompt is about, e.g. the photo to recreate.
+        role: 'source',
         status: 'reading',
         kind: 'other',
       };
@@ -164,107 +160,61 @@ export default function FileUploadPanel({ value, onChange, disabled, pickerRef }
     }
   };
 
-  const onDrop = (role: AttachmentRole) => (e: DragEvent) => {
-    e.preventDefault();
-    setDragOver(null);
-    if (!disabled && e.dataTransfer.files.length) add(role, e.dataTransfer.files);
-  };
+  pickerRef.current = { open: () => input.current?.click(), add };
 
   return (
     <div className="space-y-2">
-      <div className="grid gap-3 sm:grid-cols-2">
-        {ZONES.map((zone) => {
-          const files = value.filter((a) => a.role === zone.role);
-          const full = files.length >= zone.max;
-          return (
-            <div key={zone.role}>
-              <div
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  if (!disabled && !full) setDragOver(zone.role);
-                }}
-                onDragLeave={() => setDragOver(null)}
-                onDrop={onDrop(zone.role)}
-                className={`rounded-xl border border-dashed p-3 transition ${
-                  dragOver === zone.role
-                    ? 'border-brand-500 bg-brand-50 dark:bg-brand-900/20'
-                    : 'border-slate-300 dark:border-slate-700'
-                }`}
-              >
+      <input
+        ref={input}
+        type="file"
+        multiple
+        accept={ACCEPT}
+        className="sr-only"
+        tabIndex={-1}
+        aria-label="Attach a photo or file"
+        onChange={(e) => {
+          if (e.target.files?.length) add(e.target.files);
+          e.target.value = '';
+        }}
+      />
+      {value.length > 0 && (
+        <ul className="space-y-1.5" aria-label="Attached files">
+          {value.map((a) => {
+            const Icon = a.kind === 'image' ? ImageIcon : FileIcon;
+            return (
+              <li key={a.id} className="flex items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-1.5 dark:bg-slate-800/60">
+                {a.status !== 'ready' ? <SpinnerIcon className="shrink-0 text-slate-400" width={16} height={16} /> : <Icon className="shrink-0 text-slate-400" width={16} height={16} />}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm">{a.name}</span>
+                  <span className={`block truncate text-xs ${a.note && !a.text && !a.description ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'}`}>
+                    {statusLine(a)}
+                  </span>
+                </span>
+                {a.aiOffer && (
+                  <button
+                    type="button"
+                    className="btn-secondary shrink-0 !px-2 !py-1 text-xs"
+                    onClick={enableOnDeviceAi}
+                    disabled={disabled}
+                    title={`Free and private: the AI runs on your device. One-time ${MODEL_DOWNLOAD_MB} MB download, then it's cached.`}
+                  >
+                    Describe with AI
+                  </button>
+                )}
                 <button
                   type="button"
-                  className="flex w-full items-start gap-2 text-left disabled:opacity-50"
-                  onClick={() => inputs.current[zone.role]?.click()}
-                  disabled={disabled || full}
-                  aria-describedby={`${id}-${zone.role}-hint`}
+                  className="btn-ghost h-7 w-7 shrink-0 !p-0"
+                  onClick={() => onChange((prev) => prev.filter((x) => x.id !== a.id))}
+                  aria-label={`Remove ${a.name}`}
+                  disabled={disabled}
                 >
-                  <PaperclipIcon className="mt-0.5 shrink-0 text-brand-600 dark:text-brand-400" />
-                  <span>
-                    <span className="block text-sm font-medium">{zone.title}</span>
-                    <span id={`${id}-${zone.role}-hint`} className="block text-xs text-slate-500 dark:text-slate-400">
-                      {full ? `Maximum ${zone.max} files` : `${zone.hint}. Tap or drop files here.`}
-                    </span>
-                  </span>
+                  <XIcon width={14} height={14} />
                 </button>
-                <input
-                  ref={(el) => {
-                    inputs.current[zone.role] = el;
-                  }}
-                  type="file"
-                  multiple
-                  accept={ACCEPT}
-                  className="sr-only"
-                  tabIndex={-1}
-                  aria-label={zone.title}
-                  onChange={(e) => {
-                    if (e.target.files?.length) add(zone.role, e.target.files);
-                    e.target.value = '';
-                  }}
-                />
-              </div>
-
-              {files.length > 0 && (
-                <ul className="mt-2 space-y-1.5" aria-label={`${zone.title} list`}>
-                  {files.map((a) => {
-                    const Icon = a.kind === 'image' ? ImageIcon : FileIcon;
-                    return (
-                      <li key={a.id} className="flex items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-1.5 dark:bg-slate-800/60">
-                        {a.status !== 'ready' ? <SpinnerIcon className="shrink-0 text-slate-400" width={16} height={16} /> : <Icon className="shrink-0 text-slate-400" width={16} height={16} />}
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm">{a.name}</span>
-                          <span className={`block truncate text-xs ${a.note && !a.text && !a.description ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'}`}>
-                            {statusLine(a)}
-                          </span>
-                        </span>
-                        {a.aiOffer && (
-                          <button
-                            type="button"
-                            className="btn-secondary shrink-0 !px-2 !py-1 text-xs"
-                            onClick={enableOnDeviceAi}
-                            disabled={disabled}
-                            title={`Free and private: the AI runs on your device. One-time ${MODEL_DOWNLOAD_MB} MB download, then it's cached.`}
-                          >
-                            Describe with AI
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          className="btn-ghost h-7 w-7 shrink-0 !p-0"
-                          onClick={() => onChange((prev) => prev.filter((x) => x.id !== a.id))}
-                          aria-label={`Remove ${a.name}`}
-                          disabled={disabled}
-                        >
-                          <XIcon width={14} height={14} />
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
-          );
-        })}
-      </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
       {value.some((a) => a.aiOffer) && (
         <p className="rounded-lg bg-brand-50 px-3 py-2 text-xs text-slate-600 dark:bg-brand-900/20 dark:text-slate-300">
           <strong>Describe with AI</strong> runs free and privately on your device: your photo never leaves it. The first time it downloads a {MODEL_DOWNLOAD_MB} MB model (use Wi-Fi); after that it&apos;s instant to start. Colours, light and shape are already measured.

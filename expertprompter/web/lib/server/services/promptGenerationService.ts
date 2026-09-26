@@ -323,18 +323,36 @@ function aspectFromFormat(format: string | undefined, fallback: string): string 
 }
 
 /**
- * Words that only say "use my photo". What's left after removing them is the
- * change the user wants ("make it a watercolor"), or nothing.
+ * Words that only say "give me a prompt for my photo". What's left after removing
+ * them is the change the user wants ("make it a watercolor"), or nothing.
  */
-const RECREATE_WORDS = /\b(please|re-?create|recreate|replicate|reproduce|copy|same|exactly|just|like|as|this|that|the|my|a|an|it|its|uploaded|attached|above|photo|photograph|picture|pic|image|img|of|make|generate|create|prompt|for|get|result|me|similar|one|version)\b/gi;
+const RECREATE_WORDS = /\b(please|kindly|can|could|would|will|you|u|i|i'?m|i'?ve|we|need|want|give|provide|write|show|tell|help|get|gets|make|generate|create|produce|re-?create|replicate|reproduce|copy|clone|convert(?:ed)?|turn|same|exact(?:ly)?|identical|close(?:ly|st)?|possible|match(?:es|ing)?|similar|like|looks?|as|so|that|this|these|the|my|a|an|any|it|its|to|into|for|of|from|and|is|be|have|has|in|which|how|uploaded|attached|above|given|shared|sent|reference|ref|photo(?:graph)?s?|pictures?|pics?|images?|imgs?|prompts?|results?|outputs?|versions?|one|me|us|percent|just|every|detail(?:s|ed)?|also|output)\b|\d+\s*%?/gi;
+
+/** "give me a prompt to recreate…", "recreate…" at the start of a request. */
+const REQUEST_PREFIX = /^\s*(please\s+)?((can|could|would|will)\s+(you|u)\s+)?(please\s+)?(((give|provide|write|show|create|generate|make|get)\s+(me\s+|us\s+)?(an?\s+|the\s+)?(detailed\s+|good\s+|best\s+|exact\s+)?prompts?\s*(to|for|that|which)?\s*(will\s+|can\s+)?((re-?create|replicate|reproduce|copy|generate|create|make|get|produce|turn|convert)\s+)?)|((re-?create|replicate|reproduce|copy)\s+))?/i;
+/** "the attached photo", "the one reference i have attached", "this image". */
+const PHOTO_PHRASE = /\b(any\s+(picture|photo|image)\s+)?((to|into|of|from|like)\s+)?((the|this|my|that)\s+(one\s+)?(attached\s+|uploaded\s+|above\s+|given\s+)?|(attached|uploaded|above|given)\s+)(reference\s+)?(photo(graph)?|picture|pic|image|img|reference)(\s+(that\s+)?(i|i'?ve|we)\s+(have\s+)?(attached|uploaded|shared|sent))?\b/gi;
 
 function lowerFirst(s: string) {
   return s.charAt(0).toLowerCase() + s.slice(1);
 }
 
-function userChange(task: string): string | null {
+/** The change the user asked for on top of their photo, in their own words; null for a plain "recreate this". */
+export function userChange(task: string): string | null {
   const left = task.replace(RECREATE_WORDS, ' ').replace(/[^\p{L}\p{N}\s-]/gu, ' ').trim().split(/\s+/).filter(Boolean);
-  return left.length >= 2 ? task.replace(/[.!]+$/, '').trim() : null;
+  if (left.length === 0) return null;
+  const whole = task.replace(/[.!]+$/, '').trim();
+  // Only a request *for a prompt* ("give me a prompt… but in anime style") is trimmed to the change;
+  // a direct instruction ("make this photo look like…") already reads well.
+  if (!/\bprompts?\b|^\s*(please\s+)?(re-?create|replicate|reproduce|copy)\b/i.test(task)) return whole;
+  const phrase = task
+    .replace(REQUEST_PREFIX, '')
+    .replace(PHOTO_PHRASE, ' ')
+    .replace(/\s+/g, ' ')
+    .replace(/^[\s,;:-]*(but|and|so|then)?[\s,;:-]*/i, '')
+    .replace(/[\s,;:.!-]+$/, '')
+    .trim();
+  return phrase || whole;
 }
 
 function buildImagePrompt(analysis: InputAnalysis, template: TaskTemplate, style: PromptStyle, options: PromptOptions, rng: () => number, variation: number, files: Attachment[] = []): string {
@@ -345,7 +363,9 @@ function buildImagePrompt(analysis: InputAnalysis, template: TaskTemplate, style
   const sourceDesc = source?.description;
   const photo = sourceDesc?.prompt ? sourceDesc : undefined;
   const look = reference?.description;
-  const subject = photo?.subject || extractSubject(analysis.task);
+  const change = source ? userChange(analysis.task) : null;
+  // "Give me a prompt for the attached photo" has no subject of its own: the photo is the subject.
+  const subject = photo?.subject || (source && !change ? `the scene in the attached photo (${source.name})` : extractSubject(analysis.task));
   const aiMood = (photo ?? look)?.mood;
   const mood = aiMood ? uniq([...splitTone(options.tone), aiMood]) : uniq([...splitTone(options.tone), ...template.defaultTone]);
   const lighting = look?.lighting || sourceDesc?.lighting || pick(LIGHTING, rng, variation);
@@ -358,15 +378,15 @@ function buildImagePrompt(analysis: InputAnalysis, template: TaskTemplate, style
   let mainPrompt: string;
   if (photo) {
     // Recreate the uploaded photo, applying any change the user asked for.
-    const change = userChange(analysis.task);
     mainPrompt = uniq([
       ...(change ? [change] : []),
       change ? lowerFirst(photo.prompt.replace(/[.\s]+$/, '')) : photo.prompt.replace(/[.\s]+$/, ''),
       ...(look
         ? [look.style ? `in the style of: ${look.style}` : '', look.lighting, look.colors.length ? `colour palette: ${look.colors.join(', ')}` : ''].filter(Boolean)
         : []),
+      change ? '' : 'same framing, pose, lighting and colours as the original photo',
       'high resolution, highly detailed',
-    ]).join(', ');
+    ].filter(Boolean)).join(', ');
   } else {
     const descriptors = uniq([
       subject,
