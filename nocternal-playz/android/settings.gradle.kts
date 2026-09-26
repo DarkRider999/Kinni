@@ -33,6 +33,7 @@ include(
     ":lyrics_engine",
     ":backup_manager",
     ":fx_engine",
+    ":radio_hub",
 )
 
 // Android modules.

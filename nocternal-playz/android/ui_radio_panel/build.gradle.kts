@@ -23,6 +23,7 @@ kotlin {
 dependencies {
     api(project(":core:designsystem"))
     api(project(":core:model"))
+    api(project(":radio_hub"))
     implementation(project(":theme_manager"))
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.kotlinx.coroutines.android)

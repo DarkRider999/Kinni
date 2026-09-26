@@ -40,7 +40,7 @@ import com.nocternal.playz.theme.ThemeApplier
 import com.nocternal.playz.theme.ThemeEvent
 import com.nocternal.playz.theme.ThemeStateStore
 import com.nocternal.playz.theme.ThemeSwitcher
-import com.nocternal.playz.ui.radio.RadioBrowserClient
+import com.nocternal.playz.radio.RadioDirectory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -113,7 +113,7 @@ class AppContainer(val context: Context) {
     val lyrics: StateFlow<Lyrics?> = _lyrics.asStateFlow()
 
     val backup = BackupManager(appVersion = "1.0.0")
-    val radio = RadioBrowserClient()
+    val radio = RadioDirectory()
     val voice = VoiceInput(context)
     val recognizer = MusicRecognizer { settingsRepo.recognitionToken.value }
 

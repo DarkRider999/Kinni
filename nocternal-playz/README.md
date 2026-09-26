@@ -21,7 +21,8 @@ nocternal-playz/
 │   ├── offline_manager      smart offline mode, auto-download worker
 │   ├── ui_player            player, EQ & FX, lyrics, album art
 │   ├── ui_youtube_panel     YouTube Music WebView panel
-│   ├── ui_radio_panel       Radio Hub + FM dial
+│   ├── radio_hub            open radio directories: Radio Browser, SomaFM, Icecast; by country & genre
+│   ├── ui_radio_panel       Radio Hub screen + FM dial
 │   └── app                  navigation, Home, Lighting, Settings, AI panel, floating bubble
 ├── ios/
 │   ├── NocternalKit/        Swift package mirroring the shared modules (+ tests)
@@ -58,7 +59,7 @@ CI (`.github/workflows/nocternal-playz.yml`) runs both on every push and publish
 | Free-form AI chat (commands work without it) | Claude API key | Settings → AI. Stored on-device only (Android DataStore / iOS Keychain), never in backups. |
 | Song recognition on Android | [AudD](https://audd.io) token | Settings → AI. iOS uses Apple's ShazamKit, no key. |
 
-Lyrics (LRCLIB) and radio (Radio Browser) are free, keyless public services.
+Lyrics (LRCLIB) and radio (Radio Browser, SomaFM, Icecast directory) are free, keyless public services.
 
 For a public release, route AI requests through your own server instead of asking users for a key.
 

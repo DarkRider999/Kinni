@@ -1,6 +1,7 @@
 package com.nocternal.playz.ui.radio
 
 import androidx.compose.foundation.Canvas
+import com.nocternal.playz.radio.RadioStation
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
