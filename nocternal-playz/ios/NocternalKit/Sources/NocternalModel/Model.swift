@@ -229,6 +229,8 @@ public struct LightBarSettings: Codable, Hashable, Sendable {
     public var color: NeonColor? = nil
     public var glowIntensity = 0.8
     public var animation: LightingAnimation = .pulseWaveSpectrum
+    /// True once the user picks an animation; genre themes then stop changing it.
+    public var customAnimation = false
     public init() {}
 }
 
@@ -237,6 +239,9 @@ public struct EdgeLightingSettings: Codable, Hashable, Sendable {
     public var mode: EdgeLightingMode = .musicReactive
     public var thickness = 4.0
     public var brightness = 0.8
+    /// True once the user sets thickness/brightness (or the mode); genre themes then keep the user's values.
+    public var customStyle = false
+    public var customMode = false
     public init() {}
 }
 
@@ -249,13 +254,15 @@ public struct AppSettings: Codable, Hashable, Sendable {
     public var autoThemeByTime = false
     public var eqFollowsTheme = true
     public var autoFaderEnabled = true
-    public var crossfadeSeconds = 3.0
+    public var crossfadeSeconds = 5.0
     public var gapless = true
     public var normalization = true
     public var speakerSafeMode = true
     public var privateMode = false
     public var smartOfflineMode = true
-    public var autoDownloadOnWifiOnly = true
+    public var useWifi = true
+    public var useMobileData = true
+    public var autoDownloadOnWifiOnly = false
     public var autoDownloadLyrics = true
     public var lightBar = LightBarSettings()
     public var edgeLighting = EdgeLightingSettings()
@@ -281,6 +288,8 @@ extension AppSettings {
         if let v = try c.decodeIfPresent(Bool.self, forKey: .speakerSafeMode) { speakerSafeMode = v }
         if let v = try c.decodeIfPresent(Bool.self, forKey: .privateMode) { privateMode = v }
         if let v = try c.decodeIfPresent(Bool.self, forKey: .smartOfflineMode) { smartOfflineMode = v }
+        if let v = try c.decodeIfPresent(Bool.self, forKey: .useWifi) { useWifi = v }
+        if let v = try c.decodeIfPresent(Bool.self, forKey: .useMobileData) { useMobileData = v }
         if let v = try c.decodeIfPresent(Bool.self, forKey: .autoDownloadOnWifiOnly) { autoDownloadOnWifiOnly = v }
         if let v = try c.decodeIfPresent(Bool.self, forKey: .autoDownloadLyrics) { autoDownloadLyrics = v }
         if let v = try c.decodeIfPresent(LightBarSettings.self, forKey: .lightBar) { lightBar = v }
@@ -298,6 +307,7 @@ extension LightBarSettings {
         if c.contains(.color) { color = try c.decodeIfPresent(NeonColor.self, forKey: .color) }
         if let v = try c.decodeIfPresent(Double.self, forKey: .glowIntensity) { glowIntensity = v }
         if let v = try c.decodeIfPresent(LightingAnimation.self, forKey: .animation) { animation = v }
+        if let v = try c.decodeIfPresent(Bool.self, forKey: .customAnimation) { customAnimation = v }
     }
 }
 
@@ -309,5 +319,7 @@ extension EdgeLightingSettings {
         if let v = try c.decodeIfPresent(EdgeLightingMode.self, forKey: .mode) { mode = v }
         if let v = try c.decodeIfPresent(Double.self, forKey: .thickness) { thickness = v }
         if let v = try c.decodeIfPresent(Double.self, forKey: .brightness) { brightness = v }
+        if let v = try c.decodeIfPresent(Bool.self, forKey: .customStyle) { customStyle = v }
+        if let v = try c.decodeIfPresent(Bool.self, forKey: .customMode) { customMode = v }
     }
 }

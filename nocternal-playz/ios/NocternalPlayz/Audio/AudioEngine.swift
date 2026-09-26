@@ -66,7 +66,6 @@ final class AudioEngine: ObservableObject, EQManaging {
     private var listenedMs: Int64 = 0
     private var ticker: Timer?
     private var sleepEnd: Date?
-    private var fader = AutoFader()
     private let planner = AutoMixPlanner()
 
     init() {
@@ -258,12 +257,8 @@ final class AudioEngine: ObservableObject, EQManaging {
         else if player.isPlaying { positionMs = max(0, Int64(Double(rendered - trackStartFrame) / format.sampleRate * 1000)) }
         if isPlaying { listenedMs += 33 }
 
-        // Auto-fader × sleep fade on the main mixer.
+        // Files are scheduled back-to-back (gapless), so there is no fade dip between songs; only the sleep timer fades.
         var level = 1.0
-        if settings.autoFaderEnabled, let t = current, t.durationMs > 0, t.source == .local {
-            fader.fadeInMs = Int64(settings.crossfadeSeconds * 1000); fader.fadeOutMs = fader.fadeInMs
-            level = fader.volume(at: positionMs, duration: t.durationMs)
-        }
         if let left = sleepRemaining, left < 30 { level *= left / 30 }
         engine.mainMixerNode.outputVolume = Float(level)
         streamPlayer?.volume = Float(level)

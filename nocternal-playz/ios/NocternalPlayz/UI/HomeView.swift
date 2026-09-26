@@ -46,6 +46,7 @@ struct LocalPanel: View {
     @State private var tab = 0
     @State private var folder = ""
     @State private var importing = false
+    @State private var expanded = Set<String>()
 
     var body: some View {
         let snap = library.snapshot
@@ -78,8 +79,25 @@ struct LocalPanel: View {
                 case 0: ForEach(library.data.tracks) { t in TrackRow(track: t) { model.audio.play(library.data.tracks, at: library.data.tracks.firstIndex(of: t) ?? 0); openPlayer() } }
                 case 1:
                     ForEach(model.smart.all(snap).filter { !$0.trackIds.isEmpty } + library.data.playlists) { p in
-                        GlowCard { Text(p.name).font(.headline).foregroundStyle(theme.text); Text("\(p.trackIds.count) songs · \(p.description)").font(.caption).foregroundStyle(theme.muted) }
-                            .onTapGesture { model.playPlaylist(p); openPlayer() }
+                        let open = expanded.contains(p.id)
+                        GlowCard {
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text(p.name).font(.headline).foregroundStyle(theme.text)
+                                    Text("\(p.trackIds.count) songs · \(p.description)").font(.caption).lineLimit(1).foregroundStyle(theme.muted)
+                                }
+                                Spacer()
+                                NeonChip(text: "▶ Play") { model.playPlaylist(p); openPlayer() }
+                                Image(systemName: open ? "chevron.up" : "chevron.down").foregroundStyle(theme.accent)
+                            }
+                        }
+                        .onTapGesture { if open { expanded.remove(p.id) } else { expanded.insert(p.id) } }
+                        if open {
+                            let tracks = p.trackIds.compactMap(library.track)
+                            ForEach(tracks) { t in
+                                TrackRow(track: t) { model.audio.play(tracks, at: tracks.firstIndex(of: t) ?? 0, genreId: p.genreId); openPlayer() }.padding(.leading, 16)
+                            }
+                        }
                     }
                 case 2:
                     let root = FolderNode.build(library.data.tracks), node = root.find(folder) ?? root

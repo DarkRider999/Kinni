@@ -47,7 +47,10 @@ final class NocternalKitTests: XCTestCase {
         let d = GenreDetector()
         XCTAssertEqual(d.detect(Track(id: "a", title: "x", genreTag: "Lo-Fi Hip Hop"))?.genre.id, "lofi")
         XCTAssertEqual(d.detect(Track(id: "b", title: "Trance Nation"))?.genre.id, "trance")
-        XCTAssertEqual(d.detect(Track(id: "c", title: "Gentle rain for sleeping"))?.genre.id, "sleep")
+        XCTAssertEqual(d.detect(Track(id: "c", title: "Gentle rain", folder: "Music/Sleep Sounds"))?.genre.id, "sleep")
+        XCTAssertNil(d.detect(Track(id: "d", title: "Purple Rain", artist: "Prince")))
+        XCTAssertEqual(d.detect(Track(id: "e", title: "x", genreTag: "Bollywood", year: 1975))?.genre.id, "hindi_classics")
+        XCTAssertEqual(d.detect(Track(id: "f", title: "x", genreTag: "Hip-Hop/Rap"))?.genre.id, "workout")
     }
 
     func testCamelotAndAutoMix() {

@@ -42,7 +42,7 @@ struct SettingsView: View {
                 }
                 SectionTitle(text: "Playback")
                 GlowCard {
-                    toggle("Auto-fader (fade out + fade in)", \.autoFaderEnabled)
+                    toggle("Crossfade between songs", \.autoFaderEnabled)
                     HStack { Text("Crossfade \(Int(model.settings.crossfadeSeconds)) s").foregroundStyle(theme.text); Slider(value: Binding(get: { model.settings.crossfadeSeconds }, set: { model.settings.crossfadeSeconds = $0.rounded() }), in: 0...12).tint(theme.accent) }
                     toggle("True gapless playback", \.gapless)
                     toggle("Smart audio normalization", \.normalization)
@@ -60,7 +60,9 @@ struct SettingsView: View {
                     toggle("Private mode (no history)", \.privateMode)
                     toggle("Smart offline mode", \.smartOfflineMode)
                     toggle("Auto-download lyrics", \.autoDownloadLyrics)
-                    toggle("Downloads on Wi-Fi only", \.autoDownloadOnWifiOnly)
+                    toggle("Use Wi-Fi", \.useWifi)
+                    toggle("Use mobile data", \.useMobileData)
+                    toggle("Background downloads on Wi-Fi only", \.autoDownloadOnWifiOnly)
                     NeonChip(text: "Clear playback history") { model.library.clearHistory() }
                 }
                 SectionTitle(text: "AI")

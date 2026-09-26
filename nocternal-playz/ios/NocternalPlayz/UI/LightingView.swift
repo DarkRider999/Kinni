@@ -35,11 +35,14 @@ struct LightingView: View {
                 SectionTitle(text: "Edge lighting")
                 GlowCard {
                     Toggle("Enabled", isOn: Binding(get: { model.settings.edgeLighting.enabled }, set: { model.settings.edgeLighting.enabled = $0 })).tint(theme.accent)
-                    Picker("Mode", selection: Binding(get: { model.lighting.edge.mode }, set: { model.lighting.setEdgeMode($0); model.settings.edgeLighting.mode = $0 })) {
+                    Picker("Mode", selection: Binding(get: { model.lighting.edge.mode }, set: { model.settings.edgeLighting.mode = $0; model.settings.edgeLighting.customMode = true })) {
                         ForEach([EdgeLightingMode.staticGlow, .gradient, .musicReactive], id: \.self) { Text($0.label).tag($0) }
                     }.pickerStyle(.segmented)
-                    HStack { Text("Thickness").foregroundStyle(theme.muted); Slider(value: Binding(get: { model.lighting.edge.thickness }, set: { model.lighting.setEdgeStyle(thickness: $0, brightness: model.lighting.edge.brightness) }), in: 1...12).tint(theme.accent) }
-                    HStack { Text("Brightness").foregroundStyle(theme.muted); Slider(value: Binding(get: { model.lighting.edge.brightness }, set: { model.lighting.setEdgeStyle(thickness: model.lighting.edge.thickness, brightness: $0) })).tint(theme.accent) }
+                    HStack { Text("Thickness").foregroundStyle(theme.muted); Slider(value: Binding(get: { model.lighting.edge.thickness }, set: { model.settings.edgeLighting.thickness = $0; model.settings.edgeLighting.brightness = model.lighting.edge.brightness; model.settings.edgeLighting.customStyle = true }), in: 1...12).tint(theme.accent) }
+                    HStack { Text("Brightness").foregroundStyle(theme.muted); Slider(value: Binding(get: { model.lighting.edge.brightness }, set: { model.settings.edgeLighting.brightness = $0; model.settings.edgeLighting.thickness = model.lighting.edge.thickness; model.settings.edgeLighting.customStyle = true })).tint(theme.accent) }
+                }
+                if model.settings.edgeLighting.customStyle || model.settings.edgeLighting.customMode {
+                    NeonChip(text: "Follow genre theme again") { model.settings.edgeLighting.customStyle = false; model.settings.edgeLighting.customMode = false }
                 }
                 SectionTitle(text: "Animations")
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
@@ -50,7 +53,7 @@ struct LightingView: View {
                         }
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                         .overlay(RoundedRectangle(cornerRadius: 16).stroke(model.lighting.lightBar.animation == a ? theme.accent : theme.muted.opacity(0.3), lineWidth: model.lighting.lightBar.animation == a ? 2 : 1))
-                        .onTapGesture { model.lighting.setLightBarAnimation(a); model.settings.lightBar.animation = a }
+                        .onTapGesture { model.settings.lightBar.animation = a; model.settings.lightBar.customAnimation = true }
                     }
                 }
                 Toggle("Full-screen visualizer behind the player", isOn: Binding(get: { model.lighting.backdrop }, set: { model.lighting.backdrop = $0 })).tint(theme.accent)

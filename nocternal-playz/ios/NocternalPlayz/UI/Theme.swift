@@ -31,15 +31,31 @@ final class ThemeState: ObservableObject, ThemeManaging, BackgroundManaging {
     var muted: Color { mode == .light ? Color(white: 0.4) : Color(red: 0.54, green: 0.54, blue: 0.63) }
 }
 
-/// Lighting state, the iOS LightingEngine sink.
+/// Lighting state, the iOS LightingEngine sink. Values the user set are pinned so genre themes can't reset them.
 final class LightingState: ObservableObject, LightingEngine {
     @Published var lightBar = LightBarSettings()
     @Published var edge = EdgeLightingSettings()
     @Published var backdrop = false
+    private var themeMode: EdgeLightingMode = .musicReactive
+    private var themeStyle = (4.0, 0.8)
+    private var themeAnimation: LightingAnimation = .pulseWaveSpectrum
+    private var user = (EdgeLightingSettings(), LightBarSettings())
 
-    func setEdgeMode(_ m: EdgeLightingMode) { onMain { self.edge.mode = m; self.edge.enabled = m != .off } }
-    func setEdgeStyle(thickness: Double, brightness: Double) { onMain { self.edge.thickness = thickness; self.edge.brightness = brightness } }
-    func setLightBarAnimation(_ a: LightingAnimation) { onMain { self.lightBar.animation = a } }
+    func setEdgeMode(_ m: EdgeLightingMode) { onMain { self.themeMode = m; self.refresh() } }
+    func setEdgeStyle(thickness: Double, brightness: Double) { onMain { self.themeStyle = (thickness, brightness); self.refresh() } }
+    func setLightBarAnimation(_ a: LightingAnimation) { onMain { self.themeAnimation = a; self.refresh() } }
+
+    func applyUser(edge e: EdgeLightingSettings, bar b: LightBarSettings) { onMain { self.user = (e, b); self.refresh() } }
+
+    private func refresh() {
+        let (e, b) = user
+        var edgeOut = e
+        if !e.customMode { edgeOut.mode = themeMode }
+        if !e.customStyle { edgeOut.thickness = themeStyle.0; edgeOut.brightness = themeStyle.1 }
+        var barOut = b
+        if !b.customAnimation { barOut.animation = themeAnimation }
+        edge = edgeOut; lightBar = barOut
+    }
 }
 
 func onMain(_ block: @escaping () -> Void) { if Thread.isMainThread { block() } else { DispatchQueue.main.async(execute: block) } }

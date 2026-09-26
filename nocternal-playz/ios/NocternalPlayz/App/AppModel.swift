@@ -73,10 +73,7 @@ final class AppModel: ObservableObject {
         library.privateMode = settings.privateMode
         theme.setThemeMode(settings.themeMode)
         if let c = settings.customAccent { theme.setAccentColor(c) }
-        lighting.lightBar.enabled = settings.lightBar.enabled
-        lighting.lightBar.color = settings.lightBar.color
-        lighting.lightBar.glowIntensity = settings.lightBar.glowIntensity
-        lighting.edge.enabled = settings.edgeLighting.enabled
+        lighting.applyUser(edge: settings.edgeLighting, bar: settings.lightBar)
     }
 
     func setApiKey(_ key: String?) {
