@@ -9,6 +9,7 @@
 // then tells the user to attach the full file.
 
 import type { Attachment, PhotoDescription } from '../types';
+import { nearestAspectRatio } from '../../aspect';
 import type { PromptMode } from './promptTemplates';
 
 export const SOURCE_CHARS_PER_FILE = 12_000;
@@ -64,16 +65,10 @@ export function describedImage(attachments: Attachment[] = [], role: Attachment[
   return attachments.find((a) => a.role === role && a.kind === 'image' && a.description);
 }
 
-const STANDARD_RATIOS: Array<[string, number]> = [
-  ['1:1', 1], ['4:5', 4 / 5], ['2:3', 2 / 3], ['3:4', 3 / 4], ['9:16', 9 / 16],
-  ['5:4', 5 / 4], ['3:2', 3 / 2], ['4:3', 4 / 3], ['16:9', 16 / 9], ['21:9', 21 / 9],
-];
-
 /** Nearest standard aspect ratio for an image, e.g. 1080x1350 -> "4:5". */
 export function aspectRatioOf(a?: Attachment): string | null {
   if (!a?.width || !a?.height) return null;
-  const r = a.width / a.height;
-  return STANDARD_RATIOS.reduce((best, cur) => (Math.abs(Math.log(cur[1] / r)) < Math.abs(Math.log(best[1] / r)) ? cur : best))[0];
+  return nearestAspectRatio(a.width, a.height);
 }
 
 export function hasAttachments(attachments?: Attachment[]) {
@@ -118,12 +113,14 @@ export function attachmentSections(attachments: Attachment[] = [], mode: PromptM
         }
       } else if (file.kind === 'image' && file.description) {
         const d = file.description;
+        const label = d.prompt ? 'photo, described by AI' : 'photo, colours and light measured';
         if (mode === 'image') {
-          out.push('(photo, described by AI) Recreate prompt:', `> ${d.prompt}`, '');
+          out.push(d.prompt ? `(${label}) Recreate prompt:` : `(${label}) Attach it as the base image. It has:`);
+          if (d.prompt) out.push(`> ${d.prompt}`, '');
         } else if (mode === 'video') {
-          out.push('(photo, described by AI) Use it as the first frame (image-to-video). It shows:');
+          out.push(`(${label}) Use it as the first frame (image-to-video). It shows:`);
         } else {
-          out.push('(photo, described by AI) The attached photo shows:');
+          out.push(`(${label}) The attached photo shows:`);
         }
         out.push(...descriptionLines(d));
         out.push('', '_Attach the photo too if your AI tool accepts images; it keeps the result closest to the original._');
@@ -150,8 +147,9 @@ export function attachmentSections(attachments: Attachment[] = [], mode: PromptM
         out.push(...text.split('\n').map((line) => `  > ${line}`));
       } else if (file.kind === 'image' && file.description) {
         const d = file.description;
-        out.push(`- **${file.name}** (photo, described by AI): match its look, not its content.`);
-        out.push(`  - Style: ${d.style}`, `  - Lighting: ${d.lighting}`, `  - Colours: ${d.colors.join(', ')}`, `  - Composition: ${d.composition}`, `  - Mood: ${d.mood}`);
+        out.push(`- **${file.name}** (photo${d.prompt ? ', described by AI' : ''}): match its look, not its content.`);
+        const rows: Array<[string, string]> = [['Style', d.style], ['Lighting', d.lighting], ['Colours', d.colors.join(', ')], ['Composition', d.composition], ['Mood', d.mood]];
+        out.push(...rows.filter(([, v]) => v).map(([k, v]) => `  - ${k}: ${v}`));
       } else if (file.kind === 'image') {
         out.push(`- **${file.name}** (${KIND_LABEL.image}): attach it alongside this prompt as a visual reference.`);
       } else {
@@ -164,20 +162,39 @@ export function attachmentSections(attachments: Attachment[] = [], mode: PromptM
   return out;
 }
 
-/** Extra tool settings for image/video prompts that have reference or base images. */
+/**
+ * How to give the photo itself to the image tool. A text prompt alone never
+ * reproduces a photo exactly; feeding the photo in keeps the result closest.
+ */
 export function mediaReferenceParameters(attachments: Attachment[] = [], mode: PromptMode): string[] {
   const images = attachments.filter((a) => a.kind === 'image');
   if (!images.length || (mode !== 'image' && mode !== 'video')) return [];
-  const names = images.map((a) => a.name).join(', ');
-  if (mode === 'image') {
+  const sources = images.filter((a) => a.role === 'source').map((a) => a.name);
+  const refs = images.filter((a) => a.role === 'reference').map((a) => a.name);
+
+  if (mode === 'video') {
     return [
-      `- Reference images: ${names}`,
-      '- Midjourney: upload the image, then add `--sref <image URL>` for its style or put the image URL first for its content.',
-      '- ChatGPT / DALL·E: attach the image with this prompt and say which parts to keep.',
+      `- Start image: ${[...sources, ...refs].join(', ')}`,
+      '- Runway / Pika / Sora: use image-to-video with this photo as the first frame, then paste the video prompt.',
     ];
   }
-  return [
-    `- Reference images: ${names}`,
-    '- Runway / Pika / Sora: start from the image (image-to-video) or add it as a style reference.',
-  ];
+
+  const out: string[] = [];
+  if (sources.length) {
+    const photo = sources.join(', ');
+    out.push(
+      `- **Closest match: give the tool the photo itself (${photo}) as well as this prompt.**`,
+      '- Midjourney: upload the photo, put its URL at the start of the prompt and add `--iw 2` (higher image weight = closer to the photo). For the same person or character, also add an Omni Reference `--oref <URL>` (V7) or Character Reference `--cref <URL>` (V6).',
+      '- ChatGPT / Gemini: attach the photo and say "Recreate this photo as closely as possible" followed by this prompt.',
+      '- Stable Diffusion: img2img with denoising strength 0.3–0.5 stays close to the photo; add ControlNet (OpenPose or Depth) to keep the pose and layout.',
+    );
+  }
+  if (refs.length) {
+    out.push(
+      `- Style reference: ${refs.join(', ')}`,
+      '- Midjourney: upload it and add `--sref <image URL>` to copy its style and colours.',
+      '- ChatGPT / Gemini: attach it and say "Match the style, lighting and colours of this image".',
+    );
+  }
+  return out;
 }

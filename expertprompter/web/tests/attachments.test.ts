@@ -63,7 +63,7 @@ describe('attachments in prompts', () => {
       attachments: [{ name: 'sketch.jpg', role: 'reference', kind: 'image' }],
     });
     expect(prompt.split('\n')[0]).not.toContain('sketch.jpg');
-    expect(prompt).toContain('- Reference images: sketch.jpg');
+    expect(prompt).toContain('- Style reference: sketch.jpg');
     expect(prompt).toContain('--sref <image URL>');
   });
 

@@ -139,6 +139,9 @@ describe('Gemini (free tier)', () => {
     delete process.env.VISION_PROVIDER;
     delete process.env.GEMINI_API_KEY;
     expect(visionProvider()).toBe('anthropic');
+    process.env.VISION_PROVIDER = 'browser';
+    expect(visionProvider()).toBeNull();
+    delete process.env.VISION_PROVIDER;
     delete process.env.ANTHROPIC_API_KEY;
     expect(visionProvider()).toBeNull();
   });

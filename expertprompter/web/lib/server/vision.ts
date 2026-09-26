@@ -5,6 +5,8 @@
 //   gemini    - GEMINI_API_KEY. Google AI Studio has a free tier (rate-limited;
 //               Google may use free-tier data to improve its products).
 //   anthropic - ANTHROPIC_API_KEY. Pay-as-you-go Claude API.
+// With neither (or VISION_PROVIDER=browser), the browser describes photos itself
+// with a free on-device model (public/photo-ai-worker.js).
 
 import Anthropic from '@anthropic-ai/sdk';
 import { ApiError as GeminiApiError, GoogleGenAI } from '@google/genai';
@@ -42,6 +44,8 @@ export type VisionProvider = 'gemini' | 'anthropic';
 
 export function visionProvider(): VisionProvider | null {
   const forced = process.env.VISION_PROVIDER?.toLowerCase();
+  // "browser": never call a server AI; photos are described on the visitor's device.
+  if (forced === 'browser' || forced === 'none') return null;
   if (forced === 'gemini' && process.env.GEMINI_API_KEY) return 'gemini';
   if (forced === 'anthropic' && process.env.ANTHROPIC_API_KEY) return 'anthropic';
   if (process.env.GEMINI_API_KEY) return 'gemini';

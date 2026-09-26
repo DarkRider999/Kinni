@@ -297,7 +297,7 @@ export default function Home() {
       </main>
 
       <footer className="mx-auto max-w-7xl px-4 pb-10 pt-4 text-xs text-slate-400 sm:px-6">
-        ExpertPrompter writes prompts with its own rule-based logic. Only photos you attach are sent to an AI to be described.
+        ExpertPrompter writes prompts with its own rule-based logic. Photos you attach are described by an AI running on your own device.
         {' · '}<a href="/privacy" className="underline">Privacy</a>{' · '}<a href="/terms" className="underline">Terms</a>
       </footer>
 

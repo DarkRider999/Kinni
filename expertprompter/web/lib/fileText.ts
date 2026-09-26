@@ -1,3 +1,5 @@
+import { analyzePixels, type PixelStats } from './imageStats';
+
 // Reads attached files in the browser. Only extracted text (plus name and
 // size) is sent to the API; the files themselves never leave the device.
 
@@ -108,13 +110,18 @@ const ANALYSIS_MAX_SIDE = 1024;
 export interface PreparedImage {
   width: number;
   height: number;
-  /** JPEG, base64 without the data: prefix. */
+  /** JPEG, base64 without the data: prefix (for the server AI). */
   base64: string;
+  /** The same JPEG as a Blob (for the on-device AI). */
+  blob: Blob;
+  /** Colour palette, lighting and contrast measured from the pixels. */
+  stats: PixelStats;
 }
 
 /**
- * Reads an image's size and makes a small JPEG copy for AI description.
- * Returns null when the browser can't decode the format (e.g. HEIC outside Safari).
+ * Reads an image's size, measures its colours and light, and makes a small JPEG
+ * copy for AI description. Returns null when the browser can't decode the
+ * format (e.g. HEIC outside Safari).
  */
 export async function prepareImage(file: File): Promise<PreparedImage | null> {
   let bitmap: ImageBitmap;
@@ -133,7 +140,18 @@ export async function prepareImage(file: File): Promise<PreparedImage | null> {
   ctx.fillStyle = '#fff'; // transparent PNGs become white, not black
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+  // A 64px copy is plenty for colour statistics.
+  const small = document.createElement('canvas');
+  small.width = 64;
+  small.height = Math.max(1, Math.round((64 * height) / width));
+  const sctx = small.getContext('2d');
+  sctx?.drawImage(bitmap, 0, 0, small.width, small.height);
+  const stats = analyzePixels(sctx ? sctx.getImageData(0, 0, small.width, small.height).data : []);
   bitmap.close();
+
   const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-  return { width, height, base64: dataUrl.slice(dataUrl.indexOf(',') + 1) };
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+  if (!blob) return null;
+  return { width, height, base64: dataUrl.slice(dataUrl.indexOf(',') + 1), blob, stats };
 }

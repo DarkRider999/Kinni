@@ -341,12 +341,17 @@ function buildImagePrompt(analysis: InputAnalysis, template: TaskTemplate, style
   const profile = STYLE_PROFILES[style];
   const source = describedImage(files, 'source');
   const reference = describedImage(files, 'reference');
-  const photo = source?.description;
+  // Pixel-only descriptions (no AI caption) have colours and lighting but no recreate prompt.
+  const sourceDesc = source?.description;
+  const photo = sourceDesc?.prompt ? sourceDesc : undefined;
   const look = reference?.description;
-  const subject = photo ? photo.subject : extractSubject(analysis.task);
-  const mood = photo || look ? uniq([...splitTone(options.tone), (photo ?? look)!.mood]) : uniq([...splitTone(options.tone), ...template.defaultTone]);
-  const lighting = look?.lighting ?? photo?.lighting ?? pick(LIGHTING, rng, variation);
-  const composition = photo?.composition ?? look?.composition ?? pick(COMPOSITION, rng, variation);
+  const subject = photo?.subject || extractSubject(analysis.task);
+  const aiMood = (photo ?? look)?.mood;
+  const mood = aiMood ? uniq([...splitTone(options.tone), aiMood]) : uniq([...splitTone(options.tone), ...template.defaultTone]);
+  const lighting = look?.lighting || sourceDesc?.lighting || pick(LIGHTING, rng, variation);
+  const composition = sourceDesc?.composition || look?.composition || pick(COMPOSITION, rng, variation);
+  const palette = (look?.colors.length ? look.colors : sourceDesc?.colors) ?? [];
+  const lookStyle = look?.style || sourceDesc?.style || '';
   // An explicit format wins; otherwise match the uploaded photo's shape.
   const aspect = options.format ? aspectFromFormat(options.format, template.aspectRatio ?? '1:1') : aspectRatioOf(source) ?? aspectRatioOf(reference) ?? template.aspectRatio ?? '1:1';
 
@@ -357,14 +362,17 @@ function buildImagePrompt(analysis: InputAnalysis, template: TaskTemplate, style
     mainPrompt = uniq([
       ...(change ? [change] : []),
       change ? lowerFirst(photo.prompt.replace(/[.\s]+$/, '')) : photo.prompt.replace(/[.\s]+$/, ''),
-      ...(look ? [`in the style of: ${look.style}`, `${look.lighting}`, `colour palette: ${look.colors.join(', ')}`] : []),
+      ...(look
+        ? [look.style ? `in the style of: ${look.style}` : '', look.lighting, look.colors.length ? `colour palette: ${look.colors.join(', ')}` : ''].filter(Boolean)
+        : []),
       'high resolution, highly detailed',
     ]).join(', ');
   } else {
     const descriptors = uniq([
       subject,
       ...template.sections.map((sec) => sec.detail),
-      ...(look ? [look.style, `colour palette: ${look.colors.join(', ')}`] : profile.imageStyle),
+      ...(lookStyle ? [lookStyle] : profile.imageStyle),
+      ...(palette.length ? [`colour palette: ${palette.join(', ')}`] : []),
       `${joinList(mood)} mood`,
       ...(template.flatGraphic ? [] : [composition, lighting]),
       template.flatGraphic ? 'crisp vector edges' : 'high resolution, highly detailed',
@@ -378,8 +386,8 @@ function buildImagePrompt(analysis: InputAnalysis, template: TaskTemplate, style
     '---',
     '',
     '## Subject', capitalize(subject) + (options.audience ? ` (designed for ${options.audience.trim()})` : ''), '',
-    '## Style', `- Visual style: ${look?.style ?? photo?.style ?? profile.imageStyle.join(', ')}`, `- Mood: ${mood.join(', ')}`,
-    ...(look || photo ? [`- Colours: ${(look ?? photo)!.colors.join(', ')}`] : []), '',
+    '## Style', `- Visual style: ${lookStyle || profile.imageStyle.join(', ')}`, `- Mood: ${mood.join(', ')}`,
+    ...(palette.length ? [`- Colours: ${palette.join(', ')}`] : []), '',
     ...attachmentSections(files, 'image'),
     ...(template.flatGraphic ? [] : ['## Composition & Lighting', `- ${capitalize(composition)}`, `- ${capitalize(lighting)}`, '']),
     '## Parameters',

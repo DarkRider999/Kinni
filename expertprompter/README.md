@@ -10,7 +10,7 @@ Type any idea or task in plain words. ExpertPrompter:
 6. lets you attach files: an **Upload file** (the document or code to work on) and **Reference files** (examples of the style you want),
 7. gives every account 5 free prompts, then offers Premium for $10/month (Stripe), with sign-in through Google, Facebook, GitHub or email.
 
-All prompt generation is **pure, deterministic TypeScript**. The one AI call is optional: when you attach a photo, an AI model (Google Gemini on its free tier, or Claude) describes it so the prompt can recreate it (see §5c). Without a key, everything else still works.
+All prompt generation is **pure, deterministic TypeScript**. When you attach a photo, a free AI model running **in the visitor's browser** describes it so the prompt can recreate it (see §5c). No API key or server AI is needed.
 
 ---
 
@@ -213,20 +213,33 @@ Rate limits: generation is limited to 60 requests/min per IP and sign-in/registr
   - The summary paragraph names the attached files.
 - **API:** `POST /api/generate-prompt` accepts `attachments: [{ name, role, kind: "text"|"image"|"other", size?, text? }]`, at most 8 files, with a 1 MB request limit. Regenerate reuses the same files.
 
-## 5c. AI photo descriptions ("recreate this photo")
+## 5c. Photo descriptions ("recreate this photo")
 
-- **What happens:** when a signed-in user attaches an image (the **+ Photo or file** button or either drop zone), the browser shrinks it to at most 1024px and sends it to `POST /api/analyze-image`.
-- **Providers** (`lib/server/vision.ts`), first match wins. Set `VISION_PROVIDER` to force one.
-  - **Google Gemini** (`GEMINI_API_KEY`, free tier from https://aistudio.google.com/apikey): `@google/genai` `models.generateContent` with the photo as `inlineData`, `responseMimeType: "application/json"` and a `responseJsonSchema` generated from the Zod schema, then validated with Zod. Model `gemini-flash-latest` (set `GEMINI_MODEL` to change it). The free tier is rate-limited, and Google may use free-tier data to improve its products, as the Privacy page says.
-  - **Anthropic Claude** (`ANTHROPIC_API_KEY`, pay-as-you-go): `client.beta.messages.parse` with the same Zod schema, `claude-opus-5` at `effort: "low"` (set `VISION_MODEL` to change it) and server-side refusal fallbacks.
-  - **Both** return subject, details, setting, composition, camera, lighting, colours, style, mood, text in the image, and a ready-to-use recreate prompt.
-- **How the description is used:**
-  - A photo under **Upload file** in an image prompt: the first line becomes the recreate prompt, with any change you typed ("make it a Pixar character") in front, and the aspect ratio matches the photo.
-  - A photo under **Reference files**: its style, lighting and colours shape the image prompt.
-  - Text tasks (for example "write a caption for this photo") include the description as source material.
-  - A vague request with an uploaded photo is treated as an image task.
-- **Cost and abuse limits:** each description is one request: free within Gemini's free-tier quota, or roughly **$0.02–0.03 with `claude-opus-5`**. Descriptions need sign-in, and free accounts get them only while they have free prompts left. Limits are 15 per minute per account and 20 per minute per IP. A description doesn't use a free prompt.
-- **Privacy:** only the text description is kept, never the photo itself.
+**No AI, always:** when an image is attached, the browser measures:
+- the exact aspect ratio (e.g. `4:5`);
+- the colour palette as plain names (`lib/imageStats.ts`);
+- the lighting: bright or dark, warm or cool, and the contrast.
+
+These go into the prompt straight away.
+
+**On-device AI (default, free, private):**
+- **The model:** `public/photo-ai-worker.js` runs **Florence-2 base** (`onnx-community/Florence-2-base-ft`, task `<MORE_DETAILED_CAPTION>`) in a Web Worker through transformers.js, loaded from jsDelivr. It uses WebGPU when the browser has it and WebAssembly otherwise.
+- **The download:** 4-bit weights with 8-bit embeddings, about **215 MB**, downloaded once from Hugging Face and cached by the browser.
+- **Consent:** the first time, each visitor taps **Describe with AI** to agree to the download. After that it runs automatically.
+- **The photo never leaves the device.**
+- **Speed and quality:** tested on a server CPU, it took about 3.5 seconds per photo. Captions are basic and occasionally wrong.
+- **How it's used:** the cleaned caption, with repeated sentences removed, becomes the recreate prompt, followed by the measured light and palette.
+
+**Server AI (optional, better quality):** set `GEMINI_API_KEY` (Google AI Studio free tier) or `ANTHROPIC_API_KEY` to describe photos on the server instead, using structured JSON with subject, details, setting, composition, camera, lighting, colours, style, mood, text and a recreate prompt. `VISION_PROVIDER=browser` forces on-device mode even when a key is set. The server path requires sign-in, and free accounts get it only while they have free prompts left. It is rate-limited, and the Privacy page says photos go to Google or Anthropic.
+
+**How descriptions are used:**
+- **Uploaded photo:** the first line of the image prompt becomes the recreate prompt, with any change the user typed in front, and the aspect ratio matches the photo.
+- **Reference photos:** they drive the style, light and palette.
+- **Text tasks:** they include the description as source material.
+- **Every image prompt with a photo** gets steps for giving the photo itself to the tool, since that matters most for an exact match:
+  - Midjourney: image URL + `--iw 2`, `--oref`/`--cref` for the same person, `--sref` for style;
+  - ChatGPT / Gemini: attach and say "recreate";
+  - Stable Diffusion: img2img at denoising strength 0.3–0.5 + ControlNet.
 
 ## 6. Prompt generation algorithm (`promptGenerationService.ts`)
 
@@ -343,7 +356,7 @@ npm run dev                               # UI + API on http://localhost:3000
 Quality checks:
 
 ```bash
-cd web && npm run typecheck && npm test && npm run build   # 80 tests without a DB (the Claude and Gemini SDKs are mocked)
+cd web && npm run typecheck && npm test && npm run build   # 100 tests without a DB (the Claude and Gemini SDKs are mocked)
 # With a migrated local DB, 10 more integration tests run (free-run limit, master, username sign-in, OAuth linking, Stripe webhook):
 DATABASE_URL=... DIRECT_URL=... npm test
 ```
@@ -357,7 +370,7 @@ DATABASE_URL=... DIRECT_URL=... npm test
   - `JWT_SECRET`: a long random string
   - `APP_URL`: `https://expertprompter.vercel.app`
   - `MASTER_EMAILS`: the owner's email(s)
-  - `GEMINI_API_KEY` (free tier) or `ANTHROPIC_API_KEY`: enables AI photo descriptions
+  - Optional: `GEMINI_API_KEY` / `ANTHROPIC_API_KEY` for server-side photo descriptions (otherwise they run on the visitor's device); `VISION_PROVIDER=browser` forces on-device
   - Sign-in and billing credentials: see below
 - **Database role:** the app connects as a dedicated `expertprompter_app` role that owns the `expertprompter` schema. It is not the Supabase `postgres` admin, and its tables are outside the `public` schema that the Supabase Data API serves.
 ### Setting up sign-in providers
