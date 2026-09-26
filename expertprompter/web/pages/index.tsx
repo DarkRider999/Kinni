@@ -45,9 +45,35 @@ export default function Home() {
   const [notice, setNotice] = useState<string | null>(null);
   const [historyKey, setHistoryKey] = useState(0);
   const [savedId, setSavedId] = useState<string | null>(null);
+  const [recent, setRecent] = useState<SavedPrompt[]>([]);
   const outputRef = useRef<HTMLDivElement>(null);
 
   const freeLimit = providers?.freeRunsLimit ?? 5;
+
+  // Last 5 different requests, refreshed whenever a new prompt is generated or saved.
+  useEffect(() => {
+    if (!user) {
+      setRecent([]);
+      return;
+    }
+    let live = true;
+    api
+      .listPrompts({ limit: 20 })
+      .then(({ items }) => {
+        const seen = new Set<string>();
+        const unique = items.filter((p) => {
+          const key = p.rawInput.trim().toLowerCase();
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+        if (live) setRecent(unique.slice(0, 5));
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [user, historyKey]);
   const openSignIn = useCallback((reason: string | null = null) => {
     setAuthReason(reason);
     setAuthOpen(true);
@@ -204,7 +230,7 @@ export default function Home() {
           </p>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
           {/* Left column: input + history */}
           <div className="space-y-6">
             <InputPanel
@@ -214,6 +240,8 @@ export default function Home() {
               onAttachmentsChange={(update) => setInput((prev) => ({ ...prev, attachments: update(prev.attachments) }))}
               onGenerate={generate}
               loading={loading}
+              recent={recent}
+              onPickRecent={(p) => void openSaved(p)}
             />
             {user ? (
               <HistoryPanel refreshKey={historyKey} onSelect={(p) => void openSaved(p)} />
@@ -257,7 +285,7 @@ export default function Home() {
                   <SparklesIcon width={28} height={28} />
                 </span>
                 <h2 className="mt-4 font-semibold">Your expert prompt will appear here</h2>
-                <p className="mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-400">Try one of the examples, or type anything, from a resignation letter to a YouTube script.</p>
+                <p className="mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-400">Type anything, from a resignation letter to a YouTube script, or attach a photo and ask for a prompt to recreate it.</p>
               </div>
             )}
 

@@ -132,7 +132,7 @@ describe('AI photo descriptions', () => {
     const { runGeneration } = await import('../lib/server/services/expertPrompterService');
     const r = runGeneration({ rawInput: 'Recreate this photo', attachments: [photo] });
     expect(r.detectedCategory).toBe('IMAGE');
-    expect(r.generatedPrompt.split('\n')[0]).toBe(`Image prompt: ${d.prompt.replace(/\.$/, '')}, high resolution, highly detailed`);
+    expect(r.generatedPrompt.split('\n')[0]).toBe(`Image prompt: ${d.prompt.replace(/\.$/, '')}, same framing, pose, lighting and colours as the original photo, high resolution, highly detailed`);
     expect(r.generatedPrompt).toContain('Aspect ratio: 4:5');
     expect(r.generatedPrompt).toContain('- Camera: eye level, 50mm, f/1.8');
   });
