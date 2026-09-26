@@ -1,4 +1,4 @@
-import type { AuthUser, Entitlement, GenerateRequest, GenerateResponse, ProvidersInfo, RecommendedTool, SavedPrompt } from './types';
+import type { AuthUser, Entitlement, GenerateRequest, GenerateResponse, PhotoDescription, ProvidersInfo, RecommendedTool, SavedPrompt } from './types';
 
 // The API lives in this app (pages/api), so requests are same-origin by default.
 export const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
@@ -70,6 +70,8 @@ export const api = {
   me: () => request<{ user: AuthUser; entitlement: Entitlement | null }>('/api/auth/me'),
   providers: () => request<ProvidersInfo>('/api/auth/providers'),
   meta: () => request<{ tools: Array<Omit<RecommendedTool, 'reason' | 'rank'>> }>('/api/meta'),
+  analyzeImage: (image: string, mediaType: 'image/jpeg') =>
+    request<{ description: PhotoDescription }>('/api/analyze-image', { method: 'POST', body: JSON.stringify({ image, mediaType }) }),
   checkout: () => request<{ url: string }>('/api/billing/checkout', { method: 'POST' }),
   billingPortal: () => request<{ url: string }>('/api/billing/portal', { method: 'POST' }),
 

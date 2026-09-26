@@ -118,3 +118,57 @@ describe('attachment validation (API)', () => {
     expect((await post({ rawInput: 'Summarize this', attachments: [{ name: 'x.txt', role: 'boss', kind: 'text' }] })).status).toBe(400);
   });
 });
+
+describe('AI photo descriptions', () => {
+  const d = {
+    subject: 'a smiling woman holding a coffee cup', details: 'cream sweater', setting: 'cafe window seat',
+    composition: 'medium close-up, rule of thirds', camera: 'eye level, 50mm, f/1.8', lighting: 'soft window light from the right',
+    colors: ['warm beige', 'sage green'], style: 'candid lifestyle photography', mood: 'calm and cosy', text: '',
+    prompt: 'A candid lifestyle photo of a smiling woman holding a coffee cup at a cafe window, soft window light.',
+  };
+  const photo = { name: 'me.jpg', role: 'source' as const, kind: 'image' as const, width: 1080, height: 1350, description: d };
+
+  it('uses the photo description as the image prompt and matches its aspect ratio', async () => {
+    const { runGeneration } = await import('../lib/server/services/expertPrompterService');
+    const r = runGeneration({ rawInput: 'Recreate this photo', attachments: [photo] });
+    expect(r.detectedCategory).toBe('IMAGE');
+    expect(r.generatedPrompt.split('\n')[0]).toBe(`Image prompt: ${d.prompt.replace(/\.$/, '')}, high resolution, highly detailed`);
+    expect(r.generatedPrompt).toContain('Aspect ratio: 4:5');
+    expect(r.generatedPrompt).toContain('- Camera: eye level, 50mm, f/1.8');
+  });
+
+  it('puts the requested change before the photo description', async () => {
+    const { runGeneration } = await import('../lib/server/services/expertPrompterService');
+    const r = runGeneration({ rawInput: 'Make this photo look like a Pixar 3D character', attachments: [photo] });
+    expect(r.generatedPrompt.split('\n')[0]).toMatch(/^Image prompt: Make this photo look like a Pixar 3D character, a candid lifestyle photo/);
+  });
+
+  it('treats a vague request with an uploaded photo as an image task', async () => {
+    const { runGeneration } = await import('../lib/server/services/expertPrompterService');
+    expect(runGeneration({ rawInput: 'same again please', attachments: [photo] }).detectedCategory).toBe('IMAGE');
+  });
+
+  it('uses a described reference photo for style, lighting and colours', () => {
+    const prompt = generatePrompt({
+      rawInput: 'A portrait of an old fisherman', category: 'IMAGE',
+      attachments: [{ ...photo, role: 'reference' }],
+    });
+    const first = prompt.split('\n')[0];
+    expect(first).toContain('candid lifestyle photography');
+    expect(first).toContain('colour palette: warm beige, sage green');
+    expect(first).toContain('soft window light from the right');
+    expect(prompt).toContain('match its look, not its content');
+  });
+
+  it('describes the photo for text tasks such as captions', () => {
+    const prompt = generatePrompt({ rawInput: 'Write an Instagram caption for this photo', category: 'MARKETING', attachments: [photo] });
+    expect(prompt).toContain('(photo, described by AI) The attached photo shows:');
+    expect(prompt).toContain('- Subject: a smiling woman holding a coffee cup');
+  });
+
+  it('rejects oversized descriptions in the API', async () => {
+    delete process.env.DATABASE_URL;
+    const res = await post({ rawInput: 'Recreate this photo', attachments: [{ ...photo, description: { ...d, prompt: 'x'.repeat(3001) } }] });
+    expect(res.status).toBe(400);
+  });
+});

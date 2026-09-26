@@ -42,6 +42,24 @@ export interface AttachmentPayload {
   kind: 'text' | 'image' | 'other';
   size?: number;
   text?: string;
+  width?: number;
+  height?: number;
+  description?: PhotoDescription;
+}
+
+/** AI description of an uploaded photo (from /api/analyze-image). */
+export interface PhotoDescription {
+  subject: string;
+  details: string;
+  setting: string;
+  composition: string;
+  camera: string;
+  lighting: string;
+  colors: string[];
+  style: string;
+  mood: string;
+  text: string;
+  prompt: string;
 }
 
 export interface GenerateResponse {
@@ -97,6 +115,8 @@ export interface ProvidersInfo {
   accountsEnabled: boolean;
   providers: Array<{ id: 'google' | 'facebook' | 'github'; label: string }>;
   billingEnabled: boolean;
+  /** True when photos can be described by AI (an Anthropic API key is set). */
+  visionEnabled?: boolean;
   freeRunsLimit: number;
 }
 

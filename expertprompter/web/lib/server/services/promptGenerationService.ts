@@ -25,7 +25,7 @@
 
 import { analyzeInput, type InputAnalysis } from './inputAnalysisService';
 import { selectTemplate, type TaskTemplate } from './promptTemplates';
-import { attachmentSections, attachmentSummary, mediaReferenceParameters } from './attachmentSections';
+import { aspectRatioOf, attachmentSections, attachmentSummary, describedImage, mediaReferenceParameters } from './attachmentSections';
 import type { Attachment, Category, PromptOptions, PromptStyle } from '../types';
 
 export interface GeneratePromptInput {
@@ -322,23 +322,55 @@ function aspectFromFormat(format: string | undefined, fallback: string): string 
   return fallback;
 }
 
+/**
+ * Words that only say "use my photo". What's left after removing them is the
+ * change the user wants ("make it a watercolor"), or nothing.
+ */
+const RECREATE_WORDS = /\b(please|re-?create|recreate|replicate|reproduce|copy|same|exactly|just|like|as|this|that|the|my|a|an|it|its|uploaded|attached|above|photo|photograph|picture|pic|image|img|of|make|generate|create|prompt|for|get|result|me|similar|one|version)\b/gi;
+
+function lowerFirst(s: string) {
+  return s.charAt(0).toLowerCase() + s.slice(1);
+}
+
+function userChange(task: string): string | null {
+  const left = task.replace(RECREATE_WORDS, ' ').replace(/[^\p{L}\p{N}\s-]/gu, ' ').trim().split(/\s+/).filter(Boolean);
+  return left.length >= 2 ? task.replace(/[.!]+$/, '').trim() : null;
+}
+
 function buildImagePrompt(analysis: InputAnalysis, template: TaskTemplate, style: PromptStyle, options: PromptOptions, rng: () => number, variation: number, files: Attachment[] = []): string {
   const profile = STYLE_PROFILES[style];
-  const subject = extractSubject(analysis.task);
-  const mood = uniq([...splitTone(options.tone), ...template.defaultTone]);
-  const lighting = pick(LIGHTING, rng, variation);
-  const composition = pick(COMPOSITION, rng, variation);
-  const aspect = aspectFromFormat(options.format, template.aspectRatio ?? '1:1');
+  const source = describedImage(files, 'source');
+  const reference = describedImage(files, 'reference');
+  const photo = source?.description;
+  const look = reference?.description;
+  const subject = photo ? photo.subject : extractSubject(analysis.task);
+  const mood = photo || look ? uniq([...splitTone(options.tone), (photo ?? look)!.mood]) : uniq([...splitTone(options.tone), ...template.defaultTone]);
+  const lighting = look?.lighting ?? photo?.lighting ?? pick(LIGHTING, rng, variation);
+  const composition = photo?.composition ?? look?.composition ?? pick(COMPOSITION, rng, variation);
+  // An explicit format wins; otherwise match the uploaded photo's shape.
+  const aspect = options.format ? aspectFromFormat(options.format, template.aspectRatio ?? '1:1') : aspectRatioOf(source) ?? aspectRatioOf(reference) ?? template.aspectRatio ?? '1:1';
 
-  const descriptors = uniq([
-    subject,
-    ...template.sections.map((sec) => sec.detail),
-    ...profile.imageStyle,
-    `${joinList(mood)} mood`,
-    ...(template.flatGraphic ? [] : [composition, lighting]),
-    template.flatGraphic ? 'crisp vector edges' : 'high resolution, highly detailed',
-  ]);
-  const mainPrompt = descriptors.join(', ');
+  let mainPrompt: string;
+  if (photo) {
+    // Recreate the uploaded photo, applying any change the user asked for.
+    const change = userChange(analysis.task);
+    mainPrompt = uniq([
+      ...(change ? [change] : []),
+      change ? lowerFirst(photo.prompt.replace(/[.\s]+$/, '')) : photo.prompt.replace(/[.\s]+$/, ''),
+      ...(look ? [`in the style of: ${look.style}`, `${look.lighting}`, `colour palette: ${look.colors.join(', ')}`] : []),
+      'high resolution, highly detailed',
+    ]).join(', ');
+  } else {
+    const descriptors = uniq([
+      subject,
+      ...template.sections.map((sec) => sec.detail),
+      ...(look ? [look.style, `colour palette: ${look.colors.join(', ')}`] : profile.imageStyle),
+      `${joinList(mood)} mood`,
+      ...(template.flatGraphic ? [] : [composition, lighting]),
+      template.flatGraphic ? 'crisp vector edges' : 'high resolution, highly detailed',
+    ]);
+    mainPrompt = descriptors.join(', ');
+  }
 
   return [
     `Image prompt: ${mainPrompt}`,
@@ -346,7 +378,8 @@ function buildImagePrompt(analysis: InputAnalysis, template: TaskTemplate, style
     '---',
     '',
     '## Subject', capitalize(subject) + (options.audience ? ` (designed for ${options.audience.trim()})` : ''), '',
-    '## Style', `- Visual style: ${profile.imageStyle.join(', ')}`, `- Mood: ${mood.join(', ')}`, '',
+    '## Style', `- Visual style: ${look?.style ?? photo?.style ?? profile.imageStyle.join(', ')}`, `- Mood: ${mood.join(', ')}`,
+    ...(look || photo ? [`- Colours: ${(look ?? photo)!.colors.join(', ')}`] : []), '',
     ...attachmentSections(files, 'image'),
     ...(template.flatGraphic ? [] : ['## Composition & Lighting', `- ${capitalize(composition)}`, `- ${capitalize(lighting)}`, '']),
     '## Parameters',

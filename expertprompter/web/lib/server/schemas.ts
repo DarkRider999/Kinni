@@ -24,12 +24,22 @@ export const MAX_ATTACHMENTS = 8;
 /** Text accepted per file; the prompt builder trims further to keep prompts usable. */
 export const MAX_ATTACHMENT_TEXT = 40_000;
 
+const descText = z.string().trim().max(2_000);
+const PhotoDescriptionSchema = z.object({
+  subject: descText, details: descText, setting: descText, composition: descText, camera: descText,
+  lighting: descText, colors: z.array(z.string().trim().max(60)).max(8), style: descText, mood: descText,
+  text: descText, prompt: z.string().trim().max(3_000),
+});
+
 const AttachmentSchema = z.object({
   name: z.string().trim().min(1).max(200),
   role: z.enum(['source', 'reference']),
   kind: z.enum(['text', 'image', 'other']),
   size: z.number().int().nonnegative().optional(),
   text: z.string().max(MAX_ATTACHMENT_TEXT).optional(),
+  width: z.number().int().positive().max(100_000).optional(),
+  height: z.number().int().positive().max(100_000).optional(),
+  description: PhotoDescriptionSchema.optional(),
 });
 
 export const GenerateSchema = z.object({

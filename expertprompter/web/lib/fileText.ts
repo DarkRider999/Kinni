@@ -101,3 +101,39 @@ export function formatBytes(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
+
+/** Longest side sent for AI description: enough detail, ~1,500 input tokens. */
+const ANALYSIS_MAX_SIDE = 1024;
+
+export interface PreparedImage {
+  width: number;
+  height: number;
+  /** JPEG, base64 without the data: prefix. */
+  base64: string;
+}
+
+/**
+ * Reads an image's size and makes a small JPEG copy for AI description.
+ * Returns null when the browser can't decode the format (e.g. HEIC outside Safari).
+ */
+export async function prepareImage(file: File): Promise<PreparedImage | null> {
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  } catch {
+    return null;
+  }
+  const { width, height } = bitmap;
+  const scale = Math.min(1, ANALYSIS_MAX_SIDE / Math.max(width, height));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(width * scale));
+  canvas.height = Math.max(1, Math.round(height * scale));
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+  ctx.fillStyle = '#fff'; // transparent PNGs become white, not black
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  bitmap.close();
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+  return { width, height, base64: dataUrl.slice(dataUrl.indexOf(',') + 1) };
+}

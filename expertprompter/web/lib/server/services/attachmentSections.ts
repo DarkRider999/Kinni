@@ -8,7 +8,7 @@
 // Long files are trimmed so the prompt stays usable in any AI tool; the prompt
 // then tells the user to attach the full file.
 
-import type { Attachment } from '../types';
+import type { Attachment, PhotoDescription } from '../types';
 import type { PromptMode } from './promptTemplates';
 
 export const SOURCE_CHARS_PER_FILE = 12_000;
@@ -40,6 +40,40 @@ function languageHint(name: string) {
 function clip(text: string, limit: number) {
   const clean = text.replace(/\r\n?/g, '\n').replace(/\n{4,}/g, '\n\n\n').trim();
   return clean.length > limit ? { text: clean.slice(0, limit).trimEnd(), truncated: clean.length } : { text: clean, truncated: 0 };
+}
+
+/** Bullet lines for an AI photo description. */
+export function descriptionLines(d: PhotoDescription): string[] {
+  const rows: Array<[string, string]> = [
+    ['Subject', d.subject],
+    ['Details', d.details],
+    ['Setting', d.setting],
+    ['Composition', d.composition],
+    ['Camera', d.camera],
+    ['Lighting', d.lighting],
+    ['Colours', d.colors.join(', ')],
+    ['Style', d.style],
+    ['Mood', d.mood],
+    ['Text in image', d.text],
+  ];
+  return rows.filter(([, v]) => v && v.trim()).map(([k, v]) => `- ${k}: ${v.trim()}`);
+}
+
+/** The first described photo with the given role, if any. */
+export function describedImage(attachments: Attachment[] = [], role: Attachment['role']) {
+  return attachments.find((a) => a.role === role && a.kind === 'image' && a.description);
+}
+
+const STANDARD_RATIOS: Array<[string, number]> = [
+  ['1:1', 1], ['4:5', 4 / 5], ['2:3', 2 / 3], ['3:4', 3 / 4], ['9:16', 9 / 16],
+  ['5:4', 5 / 4], ['3:2', 3 / 2], ['4:3', 4 / 3], ['16:9', 16 / 9], ['21:9', 21 / 9],
+];
+
+/** Nearest standard aspect ratio for an image, e.g. 1080x1350 -> "4:5". */
+export function aspectRatioOf(a?: Attachment): string | null {
+  if (!a?.width || !a?.height) return null;
+  const r = a.width / a.height;
+  return STANDARD_RATIOS.reduce((best, cur) => (Math.abs(Math.log(cur[1] / r)) < Math.abs(Math.log(best[1] / r)) ? cur : best))[0];
 }
 
 export function hasAttachments(attachments?: Attachment[]) {
@@ -82,6 +116,17 @@ export function attachmentSections(attachments: Attachment[] = [], mode: PromptM
         if (truncated) {
           out.push(`_[Trimmed: showing the first ${formatCount(text.length)} of ${formatCount(truncated)} characters. Attach the full file too if your AI tool accepts uploads.]_`);
         }
+      } else if (file.kind === 'image' && file.description) {
+        const d = file.description;
+        if (mode === 'image') {
+          out.push('(photo, described by AI) Recreate prompt:', `> ${d.prompt}`, '');
+        } else if (mode === 'video') {
+          out.push('(photo, described by AI) Use it as the first frame (image-to-video). It shows:');
+        } else {
+          out.push('(photo, described by AI) The attached photo shows:');
+        }
+        out.push(...descriptionLines(d));
+        out.push('', '_Attach the photo too if your AI tool accepts images; it keeps the result closest to the original._');
       } else if (file.kind === 'image') {
         const use =
           mode === 'image' ? 'Attach this image and use it as the base image to edit or build on.'
@@ -103,6 +148,10 @@ export function attachmentSections(attachments: Attachment[] = [], mode: PromptM
         const { text, truncated } = clip(file.text, REFERENCE_CHARS_PER_FILE);
         out.push(`- **${file.name}** (${KIND_LABEL.text}${truncated ? ', excerpt' : ''}):`);
         out.push(...text.split('\n').map((line) => `  > ${line}`));
+      } else if (file.kind === 'image' && file.description) {
+        const d = file.description;
+        out.push(`- **${file.name}** (photo, described by AI): match its look, not its content.`);
+        out.push(`  - Style: ${d.style}`, `  - Lighting: ${d.lighting}`, `  - Colours: ${d.colors.join(', ')}`, `  - Composition: ${d.composition}`, `  - Mood: ${d.mood}`);
       } else if (file.kind === 'image') {
         out.push(`- **${file.name}** (${KIND_LABEL.image}): attach it alongside this prompt as a visual reference.`);
       } else {

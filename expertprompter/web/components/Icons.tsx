@@ -69,3 +69,4 @@ export const FileIcon = (p: SVGProps<SVGSVGElement>) => (
   <svg {...base(p)}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6" /></svg>
 );
 export const XIcon = (p: SVGProps<SVGSVGElement>) => (<svg {...base(p)}><path d="M18 6L6 18M6 6l12 12" /></svg>);
+export const PlusIcon = (p: SVGProps<SVGSVGElement>) => (<svg {...base(p)}><path d="M12 5v14M5 12h14" /></svg>);
