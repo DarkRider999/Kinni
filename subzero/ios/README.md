@@ -19,6 +19,12 @@ the layout below with Xcode's "App" template.
 <key>NSFaceIDUsageDescription</key>
 <string>Unlock SubZero and protect your private messages.</string>
 
+<key>NSCameraUsageDescription</key>
+<string>Used for encrypted video calls.</string>
+<key>NSMicrophoneUsageDescription</key>
+<string>Used for encrypted voice and video calls.</string>
+<!-- Photo import uses PHPicker, which needs no photo-library permission. -->
+
 <!-- Alternate app icons for identity switching -->
 <key>CFBundleIcons</key>
 <dict>

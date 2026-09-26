@@ -52,7 +52,9 @@ subzero/
 | Decoy calculator / notes / weather | ✅ all three | ✅ all three |
 | Identity (name + icon) switching | ✅ launcher aliases | ⚙️ alternate icons |
 | Rooted/jailbroken device awareness | ✅ | ✅ |
-| Encrypted voice/video (WebRTC) | ⚙️ interface scaffold | ⚙️ interface scaffold |
+| Encrypted media vault (hidden from Gallery/Photos, encrypted at rest) | ✅ | ✅ |
+| Voice/video call UI + state machine + encrypted signaling model | ✅ | ✅ |
+| Live call media (WebRTC engine + signaling server) | ⚙️ engine seam | ⚙️ engine seam |
 
 ✅ = working implementation · ⚙️ = scaffold/interface with TODOs
 

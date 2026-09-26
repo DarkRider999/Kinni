@@ -39,6 +39,12 @@ struct RootView: View {
     @Binding var locked: Bool
 
     @StateObject private var chatVM: ChatViewModel
+    @StateObject private var vault = VaultStore()
+    @StateObject private var callManager = CallManager(engine: LoopbackRtcEngine(),
+                                                       sendSignaling: { _ in /* TODO(subzero): encrypt + send */ })
+    @State private var appScreen: AppScreen = .chat
+
+    private enum AppScreen { case chat, vault, call }
 
     init(buffer: RamMessageBuffer, safeZone: SafeZoneController,
          conversationId: String, locked: Binding<Bool>) {
@@ -53,10 +59,18 @@ struct RootView: View {
                 LockGate(locked: $locked)
             } else if let screen = safeZone.activeScreen {
                 SafeZoneHostView(screen: screen) { safeZone.exit() }
+            } else if appScreen == .vault {
+                VaultView(vault: vault) { appScreen = .chat }
+            } else if appScreen == .call {
+                CallView(manager: callManager) { callManager.reset(); appScreen = .chat }
             } else {
-                ChatView(viewModel: chatVM, buffer: buffer) {
-                    safeZone.activate(conversationId: conversationId)
-                }
+                ChatView(
+                    viewModel: chatVM, buffer: buffer,
+                    onSafeZone: { safeZone.activate(conversationId: conversationId) },
+                    onVoiceCall: { callManager.placeCall("Contact", type: .audio); appScreen = .call },
+                    onVideoCall: { callManager.placeCall("Contact", type: .video); appScreen = .call },
+                    onOpenVault: { appScreen = .vault }
+                )
             }
         }
     }

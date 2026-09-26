@@ -20,6 +20,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.subzero.messenger.data.Message
 import com.subzero.messenger.data.MessageDirection
 
@@ -29,10 +30,27 @@ import com.subzero.messenger.data.MessageDirection
  * calls [onSafeZone] which activates the quick-hide flow instantly.
  */
 @Composable
-fun ChatScreen(viewModel: ChatViewModel, onSafeZone: () -> Unit) {
+fun ChatScreen(
+    viewModel: ChatViewModel,
+    onSafeZone: () -> Unit,
+    onVoiceCall: () -> Unit = {},
+    onVideoCall: () -> Unit = {},
+    onOpenVault: () -> Unit = {},
+) {
     val state by viewModel.state.collectAsState()
 
     Column(Modifier.fillMaxSize().background(Color(0xFF0B0F14))) {
+        Row(
+            Modifier.fillMaxWidth().background(Color(0xFF11181F))
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("SubZero", color = Color.White, fontSize = 18.sp)
+            Spacer(Modifier.weight(1f))
+            TopAction("📞", onVoiceCall)
+            TopAction("🎥", onVideoCall)
+            TopAction("🗄", onOpenVault)
+        }
         LazyColumn(
             modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp),
             reverseLayout = true,
@@ -83,6 +101,15 @@ private fun MessageBubble(msg: Message) {
             Text(String(msg.body), color = Color.White)
         }
     }
+}
+
+@Composable
+private fun TopAction(glyph: String, onClick: () -> Unit) {
+    Box(
+        Modifier.padding(start = 14.dp).size(36.dp).clip(CircleShape).background(Color(0xFF16202B))
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center,
+    ) { Text(glyph, fontSize = 16.sp) }
 }
 
 // Minimal no-ripple click helper to keep the SafeZone glyph unobtrusive.

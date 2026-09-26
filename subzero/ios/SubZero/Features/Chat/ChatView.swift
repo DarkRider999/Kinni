@@ -28,12 +28,24 @@ struct ChatView: View {
     @ObservedObject var viewModel: ChatViewModel
     @ObservedObject var buffer: RamMessageBuffer
     let onSafeZone: () -> Void
+    var onVoiceCall: () -> Void = {}
+    var onVideoCall: () -> Void = {}
+    var onOpenVault: () -> Void = {}
 
     private let ink = Color(red: 0.043, green: 0.059, blue: 0.078)
     private let neon = Color(red: 0.208, green: 0.878, blue: 0.769)
 
     var body: some View {
         VStack(spacing: 0) {
+            HStack {
+                Text("SubZero").foregroundColor(.white)
+                Spacer()
+                topAction("phone.fill", onVoiceCall)
+                topAction("video.fill", onVideoCall)
+                topAction("lock.rectangle.stack.fill", onOpenVault)
+            }
+            .padding(.horizontal, 16).padding(.vertical, 12)
+            .background(Color(red: 0.067, green: 0.094, blue: 0.122))
             ScrollView {
                 LazyVStack(spacing: 8) {
                     ForEach(buffer.messages(viewModel.conversationId)) { msg in
@@ -54,6 +66,14 @@ struct ChatView: View {
             }.padding(8)
         }
         .background(ink.ignoresSafeArea())
+    }
+
+    private func topAction(_ system: String, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: system).foregroundColor(neon)
+                .frame(width: 36, height: 36).background(Color(red: 0.086, green: 0.125, blue: 0.169))
+                .clipShape(Circle())
+        }.padding(.leading, 10)
     }
 
     private func bubble(_ msg: Message) -> some View {

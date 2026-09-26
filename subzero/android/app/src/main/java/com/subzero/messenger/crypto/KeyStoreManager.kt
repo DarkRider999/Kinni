@@ -28,6 +28,17 @@ class KeyStoreManager(
     }
 
     private fun generateMasterKey(requireBiometric: Boolean) {
+        // Prefer StrongBox (dedicated secure element); many devices and all
+        // emulators lack it, so fall back to the TEE-backed Keystore rather than
+        // crashing.
+        try {
+            generateKey(requireBiometric, strongBox = true)
+        } catch (_: android.security.keystore.StrongBoxUnavailableException) {
+            generateKey(requireBiometric, strongBox = false)
+        }
+    }
+
+    private fun generateKey(requireBiometric: Boolean, strongBox: Boolean) {
         val kg = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
         val spec = KeyGenParameterSpec.Builder(
             alias,
@@ -41,8 +52,7 @@ class KeyStoreManager(
                     setUserAuthenticationRequired(true)
                     setUserAuthenticationParameters(30, KeyProperties.AUTH_BIOMETRIC_STRONG)
                 }
-                // StrongBox where available; caller falls back on StrongBoxUnavailableException.
-                setIsStrongBoxBacked(true)
+                setIsStrongBoxBacked(strongBox)
             }
             .build()
         kg.init(spec)

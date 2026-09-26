@@ -6,13 +6,18 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModelProvider
+import com.subzero.messenger.call.CallManager
+import com.subzero.messenger.call.CallType
+import com.subzero.messenger.call.LoopbackRtcEngine
 import com.subzero.messenger.crypto.CryptoEngine
 import com.subzero.messenger.data.ChatRepository
 import com.subzero.messenger.data.RamMessageBuffer
+import com.subzero.messenger.data.VaultStore
 import com.subzero.messenger.identity.AppIdentity
 import com.subzero.messenger.identity.IdentityManager
 import com.subzero.messenger.security.AppLock
 import com.subzero.messenger.security.ScreenSecurity
+import com.subzero.messenger.ui.call.CallScreen
 import com.subzero.messenger.ui.chat.ChatScreen
 import com.subzero.messenger.ui.chat.ChatViewModel
 import com.subzero.messenger.ui.decoy.CalculatorScreen
@@ -21,6 +26,7 @@ import com.subzero.messenger.ui.decoy.WeatherScreen
 import com.subzero.messenger.ui.safezone.*
 import com.subzero.messenger.ui.safezone.games.GameRegistry
 import com.subzero.messenger.ui.theme.SubZeroTheme
+import com.subzero.messenger.ui.vault.VaultScreen
 
 /**
  * Single-activity host. Owns the app-wide privacy state machine:
@@ -44,8 +50,13 @@ class MainActivity : FragmentActivity() {
 
     private val safeZoneScreenState = mutableStateOf<SafeZoneScreen?>(null)
     private val lockedState = mutableStateOf(true)
+    private val appScreenState = mutableStateOf(AppScreen.CHAT)
 
     private lateinit var safeZone: SafeZoneController
+    private lateinit var vault: VaultStore
+    private lateinit var callManager: CallManager
+
+    private enum class AppScreen { CHAT, VAULT, CALL }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,6 +65,11 @@ class MainActivity : FragmentActivity() {
         identity = IdentityManager(this)
         appLock = AppLock(this)
         repository = ChatRepository(crypto, buffer, NoopTransport)
+        vault = VaultStore(this)
+        // Media engine + signaling. The demo engine + no-op signaling let the full
+        // call UI run today; swap for WebRtcEngine + an encrypted signaling
+        // transport (E2E via CryptoEngine) to place live calls between phones.
+        callManager = CallManager(engine = LoopbackRtcEngine(), sendSignaling = { /* TODO(subzero): encrypt + send */ })
 
         safeZone = SafeZoneController(
             buffer = buffer,
@@ -71,15 +87,27 @@ class MainActivity : FragmentActivity() {
             SubZeroTheme {
                 val locked by lockedState
                 val safeScreen by safeZoneScreenState
+                val appScreen by appScreenState
                 when {
                     locked -> LockGate(onUnlock = { lockedState.value = false })
                     safeScreen != null -> SafeZoneHost(
                         screen = safeScreen!!,
                         onReturn = { safeZone.exit() },
                     )
+                    appScreen == AppScreen.VAULT -> VaultScreen(
+                        vault = vault,
+                        onBack = { appScreenState.value = AppScreen.CHAT },
+                    )
+                    appScreen == AppScreen.CALL -> CallScreen(
+                        manager = callManager,
+                        onFinished = { callManager.reset(); appScreenState.value = AppScreen.CHAT },
+                    )
                     else -> ChatScreen(
                         viewModel = chatViewModel,
                         onSafeZone = { safeZone.activate(conversationId) },
+                        onVoiceCall = { callManager.placeCall("Contact", CallType.AUDIO); appScreenState.value = AppScreen.CALL },
+                        onVideoCall = { callManager.placeCall("Contact", CallType.VIDEO); appScreenState.value = AppScreen.CALL },
+                        onOpenVault = { appScreenState.value = AppScreen.VAULT },
                     )
                 }
             }
