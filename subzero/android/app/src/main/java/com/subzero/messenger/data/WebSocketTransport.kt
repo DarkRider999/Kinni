@@ -1,6 +1,5 @@
 package com.subzero.messenger.data
 
-import android.util.Base64
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -10,32 +9,27 @@ import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
 /**
- * Delivers end-to-end-encrypted envelopes over the SubZero relay
- * ([RelayConfig]). The ratchet header and ciphertext are base64-wrapped into an
- * opaque payload — the relay never sees plaintext or keys, only routing.
- *
- * Reconnects are handled by re-creating the transport; this class keeps one live
- * socket and re-registers on open, flushing any queued outbound frames.
+ * Relay client. Implements both [ChatRepository.Transport] (opaque ciphertext
+ * envelopes) and [ChatRepository.Directory] (publish/fetch public prekey
+ * bundles) over one WebSocket to the SubZero relay. The relay only ever sees the
+ * routing address and opaque payloads — never plaintext or keys.
  */
 class WebSocketTransport(
     private val url: String,
     private val selfAddress: String,
     private val peerAddress: String,
-    private val conversationId: String,
-) : ChatRepository.Transport {
+) : ChatRepository.Transport, ChatRepository.Directory {
 
-    private val client = OkHttpClient.Builder()
-        .pingInterval(20, TimeUnit.SECONDS)
-        .build()
+    private val client = OkHttpClient.Builder().pingInterval(20, TimeUnit.SECONDS).build()
     private var socket: WebSocket? = null
-    private var handler: ((String, ByteArray, ByteArray) -> Unit)? = null
+    private var envelopeHandler: ((String) -> Unit)? = null
+    private var bundleHandler: ((String) -> Unit)? = null
     private val pending = ArrayDeque<String>()
 
     init { connect() }
 
     private fun connect() {
-        val request = Request.Builder().url(url).build()
-        socket = client.newWebSocket(request, object : WebSocketListener() {
+        socket = client.newWebSocket(Request.Builder().url(url).build(), object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 webSocket.send(JSONObject().put("t", "reg").put("address", selfAddress).toString())
                 while (pending.isNotEmpty()) webSocket.send(pending.removeFirst())
@@ -43,31 +37,37 @@ class WebSocketTransport(
 
             override fun onMessage(webSocket: WebSocket, text: String) {
                 val obj = runCatching { JSONObject(text) }.getOrNull() ?: return
-                if (obj.optString("t") != "env" || obj.optString("kind") != "message") return
-                val payload = runCatching { JSONObject(String(b64d(obj.getString("payload")))) }.getOrNull() ?: return
-                val header = b64d(payload.getString("h"))
-                val ciphertext = b64d(payload.getString("c"))
-                handler?.invoke(conversationId, header, ciphertext)
+                when (obj.optString("t")) {
+                    "env" -> if (obj.optString("kind") == "message")
+                        envelopeHandler?.invoke(obj.optString("payload"))
+                    "bundle" -> obj.optString("bundle").takeIf { it.isNotEmpty() }?.let { bundleHandler?.invoke(it) }
+                }
             }
         })
     }
 
-    override fun send(conversationId: String, header: ByteArray, ciphertext: ByteArray) {
-        val payload = JSONObject().put("h", b64e(header)).put("c", b64e(ciphertext)).toString()
-        val frame = JSONObject()
-            .put("t", "env").put("to", peerAddress).put("kind", "message")
-            .put("payload", b64e(payload.toByteArray()))
-            .toString()
+    private fun emit(frame: String) {
         val s = socket
         if (s == null || !s.send(frame)) pending.addLast(frame)
     }
 
-    override fun onReceive(handler: (String, ByteArray, ByteArray) -> Unit) {
-        this.handler = handler
+    // Transport
+    override fun send(envelope: String) {
+        emit(JSONObject().put("t", "env").put("to", peerAddress).put("kind", "message").put("payload", envelope).toString())
     }
 
-    fun close() { socket?.close(1000, null); client.dispatcher.executorService.shutdown() }
+    override fun onReceive(handler: (String) -> Unit) { envelopeHandler = handler }
 
-    private fun b64e(b: ByteArray) = Base64.encodeToString(b, Base64.NO_WRAP)
-    private fun b64d(s: String) = Base64.decode(s, Base64.NO_WRAP)
+    // Directory
+    override fun publish(bundleWire: String) {
+        emit(JSONObject().put("t", "bundle").put("address", selfAddress).put("bundle", bundleWire).toString())
+    }
+
+    override fun requestPeerBundle() {
+        emit(JSONObject().put("t", "getBundle").put("address", peerAddress).toString())
+    }
+
+    override fun onPeerBundle(handler: (String) -> Unit) { bundleHandler = handler }
+
+    fun close() { socket?.close(1000, null); client.dispatcher.executorService.shutdown() }
 }

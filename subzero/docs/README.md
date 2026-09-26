@@ -57,8 +57,9 @@ subzero/
 | Voice/video call UI + state machine + encrypted signaling model | ✅ | ✅ |
 | Live call media (WebRTC engine + signaling server) | ⚙️ engine seam | ⚙️ engine seam |
 | Relay/signaling server (zero-knowledge, store-and-forward) | ✅ built + tested (`server/`) | — |
-| Client ↔ relay transport | ✅ WebSocketTransport | ⚙️ TODO |
-| Over-the-wire X3DH session handshake | ⚙️ final wiring step | ⚙️ final wiring step |
+| Client ↔ relay transport + prekey directory | ✅ WebSocketTransport | ⚙️ TODO |
+| Over-the-wire X3DH session handshake | ✅ implemented + unit-tested | ⚙️ port from Android |
+| Two-phone E2E messaging (relay deployed) | ✅ end-to-end | ⚙️ TODO |
 
 ✅ = working implementation · ⚙️ = scaffold/interface with TODOs
 

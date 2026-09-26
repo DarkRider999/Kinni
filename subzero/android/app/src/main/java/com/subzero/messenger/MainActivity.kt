@@ -66,13 +66,15 @@ class MainActivity : FragmentActivity() {
 
         identity = IdentityManager(this)
         appLock = AppLock(this)
-        // Use the relay when configured (RelayConfig.URL set), else stay offline.
-        val transport = if (RelayConfig.enabled) {
-            WebSocketTransport(RelayConfig.URL, RelayConfig.selfAddress, RelayConfig.peerAddress, conversationId)
+        // Use the relay when configured (RelayConfig.URL set), else stay offline
+        // (messages shown locally only). The relay client is both the transport
+        // and the prekey directory.
+        if (RelayConfig.enabled) {
+            val ws = WebSocketTransport(RelayConfig.URL, RelayConfig.selfAddress, RelayConfig.peerAddress)
+            repository = ChatRepository(crypto, buffer, ws, ws, conversationId, relayEnabled = true)
         } else {
-            NoopTransport
+            repository = ChatRepository(crypto, buffer, NoopTransport, NoopDirectory, conversationId, relayEnabled = false)
         }
-        repository = ChatRepository(crypto, buffer, transport)
         vault = VaultStore(this)
         // Media engine + signaling. The demo engine + no-op signaling let the full
         // call UI run today; swap for WebRtcEngine + an encrypted signaling
@@ -160,9 +162,14 @@ class MainActivity : FragmentActivity() {
         lockedState.value = true
     }
 
-    /** Stub transport so the UI + crypto run without a backend. */
+    /** Stubs so the UI runs fully offline (messages shown locally only). */
     private object NoopTransport : ChatRepository.Transport {
-        override fun send(conversationId: String, header: ByteArray, ciphertext: ByteArray) {}
-        override fun onReceive(handler: (String, ByteArray, ByteArray) -> Unit) {}
+        override fun send(envelope: String) {}
+        override fun onReceive(handler: (String) -> Unit) {}
+    }
+    private object NoopDirectory : ChatRepository.Directory {
+        override fun publish(bundleWire: String) {}
+        override fun requestPeerBundle() {}
+        override fun onPeerBundle(handler: (String) -> Unit) {}
     }
 }
