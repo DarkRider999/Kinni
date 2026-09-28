@@ -14,11 +14,14 @@ import android.content.pm.PackageManager
  */
 enum class AppIdentity(val aliasSuffix: String, val label: String) {
     DEFAULT("Default", "SubZero"),
-    CALCULATOR("Calculator", "Calculator"),
-    NOTES("Notes", "Notes"),
-    WEATHER("Weather", "Weather"),
-    GALLERY("Gallery", "Gallery"),
-    SYSTEM_UPDATE("System", "System Update");
+    // Non-standard utility disguises (unlikely to duplicate stock apps). The
+    // aliasSuffix values are internal component ids kept stable for the manifest
+    // aliases; only the visible label/icon changed.
+    CALCULATOR("Calculator", "Toolbox"),
+    NOTES("Notes", "Ledger"),
+    WEATHER("Weather", "Converter"),
+    GALLERY("Gallery", "Planner"),
+    SYSTEM_UPDATE("System", "Compass");
 }
 
 class IdentityManager(private val context: Context) {

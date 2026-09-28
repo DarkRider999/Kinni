@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">SubZero</string>
-    <string name="alias_calculator">Calculator</string>
-    <string name="alias_notes">Notes</string>
-    <string name="alias_weather">Weather</string>
-    <string name="alias_gallery">Gallery</string>
-    <string name="alias_system">System Update</string>
+    <!-- Disguise labels (non-standard utilities, unlikely to duplicate stock apps). -->
+    <string name="alias_calculator">Toolbox</string>
+    <string name="alias_notes">Ledger</string>
+    <string name="alias_weather">Converter</string>
+    <string name="alias_gallery">Planner</string>
+    <string name="alias_system">Compass</string>
 </resources>

@@ -1,16 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Gallery: white photo frame with a sun and mountain range. -->
+<!-- Planner: a clipboard checklist. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
     <group>
-        <!-- frame -->
-        <path android:strokeColor="#FFFFFF" android:strokeWidth="4"
-            android:pathData="M34,30 h40 v48 h-40 z" />
-        <!-- sun -->
-        <path android:fillColor="#FFD23F" android:pathData="M45,42 a5,5 0 1,0 0.1,0 z" />
-        <!-- mountains -->
-        <path android:fillColor="#FFFFFF"
-            android:pathData="M36,74 L50,54 L58,64 L66,50 L72,74 z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M36,32 h36 v46 h-36 z" />
+        <path android:fillColor="#4A148C" android:pathData="M48,28 h12 v8 h-12 z" />
+        <!-- rows: check boxes + lines -->
+        <path android:strokeColor="#7E57C2" android:strokeWidth="3"
+            android:pathData="M42,46 h6 v6 h-6 z M42,58 h6 v6 h-6 z M42,70 h6 v6 h-6 z" />
+        <path android:strokeColor="#B39DDB" android:strokeWidth="3" android:strokeLineCap="round"
+            android:pathData="M54,49 L66,49 M54,61 L66,61 M54,73 L66,73" />
     </group>
 </vector>

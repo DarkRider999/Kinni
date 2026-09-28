@@ -1,16 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Notes: white page with a colored header bar and text lines. -->
+<!-- Ledger: an account book with a column divider and ruled lines. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp"
     android:viewportWidth="108" android:viewportHeight="108">
     <group>
-        <path android:fillColor="#FFFFFF" android:pathData="M34,26 h40 v56 h-40 z" />
-        <path android:fillColor="#E6A700" android:pathData="M34,26 h40 v9 h-40 z" />
-        <path android:strokeColor="#666666" android:strokeWidth="3"
-            android:strokeLineCap="round" android:pathData="M42,46 L66,46" />
-        <path android:strokeColor="#666666" android:strokeWidth="3"
-            android:strokeLineCap="round" android:pathData="M42,56 L66,56" />
-        <path android:strokeColor="#666666" android:strokeWidth="3"
-            android:strokeLineCap="round" android:pathData="M42,66 L58,66" />
+        <path android:fillColor="#FBF3D9" android:pathData="M36,28 h40 v52 h-40 z" />
+        <path android:fillColor="#1B5E20" android:pathData="M36,28 h6 v52 h-6 z" />
+        <path android:strokeColor="#7A8B5A" android:strokeWidth="2"
+            android:pathData="M60,34 L60,74" />
+        <path android:strokeColor="#9AA77A" android:strokeWidth="2"
+            android:pathData="M46,42 L56,42 M64,42 L72,42 M46,52 L56,52 M64,52 L72,52 M46,62 L56,62 M64,62 L72,62" />
     </group>
 </vector>

@@ -2,9 +2,9 @@
 <resources>
     <!-- Adaptive-icon background colors, one per disguise identity. -->
     <color name="ic_bg_subzero">#0B0F14</color>
-    <color name="ic_bg_calc">#2A2A2E</color>
-    <color name="ic_bg_notes">#F7CE46</color>
-    <color name="ic_bg_weather">#4AA3F0</color>
-    <color name="ic_bg_gallery">#5B8DEF</color>
-    <color name="ic_bg_system">#3C4043</color>
+    <color name="ic_bg_calc">#455A64</color>   <!-- Toolbox   -->
+    <color name="ic_bg_notes">#2E7D32</color>  <!-- Ledger    -->
+    <color name="ic_bg_weather">#1565C0</color><!-- Converter -->
+    <color name="ic_bg_gallery">#6A1B9A</color><!-- Planner   -->
+    <color name="ic_bg_system">#263238</color> <!-- Compass    -->
 </resources>
