@@ -114,7 +114,7 @@ function send(ws, obj) { try { ws.send(JSON.stringify(obj)); } catch {} }
 
 // Address = a client-chosen routing id (e.g. a hash of the identity key).
 // It is opaque to the server; we only sanity-check shape.
-function validAddress(a) { return typeof a === 'string' && a.length >= 8 && a.length <= 128; }
+function validAddress(a) { return typeof a === 'string' && a.length >= 3 && a.length <= 128; }
 
 // Auto-start only when run directly (`node src/server.js`); tests import and
 // control the listener themselves.

@@ -70,7 +70,13 @@ class ChatRepository(
     private fun transmit(text: String) {
         try {
             if (!crypto.hasSession(conversationId)) {
-                val bundle = peerBundleWire ?: run { outbox.addLast(text); return }
+                val bundle = peerBundleWire ?: run {
+                    // Peer's key not fetched yet (they may have come online after
+                    // us). Queue and re-request; onPeerBundle() flushes the outbox.
+                    outbox.addLast(text)
+                    directory.requestPeerBundle()
+                    return
+                }
                 val handshake = crypto.startOutbound(conversationId, bundle)
                 pendingHandshake = CryptoEngine.Wire.encodeHandshake(handshake)
             }
