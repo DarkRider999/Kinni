@@ -4,14 +4,19 @@ import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.clip
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -222,11 +227,21 @@ class MainActivity : FragmentActivity() {
 
     @Composable
     private fun SafeZoneHost(screen: SafeZoneScreen, onReturn: () -> Unit) {
-        if (screen.isGame) GameRegistry.render(screen)
-        else when (screen) {
-            SafeZoneScreen.NOTES -> NotesScreen()
-            SafeZoneScreen.WEATHER -> WeatherScreen()
-            else -> CalculatorScreen()
+        Box(Modifier.fillMaxSize()) {
+            if (screen.isGame) GameRegistry.render(screen)
+            else when (screen) {
+                SafeZoneScreen.NOTES -> NotesScreen()
+                SafeZoneScreen.WEATHER -> WeatherScreen()
+                else -> CalculatorScreen()
+            }
+            // Subtle back-to-chat control (top-left). Also: double-tap top-right,
+            // or press Volume-Down twice.
+            Box(
+                Modifier.align(Alignment.TopStart).padding(10.dp).size(40.dp)
+                    .clip(CircleShape).background(Color(0x55000000))
+                    .clickable { onReturn() },
+                contentAlignment = Alignment.Center,
+            ) { Text("‹", color = Color(0xCCFFFFFF), fontSize = 22.sp) }
         }
     }
 
