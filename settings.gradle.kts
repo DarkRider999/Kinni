@@ -25,3 +25,4 @@ dependencyResolutionManagement {
 rootProject.name = "Kinni"
 
 include(":app")
+include(":luckynumbers")
