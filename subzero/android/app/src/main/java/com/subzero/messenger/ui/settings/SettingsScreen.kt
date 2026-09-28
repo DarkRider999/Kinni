@@ -59,7 +59,7 @@ fun SettingsScreen(
                 color = Color(0xFF9AA0A6), fontSize = 13.sp, modifier = Modifier.padding(bottom = 6.dp))
             LabeledField("Relay URL", "wss://your-relay.onrender.com", url) { url = it }
             LabeledField("Your address", "e.g. roshan", self) { self = it }
-            LabeledField("Their address", "e.g. priya", peer) { peer = it }
+            LabeledField("Their address", "e.g. anjali", peer) { peer = it }
             Row(Modifier.padding(top = 8.dp)) {
                 Button(onClick = { relay.save(url, self, peer); onApplyRestart() }, modifier = Modifier.weight(1f)) {
                     Text("Save & connect")
