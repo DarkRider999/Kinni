@@ -45,6 +45,10 @@ dependencies {
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    // Portable X25519/Ed25519 so the crypto works on Android versions whose
+    // built-in provider lacks them (below Android 13). The jdk15to18 build is
+    // the Android-friendly variant.
+    implementation("org.bouncycastle:bcprov-jdk15to18:1.70")
 
     testImplementation("junit:junit:4.13.2")
 }

@@ -107,11 +107,16 @@ class MainActivity : FragmentActivity() {
         appPrefs = AppPreferences(this)
         lockedState.value = appPrefs.appLockEnabled   // only lock if the user turned it on
         val ttl = appPrefs.disappearingSeconds.takeIf { it > 0 }?.let { it * 1000L }
-        if (relaySettings.enabled) {
-            val ws = WebSocketTransport(relaySettings.url, relaySettings.selfAddress, relaySettings.peerAddress)
-            repository = ChatRepository(crypto, buffer, ws, ws, conversationId, relayEnabled = true, disappearingTtlMillis = ttl)
-        } else {
-            repository = ChatRepository(crypto, buffer, NoopTransport, NoopDirectory, conversationId, relayEnabled = false, disappearingTtlMillis = ttl)
+        repository = runCatching {
+            if (relaySettings.enabled) {
+                val ws = WebSocketTransport(relaySettings.url, relaySettings.selfAddress, relaySettings.peerAddress)
+                ChatRepository(crypto, buffer, ws, ws, conversationId, relayEnabled = true, disappearingTtlMillis = ttl)
+            } else {
+                ChatRepository(crypto, buffer, NoopTransport, NoopDirectory, conversationId, relayEnabled = false, disappearingTtlMillis = ttl)
+            }
+        }.getOrElse {
+            // Never brick on launch: fall back to a local-only repository.
+            ChatRepository(crypto, buffer, NoopTransport, NoopDirectory, conversationId, relayEnabled = false, disappearingTtlMillis = ttl)
         }
         vault = VaultStore(this)
         // Media engine + signaling. The demo engine + no-op signaling let the full

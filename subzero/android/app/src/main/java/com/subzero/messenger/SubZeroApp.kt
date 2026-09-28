@@ -17,6 +17,16 @@ import java.io.StringWriter
 class SubZeroApp : Application() {
     override fun onCreate() {
         super.onCreate()
+
+        // Register Bouncy Castle as a LOW-priority fallback so X25519 and Ed25519
+        // resolve to it on devices whose system provider lacks them (below
+        // Android 13), while AES-GCM, HMAC and the hardware-backed AndroidKeyStore
+        // keep using the system provider (BC must NOT take priority for those).
+        try {
+            java.security.Security.removeProvider("BC")
+            java.security.Security.addProvider(org.bouncycastle.jce.provider.BouncyCastleProvider())
+        } catch (_: Throwable) { /* best effort */ }
+
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, error ->
             try {

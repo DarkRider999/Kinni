@@ -17,8 +17,10 @@ import javax.crypto.KeyAgreement
  */
 object Keys {
 
+    // Named algorithms ("X25519" / "Ed25519") resolve cleanly on both the JVM's
+    // provider and Bouncy Castle (registered on Android) without curve-size init.
     fun generateX25519(): KeyPair =
-        KeyPairGenerator.getInstance("XDH").apply { initialize(255) }.generateKeyPair()
+        KeyPairGenerator.getInstance("X25519").generateKeyPair()
 
     fun generateEd25519(): KeyPair =
         KeyPairGenerator.getInstance("Ed25519").generateKeyPair()
@@ -27,11 +29,11 @@ object Keys {
     fun encodePublic(key: PublicKey): ByteArray = key.encoded
 
     fun decodeX25519Public(bytes: ByteArray): PublicKey =
-        KeyFactory.getInstance("XDH").generatePublic(X509EncodedKeySpec(bytes))
+        KeyFactory.getInstance("X25519").generatePublic(X509EncodedKeySpec(bytes))
 
     /** X25519 Diffie–Hellman shared secret. */
     fun agree(privateKey: PrivateKey, peerPublic: PublicKey): ByteArray {
-        val ka = KeyAgreement.getInstance("XDH")
+        val ka = KeyAgreement.getInstance("X25519")
         ka.init(privateKey)
         ka.doPhase(peerPublic, true)
         return ka.generateSecret()
