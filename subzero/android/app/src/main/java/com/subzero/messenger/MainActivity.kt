@@ -3,19 +3,34 @@ package com.subzero.messenger
 import android.os.Bundle
 import android.view.KeyEvent
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.Button
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.ViewModelProvider
+import kotlinx.coroutines.delay
 import com.subzero.messenger.call.CallManager
 import com.subzero.messenger.call.CallType
 import com.subzero.messenger.call.LoopbackRtcEngine
 import com.subzero.messenger.crypto.CryptoEngine
+import com.subzero.messenger.data.AppPreferences
 import com.subzero.messenger.data.ChatRepository
 import com.subzero.messenger.data.RamMessageBuffer
 import com.subzero.messenger.data.RelaySettings
 import com.subzero.messenger.data.VaultStore
 import com.subzero.messenger.data.WebSocketTransport
-import com.subzero.messenger.ui.settings.SetupScreen
+import com.subzero.messenger.ui.settings.SettingsScreen
 import com.subzero.messenger.identity.AppIdentity
 import com.subzero.messenger.identity.IdentityManager
 import com.subzero.messenger.security.AppLock
@@ -52,15 +67,16 @@ class MainActivity : FragmentActivity() {
     private var lastVolumeDown = 0L
 
     private val safeZoneScreenState = mutableStateOf<SafeZoneScreen?>(null)
-    private val lockedState = mutableStateOf(true)
+    private val lockedState = mutableStateOf(false)
     private val appScreenState = mutableStateOf(AppScreen.CHAT)
 
     private lateinit var safeZone: SafeZoneController
     private lateinit var vault: VaultStore
     private lateinit var callManager: CallManager
     private lateinit var relaySettings: RelaySettings
+    private lateinit var appPrefs: AppPreferences
 
-    private enum class AppScreen { CHAT, VAULT, CALL, SETUP }
+    private enum class AppScreen { CHAT, VAULT, CALL, SETTINGS }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -72,11 +88,14 @@ class MainActivity : FragmentActivity() {
         // (messages shown locally only). The relay client is both the transport
         // and the prekey directory.
         relaySettings = RelaySettings(this)
+        appPrefs = AppPreferences(this)
+        lockedState.value = appPrefs.appLockEnabled   // only lock if the user turned it on
+        val ttl = appPrefs.disappearingSeconds.takeIf { it > 0 }?.let { it * 1000L }
         if (relaySettings.enabled) {
             val ws = WebSocketTransport(relaySettings.url, relaySettings.selfAddress, relaySettings.peerAddress)
-            repository = ChatRepository(crypto, buffer, ws, ws, conversationId, relayEnabled = true)
+            repository = ChatRepository(crypto, buffer, ws, ws, conversationId, relayEnabled = true, disappearingTtlMillis = ttl)
         } else {
-            repository = ChatRepository(crypto, buffer, NoopTransport, NoopDirectory, conversationId, relayEnabled = false)
+            repository = ChatRepository(crypto, buffer, NoopTransport, NoopDirectory, conversationId, relayEnabled = false, disappearingTtlMillis = ttl)
         }
         vault = VaultStore(this)
         // Media engine + signaling. The demo engine + no-op signaling let the full
@@ -102,7 +121,7 @@ class MainActivity : FragmentActivity() {
                 val safeScreen by safeZoneScreenState
                 val appScreen by appScreenState
                 when {
-                    locked -> LockGate(onUnlock = { lockedState.value = false })
+                    locked -> LockScreen(onUnlock = { lockedState.value = false })
                     safeScreen != null -> SafeZoneHost(
                         screen = safeScreen!!,
                         onReturn = { safeZone.exit() },
@@ -115,9 +134,13 @@ class MainActivity : FragmentActivity() {
                         manager = callManager,
                         onFinished = { callManager.reset(); appScreenState.value = AppScreen.CHAT },
                     )
-                    appScreen == AppScreen.SETUP -> SetupScreen(
-                        settings = relaySettings,
-                        onSaved = { recreate() },   // rebuild with the new connection settings
+                    appScreen == AppScreen.SETTINGS -> SettingsScreen(
+                        relay = relaySettings,
+                        prefs = appPrefs,
+                        identity = identity,
+                        onApplyRestart = { recreate() },
+                        onOpenVault = { appScreenState.value = AppScreen.VAULT },
+                        onSecureLogout = { repository.logout(); appScreenState.value = AppScreen.CHAT },
                         onBack = { appScreenState.value = AppScreen.CHAT },
                     )
                     else -> ChatScreen(
@@ -126,21 +149,41 @@ class MainActivity : FragmentActivity() {
                         onVoiceCall = { callManager.placeCall("Contact", CallType.AUDIO); appScreenState.value = AppScreen.CALL },
                         onVideoCall = { callManager.placeCall("Contact", CallType.VIDEO); appScreenState.value = AppScreen.CALL },
                         onOpenVault = { appScreenState.value = AppScreen.VAULT },
-                        onOpenSettings = { appScreenState.value = AppScreen.SETUP },
+                        onOpenSettings = { appScreenState.value = AppScreen.SETTINGS },
                     )
                 }
             }
         }
     }
 
+    /**
+     * A real lock screen (never blank). Auto-attempts biometric once; if that
+     * fails or is cancelled, the Unlock button lets the user retry. If no
+     * biometrics are enrolled, Unlock just opens the app.
+     */
     @Composable
-    private fun LockGate(onUnlock: () -> Unit) {
-        LaunchedEffect(Unit) {
+    private fun LockScreen(onUnlock: () -> Unit) {
+        fun tryUnlock() {
             if (appLock.canAuthenticate()) {
-                appLock.authenticate(onSuccess = onUnlock, onFailure = { /* stay locked */ })
+                appLock.authenticate(onSuccess = onUnlock, onFailure = { /* stay; user can retry */ })
             } else {
-                onUnlock() // no biometrics enrolled; fall through (documented limitation)
+                onUnlock()
             }
+        }
+        LaunchedEffect(Unit) {
+            delay(300) // let the activity finish resuming before prompting
+            tryUnlock()
+        }
+        Column(
+            modifier = Modifier.fillMaxSize().background(Color(0xFF0B0F14)),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text("SubZero", color = Color(0xFF35E0C4), fontSize = 30.sp)
+            Spacer(Modifier.height(8.dp))
+            Text("Locked", color = Color(0xFF9AA0A6), fontSize = 15.sp)
+            Spacer(Modifier.height(24.dp))
+            Button(onClick = { tryUnlock() }) { Text("Unlock") }
         }
     }
 
@@ -167,8 +210,8 @@ class MainActivity : FragmentActivity() {
 
     override fun onStop() {
         super.onStop()
-        // App backgrounded: re-lock. (Secure-logout wipe is a separate user action.)
-        lockedState.value = true
+        // Re-lock on background only if the user enabled app lock (default off).
+        if (appPrefs.appLockEnabled) lockedState.value = true
     }
 
     /** Stubs so the UI runs fully offline (messages shown locally only). */

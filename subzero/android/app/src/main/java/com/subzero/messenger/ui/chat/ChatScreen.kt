@@ -13,16 +13,21 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.subzero.messenger.R
 import com.subzero.messenger.data.Message
 import com.subzero.messenger.data.MessageDirection
+import com.subzero.messenger.ui.theme.FadedBackdrop
 
 /**
  * Encrypted conversation screen. The SafeZone button sits in the input row
@@ -40,18 +45,29 @@ fun ChatScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
-    Column(Modifier.fillMaxSize().background(Color(0xFF0B0F14))) {
+    FadedBackdrop(image = R.drawable.bg1) {
+     Column(Modifier.fillMaxSize()) {
         Row(
             Modifier.fillMaxWidth().background(Color(0xFF11181F))
                 .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("SubZero", color = Color.White, fontSize = 18.sp)
+            Text("SubZero", color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.weight(1f))
-            TopAction("📞", onVoiceCall)
-            TopAction("🎥", onVideoCall)
-            TopAction("🗄", onOpenVault)
-            TopAction("⚙", onOpenSettings)
+            var menuOpen by remember { mutableStateOf(false) }
+            Box {
+                Text(
+                    "Menu  ▾", color = Color(0xFF35E0C4), fontSize = 16.sp,
+                    modifier = Modifier.clip(RoundedCornerShape(8.dp)).background(Color(0xFF16202B))
+                        .clickable { menuOpen = true }.padding(horizontal = 14.dp, vertical = 8.dp),
+                )
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(text = { Text("Settings") }, onClick = { menuOpen = false; onOpenSettings() })
+                    DropdownMenuItem(text = { Text("Encrypted vault") }, onClick = { menuOpen = false; onOpenVault() })
+                    DropdownMenuItem(text = { Text("Voice call") }, onClick = { menuOpen = false; onVoiceCall() })
+                    DropdownMenuItem(text = { Text("Video call") }, onClick = { menuOpen = false; onVideoCall() })
+                }
+            }
         }
         LazyColumn(
             modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp),
@@ -85,6 +101,7 @@ fun ChatScreen(
             Spacer(Modifier.width(8.dp))
             Button(onClick = viewModel::send) { Text("Send") }
         }
+     }
     }
 }
 
@@ -103,15 +120,6 @@ private fun MessageBubble(msg: Message) {
             Text(String(msg.body), color = Color.White)
         }
     }
-}
-
-@Composable
-private fun TopAction(glyph: String, onClick: () -> Unit) {
-    Box(
-        Modifier.padding(start = 14.dp).size(36.dp).clip(CircleShape).background(Color(0xFF16202B))
-            .clickable { onClick() },
-        contentAlignment = Alignment.Center,
-    ) { Text(glyph, fontSize = 16.sp) }
 }
 
 // Minimal no-ripple click helper to keep the SafeZone glyph unobtrusive.
