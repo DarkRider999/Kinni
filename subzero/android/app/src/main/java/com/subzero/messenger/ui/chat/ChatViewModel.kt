@@ -39,10 +39,18 @@ class ChatViewModel(
     fun onDraftChange(text: String) { _state.value = _state.value.copy(draft = text) }
 
     fun send() {
-        val s = _state.value
-        if (s.draft.isBlank()) return
-        repository.sendText(s.conversationId, s.draft.trim())
-        _state.value = s.copy(draft = "")
+        val text = _state.value.draft.trim()
+        if (text.isBlank()) return
+        val cid = _state.value.conversationId
+        repository.sendText(cid, text)
+        // Re-read from the buffer and clear the draft in one atomic update based
+        // on the CURRENT state (never a stale snapshot). Using a snapshot here
+        // previously wiped the just-added message because the buffer's update
+        // collector runs synchronously on the immediate main dispatcher.
+        _state.value = _state.value.copy(
+            messages = buffer.messages(cid),
+            draft = "",
+        )
     }
 
     fun setDisappearing(seconds: Int) {
