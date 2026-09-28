@@ -10,10 +10,11 @@ android {
 
     defaultConfig {
         applicationId = "com.subzero.messenger"
-        minSdk = 31            // API 31 for JCA XDH/Ed25519 + StrongBox
+        minSdk = 26            // Android 8.0+ (adaptive icons, Keystore). Crypto keys
+                               // are generated lazily and only when the relay is used.
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 2
+        versionName = "0.1.1"
     }
 
     buildTypes {

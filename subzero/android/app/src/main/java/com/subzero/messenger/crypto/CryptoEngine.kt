@@ -22,10 +22,13 @@ import java.util.concurrent.ConcurrentHashMap
  */
 class CryptoEngine {
 
-    private val identitySign: KeyPair = Keys.generateEd25519()
-    private val identityX: KeyPair = Keys.generateX25519()
-    private val signedPreKey: KeyPair = Keys.generateX25519()
-    private val signedPreKeySignature: ByteArray = sign(Keys.encodePublic(signedPreKey.public))
+    // Generated lazily on first use (publishing a bundle / establishing a session)
+    // so the app runs offline on devices without XDH/Ed25519 without crashing at
+    // launch; the offline path never touches these.
+    private val identitySign: KeyPair by lazy { Keys.generateEd25519() }
+    private val identityX: KeyPair by lazy { Keys.generateX25519() }
+    private val signedPreKey: KeyPair by lazy { Keys.generateX25519() }
+    private val signedPreKeySignature: ByteArray by lazy { sign(Keys.encodePublic(signedPreKey.public)) }
 
     private val sessions = ConcurrentHashMap<String, DoubleRatchet>()
 

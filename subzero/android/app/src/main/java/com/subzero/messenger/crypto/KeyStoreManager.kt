@@ -28,12 +28,13 @@ class KeyStoreManager(
     }
 
     private fun generateMasterKey(requireBiometric: Boolean) {
-        // Prefer StrongBox (dedicated secure element); many devices and all
-        // emulators lack it, so fall back to the TEE-backed Keystore rather than
-        // crashing.
+        // Prefer StrongBox (API 28+) when present; fall back to the TEE-backed
+        // Keystore otherwise. Both the "no StrongBox API" (< 28) and the
+        // "StrongBox unavailable" cases fall back cleanly rather than crashing.
+        val strongBoxSupported = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P
         try {
-            generateKey(requireBiometric, strongBox = true)
-        } catch (_: android.security.keystore.StrongBoxUnavailableException) {
+            generateKey(requireBiometric, strongBox = strongBoxSupported)
+        } catch (_: Exception) {
             generateKey(requireBiometric, strongBox = false)
         }
     }
@@ -50,9 +51,19 @@ class KeyStoreManager(
             .apply {
                 if (requireBiometric) {
                     setUserAuthenticationRequired(true)
-                    setUserAuthenticationParameters(30, KeyProperties.AUTH_BIOMETRIC_STRONG)
+                    // setUserAuthenticationParameters is API 30+; use the older
+                    // validity-duration form on 26–29.
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                        setUserAuthenticationParameters(30, KeyProperties.AUTH_BIOMETRIC_STRONG)
+                    } else {
+                        @Suppress("DEPRECATION")
+                        setUserAuthenticationValidityDurationSeconds(30)
+                    }
                 }
-                setIsStrongBoxBacked(strongBox)
+                // setIsStrongBoxBacked is API 28+.
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                    setIsStrongBoxBacked(strongBox)
+                }
             }
             .build()
         kg.init(spec)
