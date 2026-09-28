@@ -28,6 +28,7 @@
             android:name=".MainActivity"
             android:exported="false"
             android:excludeFromRecents="false"
+            android:windowSoftInputMode="adjustResize"
             android:launchMode="singleTask" />
 
         <activity-alias

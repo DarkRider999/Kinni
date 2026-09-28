@@ -8,6 +8,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -46,7 +47,7 @@ fun ChatScreen(
     val state by viewModel.state.collectAsState()
 
     FadedBackdrop(image = R.drawable.bg1) {
-     Column(Modifier.fillMaxSize()) {
+     Column(Modifier.fillMaxSize().imePadding()) {
         Row(
             Modifier.fillMaxWidth().background(Color(0xFF11181F))
                 .padding(horizontal = 16.dp, vertical = 12.dp),
@@ -117,7 +118,7 @@ private fun MessageBubble(msg: Message) {
                 .background(if (outbound) Color(0xFF1C7A6E) else Color(0xFF1B2530))
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         ) {
-            Text(String(msg.body), color = Color.White)
+            Text(runCatching { String(msg.body) }.getOrDefault(""), color = Color.White)
         }
     }
 }
