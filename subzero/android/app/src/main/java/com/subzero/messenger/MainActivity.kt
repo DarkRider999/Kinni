@@ -9,6 +9,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -69,6 +72,7 @@ class MainActivity : FragmentActivity() {
     private val safeZoneScreenState = mutableStateOf<SafeZoneScreen?>(null)
     private val lockedState = mutableStateOf(false)
     private val appScreenState = mutableStateOf(AppScreen.CHAT)
+    private val crashState = mutableStateOf<String?>(null)
 
     private lateinit var safeZone: SafeZoneController
     private lateinit var vault: VaultStore
@@ -81,6 +85,13 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ScreenSecurity.protect(this)
+
+        // If the app crashed last time, surface the reason (then clear it).
+        val crashFile = java.io.File(filesDir, SubZeroApp.CRASH_FILE)
+        if (crashFile.exists()) {
+            crashState.value = runCatching { crashFile.readText() }.getOrNull()
+            crashFile.delete()
+        }
 
         identity = IdentityManager(this)
         appLock = AppLock(this)
@@ -120,7 +131,9 @@ class MainActivity : FragmentActivity() {
                 val locked by lockedState
                 val safeScreen by safeZoneScreenState
                 val appScreen by appScreenState
+                val crash by crashState
                 when {
+                    crash != null -> CrashScreen(crash!!) { crashState.value = null }
                     locked -> LockScreen(onUnlock = { lockedState.value = false })
                     safeScreen != null -> SafeZoneHost(
                         screen = safeScreen!!,
@@ -184,6 +197,26 @@ class MainActivity : FragmentActivity() {
             Text("Locked", color = Color(0xFF9AA0A6), fontSize = 15.sp)
             Spacer(Modifier.height(24.dp))
             Button(onClick = { tryUnlock() }) { Text("Unlock") }
+        }
+    }
+
+    /** Shows a captured crash so it can be screenshotted/shared, then dismissed. */
+    @Composable
+    private fun CrashScreen(text: String, onDismiss: () -> Unit) {
+        val scroll = rememberScrollState()
+        Column(
+            modifier = Modifier.fillMaxSize().background(Color(0xFF0B0F14))
+                .padding(16.dp).verticalScroll(scroll),
+        ) {
+            Text("Something went wrong", color = Color(0xFFE05A5A), fontSize = 20.sp)
+            Spacer(Modifier.height(4.dp))
+            Text("Screenshot this and send it to Roshan, then tap Dismiss.",
+                color = Color(0xFF9AA0A6), fontSize = 13.sp)
+            Spacer(Modifier.height(12.dp))
+            Text(text, color = Color(0xFFCED2D6), fontSize = 11.sp)
+            Spacer(Modifier.height(16.dp))
+            Button(onClick = onDismiss) { Text("Dismiss") }
+            Spacer(Modifier.height(40.dp))
         }
     }
 
