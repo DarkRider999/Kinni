@@ -130,7 +130,7 @@ fun SettingsScreen(c: AppContainer) {
         item {
             GlowCard(Modifier.fillMaxWidth()) {
                 ToggleRow("Crossfade (next song overlaps, no gaps)", s.autoFaderEnabled) { on -> c.settingsRepo.update { it.copy(autoFaderEnabled = on) } }
-                LabeledSlider("Crossfade overlap", s.crossfadeSeconds, 0f..12f, { if (it < 0.5f) "gapless" else "%.0f s".format(it) }) { v -> c.settingsRepo.update { it.copy(crossfadeSeconds = Math.round(v).toFloat()) } }
+                LabeledSlider("Crossfade overlap", s.crossfadeSeconds, 0f..30f, { if (it < 0.5f) "gapless" else "%.0f s".format(it) }) { v -> c.settingsRepo.update { it.copy(crossfadeSeconds = Math.round(v).toFloat()) } }
                 Text("Recommended: 4–6 s for playlists and mixes · 0 s (gapless) for live albums and DJ sets", color = p.muted, style = MaterialTheme.typography.labelSmall)
                 ToggleRow("Smart audio normalization", s.normalization) { on -> c.settingsRepo.update { it.copy(normalization = on) } }
                 ToggleRow("Speaker boost", fx.speakerBoost) { on -> c.audio.setSpeakerBoost(on) }

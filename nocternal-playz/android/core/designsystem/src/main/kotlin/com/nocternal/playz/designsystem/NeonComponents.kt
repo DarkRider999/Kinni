@@ -198,14 +198,14 @@ fun NeonLogo(modifier: Modifier = Modifier, showByline: Boolean = true) {
     val p = Neon.palette
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            "NOCTERNAL PLAYZ",
+            "NOCTERNAL PLAY",
             style = MaterialTheme.typography.displaySmall.copy(
-                brush = Brush.horizontalGradient(listOf(p.accent, p.secondary)),
-                shadow = androidx.compose.ui.graphics.Shadow(p.accent.copy(alpha = p.glow), Offset.Zero, 24f),
+                brush = Brush.horizontalGradient(listOf(p.accent, p.secondary, p.accent)),
+                shadow = androidx.compose.ui.graphics.Shadow(p.accent.copy(alpha = p.glow), Offset.Zero, 30f),
                 fontSize = 26.sp,
             ),
         )
-        if (showByline) Text("by Roshan", style = MaterialTheme.typography.labelSmall, color = p.muted)
+        if (showByline) Text("by SplitFire Production", style = MaterialTheme.typography.labelSmall.copy(shadow = androidx.compose.ui.graphics.Shadow(p.secondary.copy(alpha = p.glow), Offset.Zero, 14f)), color = p.secondary)
     }
 }
 

@@ -26,6 +26,8 @@ enum class LightingAnimation(val label: String, val description: String) {
     STARFALL_REACTIVE("Starfall Reactive", "Falling stars; new stars spawn on treble transients"),
     CRYSTAL_GRID("Crystal Grid", "Perspective neon grid whose nodes light up with the bands"),
     INFINITY_LOOP("Infinity Loop", "A lemniscate trail that breathes with the music"),
+    HALLUCINATION_BLOOM("Hallucination Bloom", "Prism, aurora and vortex layers bleed together into a melting, trippy wash"),
+    KALEIDOSCOPE_DRIFT("Kaleidoscope Drift", "Vortex and prism overlaid into a shifting kaleidoscopic haze"),
 }
 
 @Serializable

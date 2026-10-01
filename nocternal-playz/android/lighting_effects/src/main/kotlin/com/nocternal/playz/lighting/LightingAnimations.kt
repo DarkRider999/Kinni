@@ -52,6 +52,8 @@ object LightingAnimations {
             LightingAnimation.BASS_SHOCK_FLASH -> bassShock(f)
             LightingAnimation.PRISM_CYCLE -> prism(f)
             LightingAnimation.VORTEX_SPIRAL -> vortex(f)
+            LightingAnimation.HALLUCINATION_BLOOM -> { aurora(f); prism(f); vortex(f) }
+            LightingAnimation.KALEIDOSCOPE_DRIFT -> { prism(f); vortex(f); aurora(f) }
             LightingAnimation.EQ_BAR_MIRAGE -> eqMirage(f)
             LightingAnimation.STARFALL_REACTIVE -> starfall(f, stars)
             LightingAnimation.CRYSTAL_GRID -> crystalGrid(f)

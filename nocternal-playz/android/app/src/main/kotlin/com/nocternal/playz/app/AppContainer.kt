@@ -102,10 +102,12 @@ class AppContainer(val context: Context) {
             val (title, artist) = LyricsQuery.of(track)
             val genre = genreDetector.detect(track)?.genre?.displayName ?: "pop"
             val mood = moodDetector.detect(track)?.mood?.label ?: "any"
-            val prompt = "Write ORIGINAL song lyrics for a song titled \"$title\"" + (artist?.let { " (artist: $it)" } ?: "") +
-                ", genre $genre, mood $mood. Do not reproduce, quote or paraphrase the real lyrics of any existing song; " +
-                "write new words inspired only by the title and mood. If the title is Hindi or Hinglish, write in Hinglish (Latin script). " +
-                "18 to 26 short lines with verse and chorus. Output only the lyric lines, one per line, no headings or notes."
+            val prompt = "Show the lyrics of the song \"$title\"" + (artist?.let { " by $it" } ?: "") +
+                ". Write ALL lyrics in English script (Latin/Roman letters). " +
+                "For Hindi, Punjabi, or any non-English words, write them as they sound in English letters (transliteration) — " +
+                "match exactly what the singer sings, word for word. Example: 'Tujhe dekha toh yeh jaana sanam' not a translation. " +
+                "Keep English parts in English. Do not translate — transliterate. " +
+                "Output only the lyric lines, one per line, no headings, labels or notes."
             val text = ClaudeAssistantLlm(key).complete("You write song lyrics.", listOf(LlmTurn(LlmRole.USER, prompt)))
             val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("[") && !it.startsWith("#") && !it.startsWith("(") }.take(40)
             return if (lines.size < 4) null else LyricsTiming.spread(lines, track.durationMs, LyricsOrigin.AI_GENERATED)

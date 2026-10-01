@@ -65,7 +65,7 @@ fun NocternalTheme(state: NeonThemeState, userMode: ThemeMode = state.mode, cont
     val dark = mode != ThemeMode.LIGHT
     val accent by animateColorAsState(state.accent.toColor(), tween(600), label = "accent")
     val secondary by animateColorAsState(state.secondaryAccent.toColor(), tween(600), label = "secondary")
-    val glow by animateFloatAsState(if (mode == ThemeMode.NEON || mode == ThemeMode.AMOLED) state.glowIntensity else state.glowIntensity * 0.4f, tween(600), label = "glow")
+    val glow by animateFloatAsState(if (mode == ThemeMode.NEON || mode == ThemeMode.AMOLED) state.glowIntensity.coerceIn(0f, 1f) else state.glowIntensity.coerceIn(0f, 1f) * 0.55f, tween(600), label = "glow")
     val background = when (mode) {
         ThemeMode.AMOLED -> Color.Black
         ThemeMode.NEON -> Color(0xFF0A0A0F)

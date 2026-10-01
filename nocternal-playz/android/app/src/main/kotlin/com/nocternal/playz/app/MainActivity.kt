@@ -9,10 +9,15 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
+import com.nocternal.playz.app.ui.NeonSplashScreen
 import com.nocternal.playz.app.ui.NocternalRoot
 import com.nocternal.playz.audio.PlaybackService
 
@@ -32,7 +37,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val app = application as NocternalApplication
-        setContent { NocternalRoot(app.container, app.actions) }
+        setContent {
+            var showSplash by rememberSaveable { mutableStateOf(true) }
+            if (showSplash) {
+                NeonSplashScreen(onFinished = { showSplash = false })
+            } else {
+                NocternalRoot(app.container, app.actions)
+            }
+        }
 
         val wanted = buildList {
             add(audioPermission)
