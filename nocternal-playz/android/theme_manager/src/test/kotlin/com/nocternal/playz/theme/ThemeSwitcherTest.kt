@@ -38,7 +38,7 @@ class ThemeSwitcherTest {
         val d = switcher.onEvent(ThemeEvent.SongStarted(track("Om Jai Jagdish", genre = "Bhajan")))
         assertNotNull(d)
         assertEquals("sacred_gold_aura", d!!.preset.id)
-        assertEquals(LightingAnimation.AURORA_RIBBON, rec.anim)
+        assertEquals(LightingAnimation.PULSE_WAVE_SPECTRUM, rec.anim)
         assertEquals("vocal_clarity", rec.eq!!.id)
         assertEquals(NeonColor.hex("#FFC940"), store.state.value.accent)
         assertEquals(BackgroundStyle.SACRED_MANDALA, store.state.value.background)
@@ -54,8 +54,8 @@ class ThemeSwitcherTest {
         expected.forEach { (genre, preset) ->
             assertEquals(preset, ThemePresets.byId(GenreCatalog.genreThemeMap.getValue(genre)).name)
         }
-        assertEquals(LightingAnimation.INFINITY_LOOP, ThemePresets.EMERALD_TRANQUILITY.lightBarAnimation)
-        assertEquals(LightingAnimation.PRISM_CYCLE, ThemePresets.ROYAL_PURPLE_GOLD.lightBarAnimation)
+        assertEquals(LightingAnimation.PULSE_WAVE_SPECTRUM, ThemePresets.EMERALD_TRANQUILITY.lightBarAnimation)
+        assertEquals(LightingAnimation.PULSE_WAVE_SPECTRUM, ThemePresets.ROYAL_PURPLE_GOLD.lightBarAnimation)
         // Every genre points at a real preset and a real EQ.
         GenreCatalog.all.forEach {
             assertEquals(it.themePresetId, ThemePresets.byId(it.themePresetId).id)
