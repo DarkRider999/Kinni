@@ -53,20 +53,20 @@ class AssistantTest {
         assertTrue(r.actions.contains(AssistantAction.SwitchSource(AudioSource.RADIO)))
     }
 
-    @Test fun unknownGoesToLlmAndCanTriggerActions() = runTest {
-        val llm = AssistantLlm { system, turns ->
-            assertTrue(system.contains("NOCTERNAL PLAYZ")); assertEquals("why is trance so uplifting", turns.last().text)
-            "Rising chord progressions and long breakdowns.\nACTION: boost bass"
-        }
-        val r = AssistantEngine(llm).handle("why is trance so uplifting", ctx)
-        assertTrue(r.fromLlm)
-        assertEquals("Rising chord progressions and long breakdowns.", r.reply)
-        assertEquals(listOf(AssistantAction.ChangeBass(0.2f)), r.actions)
+    @Test fun unknownCommandsGetOfflineHelpText() = runTest {
+        val r = AssistantEngine().handle("why is trance so uplifting", ctx)
+        assertTrue(r.reply.contains("play trance playlist"))
+        assertTrue(r.actions.isEmpty())
     }
 
-    @Test fun llmErrorsAreFriendly() = runTest {
-        val r = AssistantEngine(AssistantLlm { _, _ -> error("offline") }).handle("tell me a story", ctx)
-        assertTrue(r.reply.contains("offline"))
+    @Test fun botCanToggleAnyAppSetting() {
+        assertEquals(AssistantIntent.ToggleSetting(AppSettingKey.GAPLESS, true), CommandParser.parse("turn on gapless"))
+        assertEquals(AssistantIntent.ToggleSetting(AppSettingKey.PRIVATE_MODE, false), CommandParser.parse("turn off private mode"))
+        assertEquals(AssistantIntent.ToggleSetting(AppSettingKey.SPEAKER_SAFE_MODE, true), CommandParser.parse("enable speaker safe mode"))
+        assertEquals(AssistantIntent.SetCrossfade(8f), CommandParser.parse("set crossfade to 8 seconds"))
+
+        val r = AssistantEngine().execute(AssistantIntent.ToggleSetting(AppSettingKey.GAPLESS, true), ctx)
+        assertEquals(listOf(AssistantAction.UpdateSetting(AppSettingKey.GAPLESS, true)), r.actions)
     }
 
     @Test fun moodAndEqAdvice() {

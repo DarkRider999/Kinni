@@ -53,7 +53,6 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.util.Calendar
@@ -145,18 +144,15 @@ class AppContainer(val context: Context) {
         register(ScrobblerPlugin()); register(PomodoroPlugin()); register(BeatCounterPlugin())
         discover()
     }
-    private val _assistant = MutableStateFlow(buildAssistant(null))
-    val assistant: StateFlow<AssistantEngine> = _assistant.asStateFlow()
+    /** The Nocternal Bot: fully on-device, no API key needed — it can also change any app setting. */
+    val assistant: AssistantEngine = AssistantEngine(
+        pluginHandler = { plugins.dispatchAssistantCommand(it) },
+        genres = genreDetector, moods = moodDetector, recommender = recommender, art = artGenerator,
+    )
 
     /** Pending search to hand to the YouTube / Radio panels (set by the assistant). */
     val panelSearch = MutableStateFlow<Pair<AudioSource, String>?>(null)
     val requestedSource = MutableStateFlow<AudioSource?>(null)
-
-    private fun buildAssistant(apiKey: String?) = AssistantEngine(
-        llm = apiKey?.takeIf { it.isNotBlank() }?.let { ClaudeAssistantLlm(it) },
-        pluginHandler = { plugins.dispatchAssistantCommand(it) },
-        genres = genreDetector, moods = moodDetector, recommender = recommender, art = artGenerator,
-    )
 
     fun start() {
         scope.launch { library.load() }
@@ -178,8 +174,6 @@ class AppContainer(val context: Context) {
                 offline.scheduleAutoDownload(s)
             }
         }
-        scope.launch { settingsRepo.settings.map { it.assistantApiKey }.distinctUntilChanged().collect { _assistant.value = buildAssistant(it) } }
-
         scope.launch {
             audio.events.collect { e ->
                 when (e) {

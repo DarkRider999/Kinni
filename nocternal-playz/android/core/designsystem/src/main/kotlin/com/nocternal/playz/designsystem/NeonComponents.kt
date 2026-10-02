@@ -9,7 +9,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -25,10 +27,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PlainTooltip
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberUpdatedState
@@ -105,19 +112,27 @@ fun NeonButton(text: String, modifier: Modifier = Modifier, icon: ImageVector? =
     }
 }
 
+/** A round neon icon button that always shows [contentDescription] as a tooltip on hover or long-press. */
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun NeonIconButton(icon: ImageVector, contentDescription: String?, modifier: Modifier = Modifier, size: Dp = 48.dp, active: Boolean = false, onClick: () -> Unit) {
+fun NeonIconButton(icon: ImageVector, contentDescription: String?, modifier: Modifier = Modifier, size: Dp = 48.dp, active: Boolean = false, onLongClick: (() -> Unit)? = null, onClick: () -> Unit) {
     val p = Neon.palette
-    Box(
-        modifier
-            .size(size)
-            .neonGlow(p.accent, if (active) p.glow else p.glow * 0.25f, corner = size / 2)
-            .clip(CircleShape)
-            .background(if (active) p.accent.copy(alpha = 0.2f) else p.surface)
-            .border(1.dp, p.accent.copy(alpha = if (active) 1f else 0.4f), CircleShape)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) { Icon(icon, contentDescription, tint = if (active) p.accent else p.onBackground, modifier = Modifier.size(size * 0.5f)) }
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberPlainTooltipPositionProvider(),
+        tooltip = { if (contentDescription != null) PlainTooltip { Text(contentDescription) } },
+        state = rememberTooltipState(),
+    ) {
+        Box(
+            modifier
+                .size(size)
+                .neonGlow(p.accent, if (active) p.glow else p.glow * 0.25f, corner = size / 2)
+                .clip(CircleShape)
+                .background(if (active) p.accent.copy(alpha = 0.2f) else p.surface)
+                .border(1.dp, p.accent.copy(alpha = if (active) 1f else 0.4f), CircleShape)
+                .combinedClickable(onLongClick = onLongClick, onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) { Icon(icon, contentDescription, tint = if (active) p.accent else p.onBackground, modifier = Modifier.size(size * 0.5f)) }
+    }
 }
 
 @Composable

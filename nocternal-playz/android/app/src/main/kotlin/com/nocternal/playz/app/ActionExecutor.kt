@@ -1,5 +1,6 @@
 package com.nocternal.playz.app
 
+import com.nocternal.playz.ai.AppSettingKey
 import com.nocternal.playz.ai.AssistantAction
 import com.nocternal.playz.ai.AssistantContext
 import com.nocternal.playz.ai.EqAdvisor
@@ -63,6 +64,26 @@ class ActionExecutor(private val c: AppContainer) {
             AssistantAction.StartRecognition -> _recognitionRequests.tryEmit(Unit)
             is AssistantAction.ShowAlbumArt -> Unit // rendered inline in the chat
             is AssistantAction.EnableAutoMix -> c.audio.setAutoMix(a.on)
+            is AssistantAction.UpdateSetting -> applySettingToggle(a.setting, a.on)
+            is AssistantAction.SetCrossfadeSeconds -> c.settingsRepo.update { it.copy(crossfadeSeconds = a.seconds, autoFaderEnabled = true) }
+        }
+    }
+
+    /** The bot's "change any setting" path: one switch mapping every [AppSettingKey] to its real AppSettings field. */
+    private fun applySettingToggle(key: AppSettingKey, on: Boolean) = c.settingsRepo.update {
+        when (key) {
+            AppSettingKey.GAPLESS -> it.copy(gapless = on)
+            AppSettingKey.NORMALIZATION -> it.copy(normalization = on)
+            AppSettingKey.SPEAKER_SAFE_MODE -> it.copy(speakerSafeMode = on)
+            AppSettingKey.PRIVATE_MODE -> it.copy(privateMode = on)
+            AppSettingKey.AUTO_THEME_BY_GENRE -> it.copy(autoThemeByGenre = on)
+            AppSettingKey.AUTO_THEME_BY_MOOD -> it.copy(autoThemeByMood = on)
+            AppSettingKey.AUTO_THEME_BY_TIME -> it.copy(autoThemeByTime = on)
+            AppSettingKey.EQ_FOLLOWS_THEME -> it.copy(eqFollowsTheme = on)
+            AppSettingKey.USE_WIFI -> it.copy(useWifi = on)
+            AppSettingKey.USE_MOBILE_DATA -> it.copy(useMobileData = on)
+            AppSettingKey.AUTO_DOWNLOAD_LYRICS -> it.copy(autoDownloadLyrics = on)
+            AppSettingKey.AUTO_DOWNLOAD_ARTWORK -> it.copy(autoDownloadArtwork = on)
         }
     }
 }

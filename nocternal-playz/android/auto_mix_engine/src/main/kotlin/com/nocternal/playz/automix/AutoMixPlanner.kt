@@ -48,7 +48,8 @@ class AutoMixPlanner(
             .toList()
     }
 
-    fun next(current: Track, pool: List<Track>, recentlyPlayed: Set<String> = emptySet()): Candidate? = rank(current, pool, recentlyPlayed).firstOrNull()
+    fun next(current: Track, pool: List<Track>, recentlyPlayed: Set<String> = emptySet(), wantEnergyRise: Boolean = false): Candidate? =
+        rank(current, pool, recentlyPlayed, wantEnergyRise).firstOrNull()
 
     /**
      * Plans the blend. Transition length is a whole number of bars (8 or 16 at the current tempo), clamped to

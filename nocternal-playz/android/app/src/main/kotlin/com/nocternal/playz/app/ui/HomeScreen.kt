@@ -192,7 +192,7 @@ private fun LocalPanel(c: AppContainer, actions: ActionExecutor, onOpenPlayer: (
         item { SectionTitle("AI ideas") }
         item {
             LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(ideas) { idea -> NeonChip("✨ $idea") { scope.launch { actions.run(c.assistant.value.handle("suggest a $idea playlist", actions.context()).actions) } } }
+                items(ideas) { idea -> NeonChip("✨ $idea") { scope.launch { actions.run(c.assistant.handle("suggest a $idea playlist", actions.context()).actions) } } }
             }
         }
 

@@ -66,15 +66,16 @@ import kotlinx.coroutines.launch
 
 private data class ChatMessage(val fromUser: Boolean, val text: String, val art: NeonArtSpec? = null, val suggestions: List<String> = emptyList())
 
-private val QUICK_ACTIONS = listOf("Play trance playlist", "Boost bass", "Activate meditation theme", "What song is this?", "Recommend EQ", "Sleep in 30 minutes", "Karaoke on", "Auto mix")
+private val QUICK_ACTIONS = listOf("Play trance playlist", "Boost bass", "Activate meditation theme", "Turn on gapless", "Turn off private mode", "Recommend EQ", "Sleep in 30 minutes", "Auto mix")
 
-/** AI Assistant panel (spec §4/§10): neon chat bubbles, quick actions and a voice orb. */
+/** Nocternal Bot panel: neon chat bubbles, quick actions and a voice orb — a fully on-device command bot
+ * (no AI/network dependency) that can also change any app setting from this one place. */
 @Composable
 fun AssistantPanel(c: AppContainer, actions: ActionExecutor) {
     val p = Neon.palette
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val messages = remember { mutableStateListOf(ChatMessage(false, "Hi, I'm Nocternal AI 🌙 Ask for a mood, a genre, an EQ or a theme — or tap the orb and speak.")) }
+    val messages = remember { mutableStateListOf(ChatMessage(false, "Hi, I'm the Nocternal Bot 🌙 I run fully on this device — ask for a mood, a genre, an EQ or a theme, or tell me to turn any setting on or off. Tap the orb to speak.")) }
     var input by remember { mutableStateOf("") }
     var thinking by remember { mutableStateOf(false) }
     val voice by c.voice.state.collectAsStateWithLifecycle()
@@ -85,7 +86,7 @@ fun AssistantPanel(c: AppContainer, actions: ActionExecutor) {
         messages += ChatMessage(true, text)
         thinking = true
         scope.launch {
-            val r = c.assistant.value.handle(text, actions.context())
+            val r = c.assistant.handle(text, actions.context())
             actions.run(r.actions)
             val art = r.actions.filterIsInstance<AssistantAction.ShowAlbumArt>().firstOrNull()?.spec
             messages += ChatMessage(false, r.reply, art, r.suggestions)
@@ -118,7 +119,7 @@ fun AssistantPanel(c: AppContainer, actions: ActionExecutor) {
 
     Column(Modifier.fillMaxWidth().fillMaxHeight(0.88f).navigationBarsPadding().imePadding().padding(horizontal = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Nocternal AI", style = MaterialTheme.typography.headlineSmall, color = p.onBackground, modifier = Modifier.weight(1f))
+            Text("Nocternal Bot", style = MaterialTheme.typography.headlineSmall, color = p.onBackground, modifier = Modifier.weight(1f))
             val listening = voice as? VoiceState.Listening
             VoiceOrb(listening != null, listening?.level ?: 0f, size = 56.dp) {
                 if (listening != null) c.voice.stop() else if (hasMic()) c.voice.start() else micPermission.launch(Manifest.permission.RECORD_AUDIO)

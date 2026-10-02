@@ -38,6 +38,9 @@ object CommandParser {
 
         sleepMinutes(t)?.let { return AssistantIntent.SleepTimer(it) }
 
+        crossfadeSeconds(t)?.let { return AssistantIntent.SetCrossfade(it) }
+        settingToggle(t)?.let { return AssistantIntent.ToggleSetting(it.first, it.second) }
+
         if (has(t, "what song", "what's this song", "whats this song", "identify", "recognize", "recognise", "shazam", "which song is"))
             return AssistantIntent.IdentifySong
         if (has(t, "album art", "cover art", "artwork")) return AssistantIntent.GenerateAlbumArt
@@ -109,6 +112,21 @@ object CommandParser {
         if (has(t, "half an hour", "half hour")) return 30
         if (has(t, "an hour", "one hour")) return 60
         return if (has(t, "sleep timer", "timer")) 30 else null
+    }
+
+    /** "crossfade to 8 seconds", "set crossfade 12s", "crossfade 0" (gapless). */
+    private fun crossfadeSeconds(t: String): Float? {
+        if (!has(t, "crossfade")) return null
+        return Regex("crossfade\\D*?(\\d{1,2})").find(t)?.groupValues?.get(1)?.toFloatOrNull()?.coerceIn(0f, 30f)
+    }
+
+    /** "turn on gapless", "disable private mode", "enable auto theme by mood" — any [AppSettingKey]. */
+    private fun settingToggle(t: String): Pair<AppSettingKey, Boolean>? {
+        val on = has(t, "turn on", "enable")
+        val off = has(t, "turn off", "disable")
+        if (!on && !off) return null
+        val match = AppSettingKey.byAlias.firstOrNull { (alias, _) -> Regex("(^|[^a-z])${Regex.escape(alias)}([^a-z]|$)").containsMatchIn(t) } ?: return null
+        return match.second to on
     }
 
     private fun enhancer(t: String): EnhancerMode? = when {

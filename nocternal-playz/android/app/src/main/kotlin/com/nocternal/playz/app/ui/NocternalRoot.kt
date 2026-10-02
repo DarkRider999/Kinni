@@ -116,7 +116,8 @@ fun NocternalRoot(c: AppContainer, actions: ActionExecutor) {
                                     like = { track?.let { c.library.toggleFavorite(it.id) } }, openEq = { nav.navigate("eq") },
                                     sleep = { m -> if (m == null) c.audio.sleepTimer.cancel() else c.audio.sleepTimer.start(m) },
                                     sleepEndOfTrack = { c.audio.sleepTimer.stopAtEndOfTrack(true) },
-                                    toggleAutoMix = { c.audio.setAutoMix(!playback.autoMix) }, openAssistant = { assistantOpen = true },
+                                    toggleAutoMix = { c.audio.setAutoMix(!playback.autoMix) }, setAutoMixEnergyRise = c.audio::setAutoMixEnergyRise,
+                                    openAssistant = { assistantOpen = true },
                                     collapse = { nav.popBackStack() },
                                 ),
                             )
@@ -124,7 +125,7 @@ fun NocternalRoot(c: AppContainer, actions: ActionExecutor) {
                         composable("eq") {
                             EqFxScreen(
                                 fx = fx, presets = EqPresets.all, onChange = c.audio::updateFx, onPreset = c.audio::applyPreset,
-                                onAiOptimize = { actions.run(c.assistant.value.execute(com.nocternal.playz.ai.AssistantIntent.OptimizeEq, actions.context()).actions) },
+                                onAiOptimize = { actions.run(c.assistant.execute(com.nocternal.playz.ai.AssistantIntent.OptimizeEq, actions.context()).actions) },
                                 onEnhance = c.audio::enhance, onBack = { nav.popBackStack() },
                             )
                         }

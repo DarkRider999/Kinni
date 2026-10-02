@@ -36,6 +36,13 @@ class AutoMixTest {
         assertTrue(ranked.none { it.track.id == "cur" })
     }
 
+    @Test fun nextCanPreferRisingEnergyForThePersonalDjMixer() {
+        val cur = t("cur", 128f, "8A", energy = 0.5f)
+        val pool = listOf(t("down", 128f, "8A", energy = 0.1f), t("up", 128f, "8A", energy = 0.95f))
+        assertEquals("up", AutoMixPlanner().next(cur, pool, wantEnergyRise = true)?.track?.id)
+        assertEquals("down", AutoMixPlanner().next(cur, pool, wantEnergyRise = false)?.track?.id)
+    }
+
     @Test fun transitionIsBarAligned() {
         val p = AutoMixPlanner().plan(t("a", 120f, "8A"), t("b", 122f, "8A"))
         val barMs = 2000.0

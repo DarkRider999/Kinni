@@ -11,26 +11,24 @@ import com.nocternal.playz.theme.GenreDetector
 import com.nocternal.playz.theme.ThemePresets
 
 /**
- * The Nocternal AI assistant. Commands are understood and executed on-device ([CommandParser] + the
- * recommenders); open questions go to the optional [AssistantLlm] (Claude) when the user has configured it.
- * The engine never touches the player directly — it returns [AssistantAction]s for the app to run.
+ * The Nocternal Bot: a fully on-device command bot (no AI/network dependency) that understands text and
+ * voice commands — including turning any app setting on or off from one place — via [CommandParser] and
+ * the recommenders. The engine never touches the player directly — it returns [AssistantAction]s for the
+ * app to run.
  */
 class AssistantEngine(
-    private val llm: AssistantLlm? = null,
-    /** Plugin commands get a chance before the LLM, e.g. "start pomodoro". */
+    /** Plugin commands get a chance first, e.g. "start pomodoro". */
     private val pluginHandler: (String) -> String? = { null },
     private val genres: GenreDetector = GenreDetector(),
     private val moods: MoodDetector = MoodDetector(genres),
     private val recommender: RecommendationEngine = RecommendationEngine(genres, moods),
     private val art: AlbumArtGenerator = AlbumArtGenerator(genres),
 ) {
-    private val conversation = ArrayDeque<LlmTurn>()
-
     suspend fun handle(text: String, ctx: AssistantContext): AssistantResponse {
         val intent = CommandParser.parse(text)
         if (intent is AssistantIntent.Unknown) {
             pluginHandler(text)?.let { return AssistantResponse(it) }
-            return askLlm(text, ctx)
+            return AssistantResponse(helpText())
         }
         return execute(intent, ctx)
     }
@@ -82,11 +80,19 @@ class AssistantEngine(
         AssistantIntent.GenerateAlbumArt -> ctx.nowPlaying?.let { AssistantResponse("Here’s neon art for “${it.title}”.", listOf(AssistantAction.ShowAlbumArt(art.generate(it)))) }
             ?: AssistantResponse("Play a song first and I’ll design its cover.")
         AssistantIntent.AutoMix -> AssistantResponse("DJ auto-mix on: I’ll pick key- and tempo-matched songs and blend them on the beat.", listOf(AssistantAction.EnableAutoMix(true)), listOf("Turn off auto-mix"))
-        is AssistantIntent.Unknown -> AssistantResponse(helpText(ctx))
+        is AssistantIntent.ToggleSetting -> AssistantResponse(
+            "${intent.setting.label} turned ${if (intent.on) "on" else "off"}.",
+            listOf(AssistantAction.UpdateSetting(intent.setting, intent.on)),
+        )
+        is AssistantIntent.SetCrossfade -> AssistantResponse(
+            if (intent.seconds <= 0f) "Crossfade off — true gapless playback." else "Crossfade set to ${intent.seconds.toInt()}s.",
+            listOf(AssistantAction.SetCrossfadeSeconds(intent.seconds)),
+        )
+        is AssistantIntent.Unknown -> AssistantResponse(helpText())
     }
 
     private fun playGenre(genreId: String, ctx: AssistantContext): AssistantResponse {
-        val g = GenreCatalog.byId(genreId) ?: return AssistantResponse(helpText(ctx))
+        val g = GenreCatalog.byId(genreId) ?: return AssistantResponse(helpText())
         val p = recommender.suggest(ctx, RecommendationEngine.Criteria(genreId = genreId, hourOfDay = ctx.hourOfDay))
         if (p.trackIds.isEmpty()) return searchOnline(g.aiSuggestions.first(), g.id)
         return AssistantResponse(
@@ -102,49 +108,8 @@ class AssistantEngine(
         listOf("Try YouTube Music instead"),
     )
 
-    private suspend fun askLlm(text: String, ctx: AssistantContext): AssistantResponse {
-        val client = llm ?: return AssistantResponse(helpText(ctx))
-        val system = buildSystemPrompt(ctx)
-        conversation.addLast(LlmTurn(LlmRole.USER, text))
-        while (conversation.size > 12) conversation.removeFirst()
-        return try {
-            val reply = client.complete(system, conversation.toList())
-            conversation.addLast(LlmTurn(LlmRole.ASSISTANT, reply))
-            // The model can ask us to run a command by ending with a line "ACTION: <command>".
-            val actionLine = reply.lines().lastOrNull { it.startsWith("ACTION:") }
-            val clean = reply.lines().filterNot { it.startsWith("ACTION:") }.joinToString("\n").trim()
-            val actions = actionLine?.removePrefix("ACTION:")?.trim()?.let { cmd ->
-                CommandParser.parse(cmd).takeIf { it !is AssistantIntent.Unknown }?.let { execute(it, ctx).actions }
-            }.orEmpty()
-            AssistantResponse(clean, actions, fromLlm = true)
-        } catch (e: Exception) {
-            conversation.removeLast()
-            AssistantResponse("I couldn’t reach the AI service (${e.message ?: "network error"}). Commands like “play lo-fi” still work offline.")
-        }
-    }
-
-    private fun buildSystemPrompt(ctx: AssistantContext): String = buildString {
-        appendLine("You are the assistant inside NOCTERNAL PLAYZ, a neon music player app. Answer in 1–4 short sentences, friendly and specific.")
-        appendLine("You can control the app by ending your reply with one line \"ACTION: <command>\" using one of: play <genre|mood|song>, boost bass, reduce bass, recommend eq, activate <genre> theme, switch to <local|youtube|radio>, sleep in <n> minutes, enhance clarity, remove noise, karaoke on, auto mix, identify song. Only add an ACTION if the user wants something done.")
-        appendLine("Built-in genres: ${GenreCatalog.all.joinToString { it.displayName }}.")
-        appendLine("Time of day: ${ctx.hourOfDay}:00. Source: ${ctx.source.label}. Output: ${ctx.route.name.lowercase()}.")
-        ctx.nowPlaying?.let { t ->
-            append("Now playing: “${t.title}” by ${t.artist}")
-            t.bpm?.let { append(", ${it.toInt()} BPM") }
-            t.camelotKey?.let { append(", key $it") }
-            genres.detect(t)?.let { append(", genre ${it.genre.displayName}") }
-            appendLine(".")
-        }
-        if (!ctx.privateMode && ctx.tracks.isNotEmpty()) {
-            val topGenres = ctx.tracks.mapNotNull { genres.detect(it)?.genre?.displayName }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.take(5)
-            appendLine("Library: ${ctx.tracks.size} songs; top genres ${topGenres.joinToString { "${it.key} (${it.value})" }}.")
-        }
-    }
-
-    private fun helpText(ctx: AssistantContext) = buildString {
-        append("Try “play trance playlist”, “boost bass”, “activate meditation theme”, “sleep in 30 minutes” or “what song is this?”.")
-        if (llm == null) append(" Add a Claude API key in Settings → AI to ask me anything else.")
-    }
+    private fun helpText() = "Try “play trance playlist”, “boost bass”, “activate meditation theme”, “sleep in 30 minutes”, " +
+        "“turn on gapless”, “turn off private mode”, “crossfade to 8 seconds” or “what song is this?”."
 
     private fun transportReply(c: TransportCommand) = when (c) {
         TransportCommand.PLAY -> "Playing."

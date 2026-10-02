@@ -1,11 +1,23 @@
 package com.nocternal.playz.ui.player
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode as AnimRepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -14,6 +26,7 @@ import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
 import com.nocternal.playz.ai.ArtShape
 import com.nocternal.playz.ai.NeonArtSpec
@@ -80,4 +93,26 @@ fun AlbumArt(artworkUri: String?, fallback: NeonArtSpec?, modifier: Modifier = M
         modifier = modifier,
         error = { if (fallback != null) NeonArtView(fallback, Modifier.fillMaxSize()) else Box(Modifier.fillMaxSize().background(Color.Black)) },
     )
+}
+
+/** Album art as a spinning vinyl disc: a continuously rotating record while [spinning] (playback is on), with a
+ * glossy rim and a center label hole, pausing in place when playback pauses — like a real turntable. */
+@Composable
+fun SpinningAlbumArt(artworkUri: String?, fallback: NeonArtSpec?, spinning: Boolean, modifier: Modifier = Modifier) {
+    val transition = rememberInfiniteTransition(label = "vinyl-spin")
+    val angle by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(9000, easing = LinearEasing), repeatMode = AnimRepeatMode.Restart),
+        label = "vinyl-angle",
+    )
+    Box(modifier, contentAlignment = Alignment.Center) {
+        Box(
+            Modifier.fillMaxSize()
+                .graphicsLayer(rotationZ = if (spinning) angle else 0f)
+                .clip(CircleShape)
+                .border(3.dp, Color.White.copy(alpha = 0.12f), CircleShape),
+        ) { AlbumArt(artworkUri, fallback, Modifier.fillMaxSize()) }
+        Box(Modifier.size(18.dp).clip(CircleShape).background(Color.Black).border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape))
+    }
 }

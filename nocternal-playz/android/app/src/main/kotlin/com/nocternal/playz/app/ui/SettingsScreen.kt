@@ -169,10 +169,10 @@ fun SettingsScreen(c: AppContainer) {
             }
         }
 
-        item { SectionTitle("AI") }
+        item { SectionTitle("AI lyrics") }
         item {
             GlowCard(Modifier.fillMaxWidth()) {
-                Text("Commands work offline. Add your own Claude API key to ask the assistant anything; it stays on this device and is never backed up.", color = p.muted, style = MaterialTheme.typography.labelSmall)
+                Text("The Nocternal Bot runs fully on this device — no key needed. Add your own Claude API key only if you want AI-written lyrics (in Hinglish for Hindi/Punjabi songs) when no official lyrics are found; it stays on this device and is never backed up.", color = p.muted, style = MaterialTheme.typography.labelSmall)
                 OutlinedTextField(apiKey, { apiKey = it }, Modifier.fillMaxWidth(), label = { Text("Claude API key") }, singleLine = true, visualTransformation = PasswordVisualTransformation(),
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = p.accent), shape = RoundedCornerShape(14.dp))
                 OutlinedTextField(token, { token = it }, Modifier.fillMaxWidth(), label = { Text("Music recognition token (audd.io)") }, singleLine = true, visualTransformation = PasswordVisualTransformation(),

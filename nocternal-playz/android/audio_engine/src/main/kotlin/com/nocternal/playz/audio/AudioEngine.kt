@@ -56,6 +56,10 @@ data class PlaybackState(
     /** Genre of the playlist the queue came from, for theme context. */
     val queueGenreId: String? = null,
     val autoMix: Boolean = false,
+    /** DJ auto-mix only: when on, picks the next song to raise energy rather than keep it steady. */
+    val autoMixEnergyRise: Boolean = false,
+    /** Why the DJ picked the queued next track (key/tempo match, blend length) — shown in the player. */
+    val autoMixExplanation: String? = null,
     val error: String? = null,
 )
 
@@ -192,7 +196,16 @@ class AudioEngine(
         _state.update { it.copy(queue = currentQueue()) }
     }
 
-    fun setAutoMix(on: Boolean) { _state.update { it.copy(autoMix = on) }; if (on) queueAutoMixNext() }
+    fun setAutoMix(on: Boolean) {
+        _state.update { it.copy(autoMix = on, autoMixExplanation = if (on) it.autoMixExplanation else null) }
+        if (on) queueAutoMixNext()
+    }
+
+    /** Personal DJ mixer: when [on], the auto-mixer picks each next song to build energy rather than hold it steady. */
+    fun setAutoMixEnergyRise(on: Boolean) {
+        _state.update { it.copy(autoMixEnergyRise = on) }
+        if (_state.value.autoMix) queueAutoMixNext()
+    }
 
     // ---- FX ----------------------------------------------------------------------------------------
 
@@ -263,13 +276,14 @@ class AudioEngine(
         val current = _state.value.track ?: return
         if (current.source != AudioSource.LOCAL) return
         recentlyMixed.addLast(current.id); while (recentlyMixed.size > 30) recentlyMixed.removeFirst()
-        val pick = planner.next(current, autoMixPool(), recentlyMixed.toSet()) ?: return
+        val pick = planner.next(current, autoMixPool(), recentlyMixed.toSet(), _state.value.autoMixEnergyRise) ?: return
         val nextIndex = player.currentMediaItemIndex + 1
         val alreadyNext = nextIndex < player.mediaItemCount && player.getMediaItemAt(nextIndex).mediaId == pick.track.id
         if (!alreadyNext) addNext(pick.track)
         val plan = planner.plan(current, pick.track, defaultFadeMs = (settings.crossfadeSeconds * 1000).toLong())
         autoMixOverlapMs = plan.durationMs.coerceAtMost(12_000)
         pendingTempo = pick.track.id to plan.tempoRatio
+        _state.update { it.copy(autoMixExplanation = plan.explanation) }
     }
 
     /** Beat-match rate for the auto-mixed track, applied when that track starts. */
