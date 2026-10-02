@@ -27,7 +27,9 @@ object Romanizer {
             if (cons != null) {
                 var j = i + 1
                 var roman = cons
-                if (j < text.length && text[j] == '़') { roman = devanagariNukta["$c़"] ?: roman; j++ }
+                if (j < text.length && (text[j] == DEVANAGARI_NUKTA || text[j] == GURMUKHI_NUKTA)) {
+                    roman = nuktaVariants["$c${text[j]}"] ?: roman; j++
+                }
                 when {
                     j < text.length && (text[j] == '्' || text[j] == '੍') -> { sb.append(roman); i = j + 1 }
                     j < text.length && matras.containsKey(text[j]) -> { sb.append(roman).append(matras.getValue(text[j])); i = j + 1 }
@@ -72,12 +74,6 @@ object Romanizer {
         'प' to "p", 'फ' to "ph", 'ब' to "b", 'भ' to "bh", 'म' to "m",
         'य' to "y", 'र' to "r", 'ल' to "l", 'व' to "v", 'ळ' to "l",
         'श' to "sh", 'ष' to "sh", 'स' to "s", 'ह' to "h",
-        'क़' to "q", 'ख़' to "kh", 'ग़' to "g", 'ज़' to "z", 'ड़' to "r", 'ढ़' to "rh", 'फ़' to "f", 'य़' to "y",
-    )
-
-    private val devanagariNukta = mapOf(
-        "क़" to "q", "ख़" to "kh", "ग़" to "g", "ज़" to "z",
-        "ड़" to "r", "ढ़" to "rh", "फ़" to "f", "य़" to "y",
     )
 
     private val gurmukhiConsonants = mapOf(
@@ -86,7 +82,17 @@ object Romanizer {
         'ਟ' to "t", 'ਠ' to "th", 'ਡ' to "d", 'ਢ' to "dh", 'ਣ' to "n",
         'ਤ' to "t", 'ਥ' to "th", 'ਦ' to "d", 'ਧ' to "dh", 'ਨ' to "n",
         'ਪ' to "p", 'ਫ' to "ph", 'ਬ' to "b", 'ਭ' to "bh", 'ਮ' to "m",
-        'ਯ' to "y", 'ਰ' to "r", 'ਲ' to "l", 'ਵ' to "v", 'ਲ਼' to "l",
-        'ਸ਼' to "sh", 'ਸ' to "s", 'ਹ' to "h", 'ਜ਼' to "z", 'ਫ਼' to "f",
+        'ਯ' to "y", 'ਰ' to "r", 'ਲ' to "l", 'ਵ' to "v",
+        'ਸ' to "s", 'ਹ' to "h",
+    )
+
+    // A base consonant followed by a combining nukta mark changes its sound (e.g. ज + ़ = ज़ "z").
+    // Both the base consonant and the nukta mark are separate Unicode codepoints, so these are string keys.
+    private const val DEVANAGARI_NUKTA = '़'
+    private const val GURMUKHI_NUKTA = '਼'
+    private val nuktaVariants = mapOf(
+        "क़" to "q", "ख़" to "kh", "ग़" to "g", "ज़" to "z",
+        "ड़" to "r", "ढ़" to "rh", "फ़" to "f", "य़" to "y",
+        "ਲ਼" to "l", "ਸ਼" to "sh", "ਜ਼" to "z", "ਫ਼" to "f",
     )
 }
