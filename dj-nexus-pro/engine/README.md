@@ -29,14 +29,16 @@ The real-time audio core of DJ Nexus Pro: decks, key lock, mixer, master bus and
 | Recording | WAV 16-bit (TPDF dither) / 24-bit / 32-bit float, written off the audio thread |
 | Loading | Any PCM from the app (`djn_deck_load_pcm`), grid updates after load (`djn_deck_set_grid`) or WAV/FLAC/MP3 files (`djn_deck_load_file`); tracks are resampled to the device rate with a band-limited sinc resampler |
 | Hosts | Desktop: miniaudio (WASAPI, CoreAudio, PulseAudio/ALSA/JACK). Android: Oboe (AAudio/OpenSL ES). iOS: RemoteIO + AVAudioSession |
+| Analysis | Offline BPM + beat-grid + musical-key detection (`djn_analyze_pcm` / `djn_analyze_file`, `src/core/analysis.cpp`): onset-autocorrelation tempo with sub-harmonic summation to resolve half/double-time octave errors and parabolic sub-frame refinement; FFT-chroma + Krumhansl-Schmuckler key detection; Camelot wheel codes (`djn_camelot_code`) |
+| Advisor | "RadicalAI" next-track scoring from metadata alone (`djn_advisor_score`, `src/core/advisor.cpp`): harmonic (Camelot wheel distance), tempo (with half/double-time credit), energy-vs-set-arc-target, genre and play-recency sub-scores, a learned per-track user-bias nudge, and tunable weights -- no engine instance needed, cheap enough to rank a whole library every UI frame |
 
-Real-time rules on the audio thread: no allocation, no locks, no file I/O, no logging. Denormals are flushed to zero on x86, ARM64 and ARMv7.
+Real-time rules on the audio thread: no allocation, no locks, no file I/O, no logging. Denormals are flushed to zero on x86, ARM64 and ARMv7. (Analysis and the advisor are the two exceptions to "real-time safe": both allocate and are meant to run off the audio thread -- analysis once per track on import, the advisor once per candidate per UI refresh.)
 
 ## Verified
 
 | Check | Result |
 |---|---|
-| 61 unit/integration tests (x86-64 Linux) | pass |
+| 79 unit/integration tests (x86-64 Linux) | pass |
 | Same tests under ASan + UBSan | pass, no reports |
 | Multi-thread stress test (audio + UI + background loader + recorder) under TSan | pass, no data races |
 | Same tests on **ARM64** and **ARMv7** (cross-compiled, run under QEMU) | pass |

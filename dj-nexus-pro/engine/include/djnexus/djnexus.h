@@ -264,6 +264,80 @@ DJN_API int djn_sampler_set_volume_db(djn_engine* engine, float db);
    0..3 so it goes through that channel's EQ, filter, fader and FX. */
 DJN_API int djn_sampler_set_output(djn_engine* engine, int32_t target);
 
+/* ---------------------------------------------------------------- analysis */
+
+/*
+ * Offline BPM/beat-grid and musical-key detection. Not real-time safe
+ * (allocates): call off the UI thread, typically once per track on import,
+ * then feed bpm/first_beat_sec into djn_deck_load_file / djn_deck_set_grid.
+ */
+typedef struct djn_analysis_result {
+  double  bpm;              /* 0 = no clear periodicity found */
+  double  bpm_confidence;   /* 0..1 */
+  double  first_beat_sec;
+  int32_t key_pitch_class;  /* 0=C .. 11=B, or -1 if no tonal center was found */
+  int32_t key_is_minor;     /* 0/1, meaningful only when key_pitch_class >= 0 */
+  double  key_confidence;   /* 0..1 */
+  /* Structural landmarks from the energy envelope, for auto-setting hot cues
+     on load; -1 when undeterminable (e.g. silence). Heuristic, not ground
+     truth -- a starting point a DJ can move. */
+  double  intro_end_sec;
+  double  drop_sec;
+  double  outro_start_sec;
+} djn_analysis_result;
+
+/* Analyzes a decoded buffer (same shape as djn_deck_load_pcm). No engine
+   instance is needed; this can run on a background thread before any deck
+   exists, e.g. while scanning a library. */
+DJN_API int djn_analyze_pcm(const float* interleaved, int64_t frames, int32_t channels,
+                            int32_t sample_rate, djn_analysis_result* out);
+
+/* Decodes a file (WAV, FLAC, MP3) and analyzes it. DJN_ERR_UNSUPPORTED on
+   builds without the built-in decoder. Blocking: call off the UI thread. */
+DJN_API int djn_analyze_file(const char* utf8_path, djn_analysis_result* out);
+
+/* Writes the 2-3 character Camelot wheel code (e.g. "8B", "10A") for a key
+   into out_buf (requires at least 4 bytes). Returns DJN_ERR_INVALID_ARG for
+   pitch_class outside 0..11 or a buffer too small. */
+DJN_API int djn_camelot_code(int32_t pitch_class, int32_t is_minor, char* out_buf, int32_t out_buf_size);
+
+/* ------------------------------------------------------------- advisor */
+
+/*
+ * The "RadicalAI" next-track advisor: scores how well a candidate track would
+ * mix in next after the currently playing one, from metadata alone. Pure and
+ * cheap (no engine instance needed) -- a host can call this over its whole
+ * library every time the UI wants a fresh ranked suggestion list.
+ */
+typedef struct djn_track_info {
+  double  bpm;                  /* <= 0: unknown */
+  int32_t key_pitch_class;      /* 0..11, or -1: unknown */
+  int32_t key_is_minor;         /* 0/1 */
+  double  energy;               /* 0..10 */
+  const char* genre;            /* UTF-8, NULL or "" treated as unknown */
+  double  seconds_since_played; /* < 0: never played */
+  double  user_bias;            /* -1..+1 learned preference nudge */
+} djn_track_info;
+
+typedef struct djn_advisor_weights {
+  double harmonic, tempo, energy, genre, recency, bias;
+  double recency_horizon_sec;
+} djn_advisor_weights;
+
+typedef struct djn_next_track_score {
+  double total, harmonic, tempo, energy, genre, recency;
+} djn_next_track_score;
+
+/* Fills `out` with the library's balanced defaults (same ones used when
+   djn_advisor_score's weights argument is NULL). */
+DJN_API void djn_advisor_default_weights(djn_advisor_weights* out);
+
+/* target_energy: the set-arc's desired energy here, or < 0 to just match
+   `current`'s energy. weights: NULL for the defaults above. */
+DJN_API int djn_advisor_score(const djn_track_info* current, const djn_track_info* candidate,
+                              double target_energy, const djn_advisor_weights* weights,
+                              djn_next_track_score* out);
+
 /* ---------------------------------------------------------------- macros */
 
 /*
