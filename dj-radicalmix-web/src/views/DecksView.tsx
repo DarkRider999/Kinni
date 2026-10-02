@@ -1,6 +1,9 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Waveform } from "../components/Waveform";
 import { engine } from "../engine/engineBridge";
+import type { Track } from "../lib/library";
+import { suggestNextTracks } from "../lib/suggestions";
+import { useAutoMix } from "../state/useAutoMix";
 import type { useDecks } from "../state/useDecks";
 import type { useEngine } from "../state/useEngine";
 
@@ -54,6 +57,7 @@ function DeckPanel({
         position={s?.position ?? 0}
         duration={s?.duration ?? 0}
         color={deck === 0 ? "#ff1744" : "#00e5ff"}
+        hotCues={decks.hotCues[deck]}
       />
 
       <div className="row">
@@ -99,9 +103,7 @@ function DeckPanel({
             key={slot}
             className="hotcue"
             onClick={() =>
-              settingHotCue
-                ? engine.call("djn_deck_hot_cue_set", deck, slot)
-                : engine.call("djn_deck_hot_cue_trigger", deck, slot)
+              settingHotCue ? decks.setHotCueAt(deck, slot, s?.position ?? 0) : engine.call("djn_deck_hot_cue_trigger", deck, slot)
             }
             disabled={!s?.loaded}
           >
@@ -182,7 +184,17 @@ function DeckPanel({
   );
 }
 
-function Mixer() {
+function Mixer({
+  decks,
+  autoMix,
+  onToggleAutoMix,
+  autoMixPhase,
+}: {
+  decks: ReturnType<typeof useDecks>;
+  autoMix: boolean;
+  onToggleAutoMix: () => void;
+  autoMixPhase: string;
+}) {
   return (
     <div className="panel mixer">
       <div className="section-title">Crossfader</div>
@@ -192,8 +204,8 @@ function Mixer() {
         min={0}
         max={1}
         step={0.01}
-        defaultValue={0.5}
-        onChange={(e) => engine.call("djn_mixer_set_crossfader", parseFloat(e.target.value))}
+        value={decks.crossfader}
+        onChange={(e) => decks.setCrossfader(parseFloat(e.target.value))}
       />
       <div style={{ display: "flex", justifyContent: "space-between", width: "100%", fontSize: 11, color: "var(--ink-dim)" }}>
         <span>A</span>
@@ -210,18 +222,130 @@ function Mixer() {
           onChange={(e) => engine.call("djn_mixer_set_master_db", parseFloat(e.target.value))}
         />
       </div>
+      <div className="row" style={{ width: "100%" }}>
+        <label>Auto-Mix</label>
+        <button className={`btn small togglebtn${autoMix ? " on" : ""}`} onClick={onToggleAutoMix}>
+          {autoMix ? "On" : "Off"}
+        </button>
+        {autoMix && (
+          <span style={{ fontSize: 11, color: "var(--ink-dim)", fontFamily: "var(--mono)" }}>
+            {autoMixPhase === "idle"
+              ? "watching for the track to end..."
+              : autoMixPhase === "loading"
+                ? "loading the next track..."
+                : autoMixPhase === "settling"
+                  ? "starting the next track..."
+                  : "crossfading..."}
+          </span>
+        )}
+      </div>
+      <p style={{ fontSize: 11, color: "var(--ink-dim)", textAlign: "center", margin: "4px 0 0" }}>
+        Auto-Mix loads and crossfades into RadicalAI's top pick when the playing deck is within 20s of ending, if
+        the other deck is idle.
+      </p>
     </div>
   );
 }
 
-export function DecksView({ eng, decks }: { eng: ReturnType<typeof useEngine>; decks: ReturnType<typeof useDecks> }) {
+function NextTrackRadar({ eng, decks, tracks }: { eng: ReturnType<typeof useEngine>; decks: ReturnType<typeof useDecks>; tracks: Track[] }) {
+  const masterIdx = eng.state?.masterDeck;
+  const referenceId =
+    (masterIdx === 0 || masterIdx === 1 ? decks.deckTracks[masterIdx]?.trackId : undefined) ?? decks.deckTracks[0]?.trackId;
+  const reference = tracks.find((t) => t.id === referenceId);
+  const idleDeck: 0 | 1 = masterIdx === 0 ? 1 : 0;
+
+  if (tracks.length === 0) return null;
+  if (!reference) {
+    return (
+      <div className="panel" style={{ padding: 16, marginTop: 16 }}>
+        <div className="section-title">RadicalAI &middot; Next-Track Radar</div>
+        <p style={{ fontSize: 12, color: "var(--ink-dim)", margin: 0 }}>
+          Load a track from your library (not a quick-loaded file) to see live suggestions here.
+        </p>
+      </div>
+    );
+  }
+
+  const suggestions = suggestNextTracks(reference, tracks, -1, 3);
+
+  return (
+    <div className="panel" style={{ padding: 16, marginTop: 16 }}>
+      <div className="section-title">RadicalAI &middot; Next-Track Radar (after {reference.name})</div>
+      {suggestions.map(({ track: t, score, reason }) => (
+        <div className="suggestion" key={t.id}>
+          <div style={{ minWidth: 0 }}>
+            <div className="trackname" style={{ fontSize: 13 }}>
+              {t.name}
+            </div>
+            <div style={{ fontSize: 11, color: "var(--ink-dim)" }}>
+              {t.camelot || "?"} &middot; {t.bpm > 0 ? `${t.bpm.toFixed(0)} BPM` : "? BPM"} &middot; {reason}
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+            <div className="score-bar">
+              <div style={{ width: `${score.total * 100}%` }} />
+            </div>
+            <button className="btn small" onClick={() => decks.loadToDeck(idleDeck, t)}>
+              Load to {idleDeck === 0 ? "A" : "B"}
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function DecksView({
+  eng,
+  decks,
+  tracks,
+}: {
+  eng: ReturnType<typeof useEngine>;
+  decks: ReturnType<typeof useDecks>;
+  tracks: Track[];
+}) {
+  const [autoMix, setAutoMix] = useState(false);
+  const { phase } = useAutoMix(autoMix, eng.state, decks, tracks);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (target && ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName)) return;
+      const bindings: Record<string, () => void> = {
+        " ": () => engine.call("djn_deck_toggle_play", 0),
+        Enter: () => engine.call("djn_deck_toggle_play", 1),
+        c: () => engine.call("djn_deck_cue", 0),
+        v: () => engine.call("djn_deck_cue", 1),
+        "1": () => engine.call("djn_deck_hot_cue_trigger", 0, 0),
+        "2": () => engine.call("djn_deck_hot_cue_trigger", 0, 1),
+        "3": () => engine.call("djn_deck_hot_cue_trigger", 0, 2),
+        "4": () => engine.call("djn_deck_hot_cue_trigger", 0, 3),
+        "7": () => engine.call("djn_deck_hot_cue_trigger", 1, 0),
+        "8": () => engine.call("djn_deck_hot_cue_trigger", 1, 1),
+        "9": () => engine.call("djn_deck_hot_cue_trigger", 1, 2),
+        "0": () => engine.call("djn_deck_hot_cue_trigger", 1, 3),
+      };
+      const action = bindings[e.key];
+      if (action) {
+        e.preventDefault();
+        action();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   return (
     <div>
       <div className="grid2" style={{ marginBottom: 16 }}>
         <DeckPanel deck={0} eng={eng} decks={decks} />
         <DeckPanel deck={1} eng={eng} decks={decks} />
       </div>
-      <Mixer />
+      <Mixer decks={decks} autoMix={autoMix} onToggleAutoMix={() => setAutoMix((v) => !v)} autoMixPhase={phase} />
+      <p style={{ fontSize: 11, color: "var(--ink-dim)", textAlign: "center", margin: "8px 0 0" }}>
+        Keyboard: Space/Enter play A/B &middot; C/V cue A/B &middot; 1-4 hot cues A &middot; 7-0 hot cues B
+      </p>
+      <NextTrackRadar eng={eng} decks={decks} tracks={tracks} />
     </div>
   );
 }

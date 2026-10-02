@@ -23,6 +23,8 @@ export function useDecks(
 ) {
   const [deckTracks, setDeckTracks] = useState<(DeckTrack | null)[]>([null, null]);
   const [loading, setLoading] = useState<[boolean, boolean]>([false, false]);
+  const [hotCues, setHotCues] = useState<Record<number, number>[]>([{}, {}]);
+  const [crossfader, setCrossfaderState] = useState(0.5);
 
   const setLoadingAt = (deck: 0 | 1, value: boolean) => {
     setLoading((prev) => {
@@ -40,6 +42,12 @@ export function useDecks(
       setDeckTracks((prev) => {
         const next = [...prev];
         next[deck] = { ...display, peaks };
+        return next;
+      });
+      // A freshly loaded track starts with no hot cues set on it.
+      setHotCues((prev) => {
+        const next = [...prev];
+        next[deck] = {};
         return next;
       });
     },
@@ -89,5 +97,22 @@ export function useDecks(
     [applyToEngine, onLoaded],
   );
 
-  return { deckTracks, loading, loadToDeck, quickLoadToDeck };
+  /** Sets hot cue `slot` on `deck` at `positionSec` (the engine snaps it to the
+   * beat grid when quantize is on; this records the position the UI *asked*
+   * for, which is accurate enough for drawing a marker on the waveform). */
+  const setHotCueAt = useCallback((deck: 0 | 1, slot: number, positionSec: number) => {
+    engine.call("djn_deck_hot_cue_set", deck, slot);
+    setHotCues((prev) => {
+      const next = [...prev];
+      next[deck] = { ...next[deck], [slot]: positionSec };
+      return next;
+    });
+  }, []);
+
+  const setCrossfader = useCallback((value: number) => {
+    setCrossfaderState(value);
+    engine.call("djn_mixer_set_crossfader", value);
+  }, []);
+
+  return { deckTracks, loading, hotCues, crossfader, loadToDeck, quickLoadToDeck, setHotCueAt, setCrossfader };
 }

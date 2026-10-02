@@ -7,9 +7,12 @@ interface Props {
   duration: number;
   color: string;
   height?: number;
+  // slot -> position in seconds. Approximate (see useDecks.setHotCueAt): the
+  // engine may snap the actual cue to the beat grid when quantize is on.
+  hotCues?: Record<number, number>;
 }
 
-export function Waveform({ peaks, position, duration, color, height = 56 }: Props) {
+export function Waveform({ peaks, position, duration, color, height = 56, hotCues }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -44,12 +47,23 @@ export function Waveform({ peaks, position, duration, color, height = 56 }: Prop
       ctx.fillRect(x, y1, 1, Math.max(1, y2 - y1));
     }
 
+    if (duration > 0 && hotCues) {
+      ctx.fillStyle = "#ffb020";
+      ctx.font = "9px sans-serif";
+      ctx.textBaseline = "top";
+      for (const [slot, cuePos] of Object.entries(hotCues)) {
+        const x = Math.min(width - 2, Math.max(0, (cuePos / duration) * width));
+        ctx.fillRect(x, 0, 2, height);
+        ctx.fillText(String(Number(slot) + 1), x + 2, 1);
+      }
+    }
+
     if (duration > 0) {
       const playX = Math.min(width, Math.max(0, (position / duration) * width));
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(playX, 0, 1.5, height);
     }
-  }, [peaks, position, duration, color, height]);
+  }, [peaks, position, duration, color, height, hotCues]);
 
   return <canvas ref={canvasRef} style={{ width: "100%", height, display: "block", borderRadius: 6 }} />;
 }

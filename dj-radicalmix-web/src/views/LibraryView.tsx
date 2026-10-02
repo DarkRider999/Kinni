@@ -1,22 +1,10 @@
 import { useMemo, useRef, useState } from "react";
-import { explainSuggestion, scoreNextTrack, type TrackInfo } from "../engine/advisor";
-import { secondsSincePlayed, trackInCrate, type Crate, type CrateRule, type Track } from "../lib/library";
+import { trackInCrate, type Crate, type CrateRule, type Track } from "../lib/library";
+import { suggestNextTracks } from "../lib/suggestions";
 import type { useCrates } from "../state/useCrates";
 import type { useDecks } from "../state/useDecks";
 import type { useEngine } from "../state/useEngine";
 import type { useLibrary } from "../state/useLibrary";
-
-function toTrackInfo(t: Track): TrackInfo {
-  return {
-    bpm: t.bpm,
-    keyPitchClass: t.keyPitchClass,
-    keyIsMinor: t.keyIsMinor,
-    energy: t.energy,
-    genre: t.genre,
-    secondsSincePlayed: secondsSincePlayed(t),
-    userBias: t.userBias,
-  };
-}
 
 function Dropzone({ onFiles }: { onFiles: (files: FileList) => void }) {
   const [drag, setDrag] = useState(false);
@@ -145,15 +133,7 @@ export function LibraryView({
 
   const suggestions = useMemo(() => {
     if (!reference) return [];
-    const current = toTrackInfo(reference);
-    return lib.tracks
-      .filter((t) => t.id !== reference.id)
-      .map((t) => {
-        const s = scoreNextTrack(current, toTrackInfo(t), targetEnergy);
-        return { track: t, score: s, reason: explainSuggestion(current, toTrackInfo(t), s) };
-      })
-      .sort((a, b) => b.score.total - a.score.total)
-      .slice(0, 6);
+    return suggestNextTracks(reference, lib.tracks, targetEnergy, 6);
   }, [reference, lib.tracks, targetEnergy]);
 
   const nudgeBias = (t: Track, delta: number) => {

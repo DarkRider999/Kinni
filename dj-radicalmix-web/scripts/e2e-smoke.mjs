@@ -134,6 +134,60 @@ try {
   await page.waitForTimeout(1200);
   await page.screenshot({ path: path.join(OUT, "05-playing.png") });
 
+  // Hot cue marker: set one on deck A, then confirm the waveform actually
+  // drew the amber marker (#ffb020) somewhere on the canvas.
+  await deckWithTrackA.locator("text=Set mode").click();
+  await deckWithTrackA.locator(".hotcue", { hasText: "1" }).click();
+  await page.waitForTimeout(200);
+  const hasHotCueMarker = await deckWithTrackA.locator("canvas").evaluate((c) => {
+    const ctx = c.getContext("2d");
+    const data = ctx.getImageData(0, 0, c.width, c.height).data;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i] > 240 && data[i + 1] > 160 && data[i + 1] < 200 && data[i + 2] < 60) return true;
+    }
+    return false;
+  });
+  assert(hasHotCueMarker, "hot cue marker (amber) was drawn on the waveform");
+  await deckWithTrackA.locator("text=Tap to set").click(); // leave "set mode" off again
+
+  // Keyboard shortcut: Space should toggle deck A's play state.
+  const playLabelBefore = await deckWithTrackA.getByRole("button", { name: /Play|Pause/, exact: true }).textContent();
+  await page.keyboard.press(" ");
+  await page.waitForTimeout(300);
+  const playLabelAfter = await deckWithTrackA.getByRole("button", { name: /Play|Pause/, exact: true }).textContent();
+  assert(playLabelBefore !== playLabelAfter, `Space toggled deck A's transport (was "${playLabelBefore}")`);
+  await page.keyboard.press(" "); // toggle back to playing, for the Auto-Mix test below
+  await page.waitForTimeout(300);
+
+  // Next-Track Radar: the Decks screen itself should show a live suggestion
+  // (not just the Library tab's copy of the same panel).
+  await page.waitForSelector("text=Next-Track Radar");
+  const radarSuggestion = await page.locator(".suggestion").first().isVisible();
+  assert(radarSuggestion, "Next-Track Radar shows a suggestion on the Decks screen");
+
+  // Auto-Mix: both test fixtures are 15s long (shorter than the 20s trigger
+  // window), so enabling it with deck A already playing should immediately
+  // pick trackB (the only other track), load it to the idle deck, play it,
+  // and crossfade into it.
+  await page.locator(".row", { hasText: "Auto-Mix" }).getByRole("button").click();
+  await page.waitForFunction(
+    () => {
+      const e = window.__djEngine;
+      const st = e?.state;
+      return st && st.decks[1].loaded === 1 && st.decks[1].playing === 1;
+    },
+    { timeout: 10000 },
+  );
+  console.log("Auto-Mix: deck B loaded and playing");
+  await page.waitForFunction(
+    () => parseFloat(document.querySelector(".xfader")?.value ?? "0") > 0.9,
+    { timeout: 15000 },
+  );
+  const finalCrossfader = await page.locator(".xfader").inputValue();
+  console.log("Auto-Mix: crossfader settled at", finalCrossfader);
+  assert(parseFloat(finalCrossfader) > 0.9, `Auto-Mix crossfaded to deck B, crossfader=${finalCrossfader}`);
+  await page.screenshot({ path: path.join(OUT, "05b-automix.png") });
+
   // Sampler: trigger a pad and confirm it loaded (not disabled).
   await page.click("text=Sampler");
   await page.waitForSelector(".pad:not([disabled])", { timeout: 10000 });

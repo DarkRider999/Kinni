@@ -1,11 +1,13 @@
 # DJ RadicalMix -- SplitFire Production (web)
 
-A real, working browser DJ console: two decks (with waveform displays), mixer, beat FX, colour FX, performance
-macros and a sampler, all running the actual **DJ Nexus Pro C++ audio engine** (`../dj-nexus-pro/engine`)
-compiled to WebAssembly -- not a simulation. On top of that: a local track library with automatic BPM/key
-detection, smart + manual crates, and the **RadicalAI** next-track advisor, all JS ports of (or built on) that
-engine's native, unit-tested analyzer and scoring formula. Recording a set also produces an auto-built
-tracklist alongside the audio.
+A real, working browser DJ console: two decks (with waveform displays and hot cue markers), mixer, beat FX,
+colour FX, performance macros and a sampler, all running the actual **DJ Nexus Pro C++ audio engine**
+(`../dj-nexus-pro/engine`) compiled to WebAssembly -- not a simulation. On top of that: a local track library
+with automatic BPM/key detection, smart + manual crates, and the **RadicalAI** next-track advisor (surfaced
+both in the library and as a live radar on the Decks screen), all JS ports of (or built on) that engine's
+native, unit-tested analyzer and scoring formula. An **Auto-Mix** mode will pick, load and crossfade into the
+AI's top suggestion as the playing deck nears its end. Recording a set also produces an auto-built tracklist
+alongside the audio. Keyboard shortcuts cover transport and hot cues.
 
 See [`docs/dj-radicalmix/SPEC.md`](../docs/dj-radicalmix/SPEC.md) for the full product blueprint and what of
 it this build does and doesn't implement (short version: the real-time engine, BPM/key detection and the
@@ -47,7 +49,15 @@ uploaded anywhere.
   re-decoded on demand when loaded to a deck. Also holds **crates**: manual (a track list) or smart
   (a BPM/energy/genre/mode rule, matched live -- RadicalSort from docs/dj-radicalmix Sec 2 Issue 3).
 - `src/lib/waveform.ts` + `src/components/Waveform.tsx` -- per-track min/max peaks computed once at
-  decode time, rendered to a canvas with a live playhead (RadicalWave, Issue 10).
+  decode time, rendered to a canvas with a live playhead and hot cue markers (RadicalWave, Issue 10). Hot cue
+  marker positions are recorded client-side when set (`useDecks.setHotCueAt`) rather than read back from the
+  engine, since the engine's state doesn't expose hot cue positions -- accurate enough for a marker, but will
+  be a beat-grid-snapped position off by a hair if quantize moved it.
+- `src/lib/suggestions.ts` -- the next-track scoring/ranking shared by the Library screen's full RadicalAI
+  panel and the Decks screen's compact **Next-Track Radar** rail, so the two never disagree.
+- `src/state/useAutoMix.ts` -- **Auto-Mix** (Issue 24): when the playing deck is within 20s of ending and the
+  other deck is idle, loads RadicalAI's top pick onto it, plays it (sync on), and crossfades over 8s. Never
+  touches a deck the DJ has already loaded manually.
 - `src/state/useSessionLog.ts` -- an in-memory "what got loaded to a deck, and when" log for this session,
   exported as a .txt tracklist alongside a recording (Issue 13) -- no server needed.
 - `src/lib/starterSounds.ts` -- 8 procedurally synthesized sampler one-shots (kick/clap/hats/riser/impact/
@@ -62,13 +72,20 @@ npm run test   # vitest: analysis.ts + advisor.ts against the same fixtures as t
 npm run lint   # oxlint
 npm run e2e    # builds, serves, and drives the built app in a real headless browser (Playwright):
                # imports synthetic fixtures, checks real BPM/key detection and the AI advisor, creates a
-               # smart crate and a manual crate, loads a deck, plays it, checks the waveform actually
-               # drew pixels, records a few seconds, and checks the exported tracklist's contents.
-               # Screenshots land in scripts/.e2e-out/ (gitignored).
+               # smart crate and a manual crate, loads a deck, plays it, checks the waveform drew pixels
+               # and a hot cue marker, checks a keyboard shortcut toggles playback, checks the Next-Track
+               # Radar, runs a full Auto-Mix transition end to end (checks the second deck ends up loaded,
+               # playing and crossfaded in), records a few seconds, and checks the exported tracklist's
+               # contents. Screenshots land in scripts/.e2e-out/ (gitignored).
 ```
 
 `npm run build` type-checks (`tsc -b`) before bundling, so a broken type is a build failure, not a runtime
 surprise.
+
+## Keyboard shortcuts (Decks screen)
+
+`Space`/`Enter` play-pause deck A/B &middot; `C`/`V` cue A/B &middot; `1`-`4` hot cues A &middot; `7`-`0` hot
+cues B. Disabled while focus is in a text input/select.
 
 ## Known limitations
 

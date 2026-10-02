@@ -57,7 +57,7 @@ export default function App() {
       </nav>
       <div className="main">
         {view === "home" && <Home eng={eng} onEnter={() => eng.enter().then(() => setView("decks"))} />}
-        {view === "decks" && ready && <DecksView eng={eng} decks={decks} />}
+        {view === "decks" && ready && <DecksView eng={eng} decks={decks} tracks={lib.tracks} />}
         {view === "library" && ready && <LibraryView lib={lib} crates={crates} decks={decks} eng={eng} />}
         {view === "sampler" && ready && <SamplerView />}
         {view === "fx" && ready && <FxView eng={eng} />}
