@@ -1,0 +1,66 @@
+{
+  "expo": {
+    "name": "SplitFire Production",
+    "slug": "splitfire-production",
+    "scheme": "splitfire",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#05010A",
+    "primaryColor": "#FF1B4B",
+    "newArchEnabled": true,
+    "description": "Neon-themed DJ motion-graphics and branding studio for DJAY RadicalMix — generate intros, transitions, posters, reels and motion graphics. Mix Beyond Reality.",
+    "ios": {
+      "bundleIdentifier": "com.splitfireproduction.app",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSPhotoLibraryAddUsageDescription": "SplitFire Production saves your rendered motion graphics, posters and reels to your photo library.",
+        "UIBackgroundModes": []
+      }
+    },
+    "android": {
+      "package": "com.splitfireproduction.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#05010A",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": ["READ_MEDIA_IMAGES", "READ_MEDIA_VIDEO"]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 220,
+          "resizeMode": "contain",
+          "backgroundColor": "#05010A",
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#05010A"
+          }
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "SplitFire Production needs access to save your rendered motion graphics, posters and reels to your photo library.",
+          "savePhotosPermission": "SplitFire Production needs permission to save exported content to your photo library.",
+          "isAccessMediaLocationEnabled": false
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
