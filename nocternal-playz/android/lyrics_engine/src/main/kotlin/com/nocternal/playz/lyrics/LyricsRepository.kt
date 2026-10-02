@@ -108,6 +108,19 @@ object LyricsQuery {
         artist = artist?.let { feat.replace(it, "").split(',', '&', '/').first().trim() }
         return title to artist
     }
+
+    private val devanagariOrGurmukhi = Regex("[ऀ-ॿ਀-੿]")
+    private val hindiWords = listOf(
+        "hindi", "bollywood", "punjabi", "bhangra", "bhajan", "devotional", "ghazal", "filmi",
+        "desi", "qawwali", "sufi", "hindustani", "retro bollywood", "old hindi",
+    )
+
+    /** True when the track's title/artist is written in Devanagari or Gurmukhi script, or its genre/folder flags it as Hindi/Punjabi music — lyrics for these should be Hinglish (Romanized), not English. */
+    fun looksHindiOrPunjabi(t: Track): Boolean {
+        if (devanagariOrGurmukhi.containsMatchIn(t.title) || devanagariOrGurmukhi.containsMatchIn(t.artist)) return true
+        val haystack = listOf(t.genreTag, t.folder).joinToString(" ") { it ?: "" }.lowercase()
+        return hindiWords.any { it in haystack }
+    }
 }
 
 /**

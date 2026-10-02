@@ -102,12 +102,16 @@ class AppContainer(val context: Context) {
             val (title, artist) = LyricsQuery.of(track)
             val genre = genreDetector.detect(track)?.genre?.displayName ?: "pop"
             val mood = moodDetector.detect(track)?.mood?.label ?: "any"
-            val prompt = "Show the lyrics of the song \"$title\"" + (artist?.let { " by $it" } ?: "") +
-                ". Write ALL lyrics in English script (Latin/Roman letters). " +
-                "For Hindi, Punjabi, or any non-English words, write them as they sound in English letters (transliteration) — " +
-                "match exactly what the singer sings, word for word. Example: 'Tujhe dekha toh yeh jaana sanam' not a translation. " +
-                "Keep English parts in English. Do not translate — transliterate. " +
-                "Output only the lyric lines, one per line, no headings, labels or notes."
+            val hindi = LyricsQuery.looksHindiOrPunjabi(track)
+            val prompt = "Show the lyrics of the song \"$title\"" + (artist?.let { " by $it" } ?: "") + ", genre $genre." +
+                (if (hindi)
+                    " This is a Hindi/Punjabi song. Write EVERY line in Hinglish — Hindi or Punjabi words spelled out phonetically in English letters, " +
+                        "exactly as the singer sings them (e.g. 'Tujhe dekha toh yeh jaana sanam'). " +
+                        "Do NOT translate to English and do NOT write plain English lines; only transliterate. " +
+                        "If you don't know the exact real lyrics, write original lines in the same Hinglish style and mood instead of switching to English."
+                else
+                    " Write the lyrics in English. If any words in the real lyrics are in another language, transliterate them into English letters rather than translating them.") +
+                " Output only the lyric lines, one per line, no headings, labels or notes."
             val text = ClaudeAssistantLlm(key).complete("You write song lyrics.", listOf(LlmTurn(LlmRole.USER, prompt)))
             val lines = text.lines().map { it.trim() }.filter { it.isNotEmpty() && !it.startsWith("[") && !it.startsWith("#") && !it.startsWith("(") }.take(40)
             return if (lines.size < 4) null else LyricsTiming.spread(lines, track.durationMs, LyricsOrigin.AI_GENERATED)

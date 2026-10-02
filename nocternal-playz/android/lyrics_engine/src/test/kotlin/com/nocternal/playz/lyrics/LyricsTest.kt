@@ -90,4 +90,17 @@ class LyricsFallbackTest {
         // On-device writer always produces something.
         org.junit.Assert.assertTrue(LyricWeaver().find(t).lines.size >= 8)
     }
+
+    @Test fun hindiTrackDetectedByScriptOrGenre() = runTest {
+        assertTrue(LyricsQuery.looksHindiOrPunjabi(Track("1", "", "तुझे देखा तो", "Artist")))
+        assertTrue(LyricsQuery.looksHindiOrPunjabi(Track("2", "", "Baatein Ye Kabhi Na", "Arijit Singh", genreTag = "Bollywood")))
+        assertFalse(LyricsQuery.looksHindiOrPunjabi(Track("3", "", "Blinding Lights", "The Weeknd", genreTag = "Pop")))
+    }
+
+    @Test fun onDeviceWriterUsesHinglishForHindiTracks() = runTest {
+        val t = Track("id", "", "Baatein Ye Kabhi Na", "Arijit Singh", genreTag = "Bollywood", durationMs = 200_000)
+        val lines = LyricWeaver().find(t).lines.map { it.text }
+        val englishOnlyWords = listOf("the floor is shaking", "turn it up and let it go", "every heartbeat hits the drum")
+        assertTrue(englishOnlyWords.none { phrase -> lines.any { it.lowercase().contains(phrase) } })
+    }
 }

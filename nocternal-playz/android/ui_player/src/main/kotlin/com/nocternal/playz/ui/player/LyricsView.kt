@@ -34,7 +34,7 @@ fun LyricsView(lyrics: Lyrics?, positionMs: Long, modifier: Modifier = Modifier,
     }
     if (lyrics.origin == LyricsOrigin.AI_GENERATED) {
         androidx.compose.foundation.layout.Column(modifier) {
-            Text("✨ Lyrics in English script — Hindi/Punjabi words transliterated to match the singer", Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+            Text("✨ No official lyrics found — shown in English script, with Hindi/Punjabi words transliterated to match the singer", Modifier.fillMaxWidth().padding(horizontal = 24.dp),
                 color = p.accent, style = MaterialTheme.typography.labelSmall, textAlign = TextAlign.Center)
             SyncedLyrics(lyrics, positionMs, Modifier.weight(1f), onLineClick)
         }
