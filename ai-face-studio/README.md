@@ -46,3 +46,62 @@ npm install
 cp .env.example .env.local   # optional — only needed to try the Owner dashboard locally
 npm run dev
 ```
+
+## Installing it today: the deployed PWA
+
+The web app is deployed at **https://ai-face-studio.vercel.app** (Vercel project `ai-face-studio`, built
+from this repo's `claude/ai-face-studio-build-wbx9ya` branch). It's a installable PWA (`public/manifest.webmanifest`
++ `public/sw.js`): open it in Chrome on Android and use **⋮ menu → Install app** to get a real home-screen
+app (a WebAPK) with no build step. That's the fastest way to try the app on a phone.
+
+## Building a real `.apk`: the Capacitor Android project
+
+`android/` is a real native Android/Gradle project, generated with the Capacitor CLI (`npx cap add android`)
+and synced to this app's static export — not a hand-written stub. It was **scaffolded but not built** here:
+this sandbox has no Android SDK, and `dl.google.com` (Google's Maven repo, which serves the Android Gradle
+Plugin itself, not just SDK platform packages) is blocked by this environment's network policy — confirmed
+directly: `./gradlew tasks` fails with `403 Forbidden` from `dl.google.com/dl/android/maven2/...` even before
+it gets to needing an installed SDK. Nothing about the project is unfinished because of that — it just needs
+to be built somewhere with normal access to Google's Maven repo.
+
+**One codebase, two build targets** (`next.config.js`):
+- The default `next build` (used by the Vercel deployment above) is a normal server build.
+- `npm run build:capacitor` sets `BUILD_TARGET=capacitor`, which switches `next.config.js` to
+  `output: 'export'` — a fully static export into `out/`, because `output: 'export'` can't use
+  `headers()`/server features, and Capacitor needs local files to bundle (no live server at runtime).
+  `pages/upload/[tool].tsx` and `pages/editor/[tool].tsx` carry `getStaticPaths` over every tool id
+  (`lib/tools.ts`) so all 32 tool screens pre-render to their own static HTML file — verified: the export
+  produces 73 HTML files, including `/upload/<tool-id>.html` and `/editor/<tool-id>.html` for every tool.
+
+### To build the APK on a machine with Android Studio / the Android SDK
+
+```bash
+cd ai-face-studio/web
+npm install
+npm run cap:sync          # builds the static export, then `cap sync android`
+cd android
+./gradlew assembleDebug   # needs Android SDK + internet access to dl.google.com, which this sandbox lacks
+```
+
+The debug APK lands at `android/app/build/outputs/apk/debug/app-debug.apk` — installable by sideloading
+(`adb install app-debug.apk`) or sending the file directly. Or skip the CLI and run `npm run android:open`
+to open the project in Android Studio and hit Run.
+
+That produces a **debug-signed** APK (fine for sideloading/testing, not for the Play Store). A Play Store
+release needs a release keystore and `./gradlew bundleRelease` (produces an `.aab`) — out of scope until
+there's an actual release to ship.
+
+### What's already set up
+
+- **App identity**: `com.splitfireproduction.aifacestudio`, app name "AI Face Studio" (`android/app/src/main/res/values/strings.xml`).
+- **Brand icons & splash**: generated with `@capacitor/assets` from `resources/icon.png` / `resources/splash.png`
+  (the same sparkle mark used across the app) into every Android density bucket, adaptive icon included, plus
+  light/dark and portrait/landscape splash variants — 100 files, `npm run cap:assets` to regenerate if the
+  source art changes.
+- **Brand color overrides** (`android/app/src/main/res/values/colors.xml`): the app module overrides
+  `capacitor-android`'s Material-default indigo/pink `colorPrimary`/`colorAccent` with the actual brand
+  purple/cyan.
+- **`INTERNET` permission** is present (for the Google Fonts `<link>` and any future real AI API calls);
+  nothing else is requested.
+- `android/app/src/main/assets/public` (the copied web build) and all Gradle/IDE build output are
+  gitignored — regenerate with `npm run cap:sync` after pulling, don't expect them to already be there.

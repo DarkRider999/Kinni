@@ -5,10 +5,20 @@ import { TopBar } from '../../components/TopBar';
 import { UploadDropzone, type UploadedFile } from '../../components/UploadDropzone';
 import { ConsentNotice } from '../../components/ConsentNotice';
 import { Icon } from '../../components/Icon';
-import { getTool } from '../../lib/tools';
+import { getTool, TOOLS } from '../../lib/tools';
 import { listCharacters, newId, saveCharacter } from '../../lib/storage';
 import { setStaged } from '../../lib/staging';
 import type { CharacterProfile, ToolDef } from '../../lib/types';
+
+// Pre-rendered for every known tool id so `npm run build:capacitor` (output: 'export', see
+// next.config.js) can produce a static /upload/<tool>.html for each one — the Capacitor Android
+// build has no server at runtime to resolve this route dynamically.
+export async function getStaticPaths() {
+  return { paths: TOOLS.map((t) => ({ params: { tool: t.id } })), fallback: false };
+}
+export async function getStaticProps() {
+  return { props: {} };
+}
 
 export default function UploadPage() {
   const router = useRouter();

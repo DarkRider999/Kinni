@@ -6,8 +6,16 @@ import { SingleEditor } from '../../components/SingleEditor';
 import { BatchRunner } from '../../components/BatchRunner';
 import { AnalysisRunner } from '../../components/AnalysisRunner';
 import type { UploadedFile } from '../../components/UploadDropzone';
-import { getTool } from '../../lib/tools';
+import { getTool, TOOLS } from '../../lib/tools';
 import { getStaged } from '../../lib/staging';
+
+// See pages/upload/[tool].tsx — same reason: static export needs every path pre-rendered.
+export async function getStaticPaths() {
+  return { paths: TOOLS.map((t) => ({ params: { tool: t.id } })), fallback: false };
+}
+export async function getStaticProps() {
+  return { props: {} };
+}
 
 export default function EditorPage() {
   const router = useRouter();
