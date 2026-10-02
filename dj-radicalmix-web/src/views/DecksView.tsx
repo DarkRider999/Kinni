@@ -1,7 +1,6 @@
 import { useRef, useState } from "react";
-import { analyzeTrack } from "../engine/analysis";
+import { Waveform } from "../components/Waveform";
 import { engine } from "../engine/engineBridge";
-import { decodeAudioFile, toEngineStereo } from "../lib/decode";
 import type { useDecks } from "../state/useDecks";
 import type { useEngine } from "../state/useEngine";
 
@@ -23,14 +22,6 @@ function DeckPanel({
   const loading = decks.loading[deck];
   const label = deck === 0 ? "A" : "B";
 
-  const quickLoad = async (file: File) => {
-    const decoded = await decodeAudioFile(file);
-    const analysis = analyzeTrack(decoded.channels, decoded.sampleRate);
-    const { left, right } = toEngineStereo(decoded);
-    await engine.load(deck, left, right, analysis.bpm, analysis.firstBeatSec);
-    // Not added to the persistent library -- quick-load is for "just hear it now".
-  };
-
   return (
     <div className={`panel deck`}>
       <h3>
@@ -42,21 +33,28 @@ function DeckPanel({
           type="file"
           accept="audio/*"
           style={{ display: "none" }}
-          onChange={(e) => e.target.files?.[0] && quickLoad(e.target.files[0])}
+          onChange={(e) => e.target.files?.[0] && decks.quickLoadToDeck(deck, e.target.files[0])}
         />
         <button className="btn small" onClick={() => fileRef.current?.click()}>
           Quick load file
         </button>
       </h3>
 
-      <div className="trackname">{deckTrack ? deckTrack.track.name : loading ? "Loading..." : "No track loaded"}</div>
+      <div className="trackname">{deckTrack ? deckTrack.name : loading ? "Loading..." : "No track loaded"}</div>
       <div className="meta-row">
         <span className="chip">{s?.effectiveBpm ? s.effectiveBpm.toFixed(1) : "--"} BPM</span>
-        <span className="chip">{deckTrack?.track.camelot || "--"}</span>
+        <span className="chip">{deckTrack?.camelot || "--"}</span>
         <span className="chip">
           {s ? `${s.position.toFixed(0)}s / ${s.duration.toFixed(0)}s` : "--"}
         </span>
       </div>
+
+      <Waveform
+        peaks={deckTrack?.peaks ?? null}
+        position={s?.position ?? 0}
+        duration={s?.duration ?? 0}
+        color={deck === 0 ? "#ff1744" : "#00e5ff"}
+      />
 
       <div className="row">
         <label>Level</label>

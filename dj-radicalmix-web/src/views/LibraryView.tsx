@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { explainSuggestion, scoreNextTrack, type TrackInfo } from "../engine/advisor";
-import { secondsSincePlayed, type Track } from "../lib/library";
+import { secondsSincePlayed, trackInCrate, type Crate, type CrateRule, type Track } from "../lib/library";
+import type { useCrates } from "../state/useCrates";
 import type { useDecks } from "../state/useDecks";
 import type { useEngine } from "../state/useEngine";
 import type { useLibrary } from "../state/useLibrary";
@@ -48,28 +49,98 @@ function Dropzone({ onFiles }: { onFiles: (files: FileList) => void }) {
   );
 }
 
+function SmartCrateForm({ onCreate, onCancel }: { onCreate: (name: string, rule: CrateRule) => void; onCancel: () => void }) {
+  const [name, setName] = useState("");
+  const [bpmMin, setBpmMin] = useState("");
+  const [bpmMax, setBpmMax] = useState("");
+  const [energyMin, setEnergyMin] = useState("");
+  const [energyMax, setEnergyMax] = useState("");
+  const [genre, setGenre] = useState("");
+  const [mode, setMode] = useState<"" | "major" | "minor">("");
+
+  const submit = () => {
+    if (!name.trim()) return;
+    const rule: CrateRule = {};
+    if (bpmMin) rule.bpmMin = parseFloat(bpmMin);
+    if (bpmMax) rule.bpmMax = parseFloat(bpmMax);
+    if (energyMin) rule.energyMin = parseFloat(energyMin);
+    if (energyMax) rule.energyMax = parseFloat(energyMax);
+    if (genre.trim()) rule.genre = genre.trim();
+    if (mode) rule.mode = mode;
+    onCreate(name.trim(), rule);
+  };
+
+  return (
+    <div className="panel" style={{ padding: 12, marginBottom: 10 }}>
+      <div className="section-title">New smart crate</div>
+      <div className="row">
+        <label>Name</label>
+        <input className="field" style={{ flex: 1 }} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Peak-Time Techno" />
+      </div>
+      <div className="row">
+        <label>BPM</label>
+        <input className="field" style={{ width: 60 }} value={bpmMin} onChange={(e) => setBpmMin(e.target.value)} placeholder="min" />
+        <input className="field" style={{ width: 60 }} value={bpmMax} onChange={(e) => setBpmMax(e.target.value)} placeholder="max" />
+        <label style={{ width: "auto", marginLeft: 10 }}>Energy</label>
+        <input className="field" style={{ width: 50 }} value={energyMin} onChange={(e) => setEnergyMin(e.target.value)} placeholder="min" />
+        <input className="field" style={{ width: 50 }} value={energyMax} onChange={(e) => setEnergyMax(e.target.value)} placeholder="max" />
+      </div>
+      <div className="row">
+        <label>Genre</label>
+        <input className="field" style={{ width: 120 }} value={genre} onChange={(e) => setGenre(e.target.value)} placeholder="any" />
+        <label style={{ width: "auto", marginLeft: 10 }}>Mode</label>
+        <select className="field" value={mode} onChange={(e) => setMode(e.target.value as typeof mode)}>
+          <option value="">any</option>
+          <option value="major">major</option>
+          <option value="minor">minor</option>
+        </select>
+      </div>
+      <div className="transport" style={{ marginTop: 6 }}>
+        <button className="btn small primary" onClick={submit}>
+          Create
+        </button>
+        <button className="btn small ghost" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function LibraryView({
   lib,
+  crates,
   decks,
   eng,
 }: {
   lib: ReturnType<typeof useLibrary>;
+  crates: ReturnType<typeof useCrates>;
   decks: ReturnType<typeof useDecks>;
   eng: ReturnType<typeof useEngine>;
 }) {
   const [query, setQuery] = useState("");
   const [refId, setRefId] = useState<string>("");
   const [targetEnergy, setTargetEnergy] = useState(-1);
+  const [activeCrateId, setActiveCrateId] = useState<string | null>(null);
+  const [showSmartForm, setShowSmartForm] = useState(false);
+
+  const activeCrate: Crate | undefined = crates.crates.find((c) => c.id === activeCrateId);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return lib.tracks;
-    return lib.tracks.filter(
-      (t) => t.name.toLowerCase().includes(q) || t.genre.toLowerCase().includes(q) || t.camelot.toLowerCase().includes(q),
-    );
-  }, [lib.tracks, query]);
+    return lib.tracks.filter((t) => {
+      // Smart crates filter the list by their rule. Manual crates don't --
+      // every track stays visible so its "in crate" checkbox can be used to
+      // add it; filtering those out here would make an empty manual crate
+      // impossible to ever put a first track into.
+      if (activeCrate?.kind === "smart" && !trackInCrate(t, activeCrate)) return false;
+      if (!q) return true;
+      return t.name.toLowerCase().includes(q) || t.genre.toLowerCase().includes(q) || t.camelot.toLowerCase().includes(q);
+    });
+  }, [lib.tracks, query, activeCrate]);
 
-  const masterDeckTrack = eng.state && eng.state.masterDeck >= 0 ? decks.deckTracks[eng.state.masterDeck]?.track : undefined;
+  const masterDeckTrackId = eng.state && eng.state.masterDeck >= 0 ? decks.deckTracks[eng.state.masterDeck]?.trackId : undefined;
+  const masterDeckTrack = lib.tracks.find((t) => t.id === masterDeckTrackId);
   const reference = lib.tracks.find((t) => t.id === refId) ?? masterDeckTrack ?? lib.tracks[0];
 
   const suggestions = useMemo(() => {
@@ -102,9 +173,59 @@ export function LibraryView({
         </div>
       )}
 
-      <div className="grid2" style={{ alignItems: "start" }}>
+      <div className="crate-rail">
+        <button className={`chip-btn${activeCrateId === null ? " active" : ""}`} onClick={() => setActiveCrateId(null)}>
+          All tracks ({lib.tracks.length})
+        </button>
+        {crates.crates.map((c) => (
+          <button
+            key={c.id}
+            className={`chip-btn${activeCrateId === c.id ? " active" : ""}`}
+            onClick={() => setActiveCrateId(c.id)}
+            title={c.kind === "smart" ? "Smart crate (rule-based)" : "Manual crate"}
+          >
+            {c.kind === "smart" ? "⚡" : "\u{1F4C1}"} {c.name} ({lib.tracks.filter((t) => trackInCrate(t, c)).length})
+            <span
+              className="chip-x"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (activeCrateId === c.id) setActiveCrateId(null);
+                crates.remove(c.id);
+              }}
+            >
+              &times;
+            </span>
+          </button>
+        ))}
+        <button
+          className="btn compact"
+          onClick={() => {
+            const name = window.prompt("Manual crate name?");
+            if (name && name.trim()) crates.createManual(name.trim());
+          }}
+        >
+          + Manual
+        </button>
+        <button className="btn compact" onClick={() => setShowSmartForm((v) => !v)}>
+          + Smart
+        </button>
+      </div>
+
+      {showSmartForm && (
+        <SmartCrateForm
+          onCreate={(name, rule) => {
+            crates.createSmart(name, rule);
+            setShowSmartForm(false);
+          }}
+          onCancel={() => setShowSmartForm(false)}
+        />
+      )}
+
+      <div className="library-grid">
         <div className="panel" style={{ padding: 16, overflowX: "auto" }}>
-          <div className="section-title">Library ({lib.tracks.length})</div>
+          <div className="section-title">
+            {activeCrate ? activeCrate.name : "Library"} ({filtered.length})
+          </div>
           <input
             className="field"
             placeholder="Search name, genre, key..."
@@ -121,6 +242,7 @@ export function LibraryView({
                 <th>Energy</th>
                 <th>Genre</th>
                 <th>Last played</th>
+                {activeCrate?.kind === "manual" && <th>In crate</th>}
                 <th></th>
               </tr>
             </thead>
@@ -154,6 +276,15 @@ export function LibraryView({
                       ? new Date(t.lastPlayedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                       : "never"}
                   </td>
+                  {activeCrate?.kind === "manual" && (
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={activeCrate.trackIds.includes(t.id)}
+                        onChange={() => crates.toggleTrack(activeCrate, t.id)}
+                      />
+                    </td>
+                  )}
                   <td>
                     <div style={{ display: "flex", gap: 4 }}>
                       <button className="btn compact" onClick={() => decks.loadToDeck(0, t)} title="Load to Deck A">
@@ -171,8 +302,8 @@ export function LibraryView({
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} style={{ color: "var(--ink-dim)" }}>
-                    No tracks yet -- import some above.
+                  <td colSpan={8} style={{ color: "var(--ink-dim)" }}>
+                    {lib.tracks.length === 0 ? "No tracks yet -- import some above." : "No tracks match this crate/search."}
                   </td>
                 </tr>
               )}

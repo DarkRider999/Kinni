@@ -1,9 +1,11 @@
 # DJ RadicalMix -- SplitFire Production (web)
 
-A real, working browser DJ console: two decks, mixer, beat FX, colour FX, performance macros and a sampler,
-all running the actual **DJ Nexus Pro C++ audio engine** (`../dj-nexus-pro/engine`) compiled to WebAssembly --
-not a simulation. On top of that: a local track library with automatic BPM/key detection and the **RadicalAI**
-next-track advisor, both JS ports of that engine's native, unit-tested analyzer and scoring formula.
+A real, working browser DJ console: two decks (with waveform displays), mixer, beat FX, colour FX, performance
+macros and a sampler, all running the actual **DJ Nexus Pro C++ audio engine** (`../dj-nexus-pro/engine`)
+compiled to WebAssembly -- not a simulation. On top of that: a local track library with automatic BPM/key
+detection, smart + manual crates, and the **RadicalAI** next-track advisor, all JS ports of (or built on) that
+engine's native, unit-tested analyzer and scoring formula. Recording a set also produces an auto-built
+tracklist alongside the audio.
 
 See [`docs/dj-radicalmix/SPEC.md`](../docs/dj-radicalmix/SPEC.md) for the full product blueprint and what of
 it this build does and doesn't implement (short version: the real-time engine, BPM/key detection and the
@@ -42,7 +44,12 @@ uploaded anywhere.
   mirror the C++ test suite's exact fixtures and assertions so a divergence shows up as a test failure on
   one side or the other.
 - `src/lib/library.ts` -- local-only track library (IndexedDB): metadata plus the original file blob,
-  re-decoded on demand when loaded to a deck.
+  re-decoded on demand when loaded to a deck. Also holds **crates**: manual (a track list) or smart
+  (a BPM/energy/genre/mode rule, matched live -- RadicalSort from docs/dj-radicalmix Sec 2 Issue 3).
+- `src/lib/waveform.ts` + `src/components/Waveform.tsx` -- per-track min/max peaks computed once at
+  decode time, rendered to a canvas with a live playhead (RadicalWave, Issue 10).
+- `src/state/useSessionLog.ts` -- an in-memory "what got loaded to a deck, and when" log for this session,
+  exported as a .txt tracklist alongside a recording (Issue 13) -- no server needed.
 - `src/lib/starterSounds.ts` -- 8 procedurally synthesized sampler one-shots (kick/clap/hats/riser/impact/
   tag). Not the blueprint's licensed 10,000+ pack library -- placeholders so the sampler screen is real and
   playable without any content this environment can't source.
@@ -54,9 +61,10 @@ uploaded anywhere.
 npm run test   # vitest: analysis.ts + advisor.ts against the same fixtures as the C++ engine's test suite
 npm run lint   # oxlint
 npm run e2e    # builds, serves, and drives the built app in a real headless browser (Playwright):
-               # imports synthetic fixtures, checks real BPM/key detection and the AI advisor, loads a
-               # deck, plays it, and exercises the sampler/FX/settings screens. Screenshots land in
-               # scripts/.e2e-out/ (gitignored).
+               # imports synthetic fixtures, checks real BPM/key detection and the AI advisor, creates a
+               # smart crate and a manual crate, loads a deck, plays it, checks the waveform actually
+               # drew pixels, records a few seconds, and checks the exported tracklist's contents.
+               # Screenshots land in scripts/.e2e-out/ (gitignored).
 ```
 
 `npm run build` type-checks (`tsc -b`) before bundling, so a broken type is a build failure, not a runtime

@@ -1,26 +1,36 @@
 import { useRef, useState } from "react";
 import { engine } from "../engine/engineBridge";
 import type { useEngine } from "../state/useEngine";
+import type { useSessionLog } from "../state/useSessionLog";
 
-function Recorder() {
+function Recorder({ sessionLog }: { sessionLog: ReturnType<typeof useSessionLog> }) {
   const [recording, setRecording] = useState(false);
-  const [download, setDownload] = useState<{ url: string; filename: string } | null>(null);
+  const [audioDownload, setAudioDownload] = useState<{ url: string; filename: string } | null>(null);
+  const [tracklistDownload, setTracklistDownload] = useState<{ url: string; filename: string } | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const startedAtRef = useRef(0);
 
   const start = () => {
     const stream = engine.startRecordTap();
     const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus") ? "audio/webm;codecs=opus" : "audio/webm";
     const rec = new MediaRecorder(stream, { mimeType: mime });
     chunksRef.current = [];
+    startedAtRef.current = Date.now();
     rec.ondataavailable = (e) => {
       if (e.data.size > 0) chunksRef.current.push(e.data);
     };
     rec.onstop = () => {
+      const stamp = Date.now();
       const blob = new Blob(chunksRef.current, { type: mime });
-      setDownload((prev) => {
+      setAudioDownload((prev) => {
         if (prev) URL.revokeObjectURL(prev.url);
-        return { url: URL.createObjectURL(blob), filename: `radicalmix-set-${Date.now()}.webm` };
+        return { url: URL.createObjectURL(blob), filename: `radicalmix-set-${stamp}.webm` };
+      });
+      const tracklistBlob = new Blob([sessionLog.toText(startedAtRef.current)], { type: "text/plain" });
+      setTracklistDownload((prev) => {
+        if (prev) URL.revokeObjectURL(prev.url);
+        return { url: URL.createObjectURL(tracklistBlob), filename: `radicalmix-set-${stamp}-tracklist.txt` };
       });
     };
     rec.start();
@@ -38,7 +48,8 @@ function Recorder() {
       <h3 style={{ marginTop: 0 }}>Record the set</h3>
       <p style={{ fontSize: 12, color: "var(--ink-dim)" }}>
         Captures the master bus (post-limiter) as compressed audio (WebM/Opus -- a browser's MediaRecorder can't
-        produce WAV/FLAC directly; that needs a native build, see docs/dj-radicalmix Sec 3 Issue 13).
+        produce WAV/FLAC directly; that needs a native build, see docs/dj-radicalmix Sec 3 Issue 13), plus a
+        tracklist built automatically from every track loaded to a deck during the recording.
       </p>
       <div className="transport">
         {!recording ? (
@@ -51,16 +62,23 @@ function Recorder() {
           </button>
         )}
       </div>
-      {download && (
-        <a className="btn small" href={download.url} download={download.filename}>
-          Download last recording
-        </a>
-      )}
+      <div className="transport">
+        {audioDownload && (
+          <a className="btn small" href={audioDownload.url} download={audioDownload.filename}>
+            Download audio (.webm)
+          </a>
+        )}
+        {tracklistDownload && (
+          <a className="btn small" href={tracklistDownload.url} download={tracklistDownload.filename}>
+            Download tracklist (.txt)
+          </a>
+        )}
+      </div>
     </div>
   );
 }
 
-export function SettingsView({ eng }: { eng: ReturnType<typeof useEngine> }) {
+export function SettingsView({ eng, sessionLog }: { eng: ReturnType<typeof useEngine>; sessionLog: ReturnType<typeof useSessionLog> }) {
   const s = eng.state;
   return (
     <div className="grid2">
@@ -81,7 +99,7 @@ export function SettingsView({ eng }: { eng: ReturnType<typeof useEngine> }) {
           <dd>{s ? s.clockBpm.toFixed(1) : "--"}</dd>
         </dl>
       </div>
-      <Recorder />
+      <Recorder sessionLog={sessionLog} />
       <div className="panel" style={{ padding: 16, gridColumn: "1 / -1" }}>
         <h3 style={{ marginTop: 0 }}>About this build</h3>
         <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>

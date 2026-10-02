@@ -140,6 +140,12 @@
   text-overflow: ellipsis;
 }
 
+.deck canvas {
+  background: var(--void);
+  border: 1px solid var(--rail);
+  margin-bottom: 10px;
+}
+
 .meta-row {
   display: flex;
   gap: 10px;
@@ -284,6 +290,56 @@
 
 .tracklist tr:hover td {
   background: color-mix(in srgb, var(--panel-2) 60%, transparent);
+}
+
+.library-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+  align-items: start;
+}
+
+@media (max-width: 1000px) {
+  .library-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.crate-rail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.chip-btn {
+  background: var(--panel-2);
+  border: 1px solid var(--rail);
+  color: var(--ink-dim);
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.chip-btn.active {
+  color: var(--ink);
+  border-color: var(--red);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--red) 40%, transparent) inset;
+}
+
+.chip-x {
+  color: var(--ink-dim);
+  font-weight: 700;
+  padding: 0 2px;
+}
+
+.chip-x:hover {
+  color: var(--bad);
 }
 
 .dropzone {

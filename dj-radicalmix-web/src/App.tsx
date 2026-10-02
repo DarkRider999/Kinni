@@ -1,8 +1,10 @@
 import { useState } from "react";
 import "./app.css";
+import { useCrates } from "./state/useCrates";
 import { useDecks } from "./state/useDecks";
 import { useEngine } from "./state/useEngine";
 import { useLibrary } from "./state/useLibrary";
+import { useSessionLog } from "./state/useSessionLog";
 import { DecksView } from "./views/DecksView";
 import { FxView } from "./views/FxView";
 import { Home } from "./views/Home";
@@ -25,7 +27,9 @@ export default function App() {
   const [view, setView] = useState<View>("home");
   const eng = useEngine();
   const lib = useLibrary();
-  const decks = useDecks(lib.markPlayed);
+  const crates = useCrates();
+  const sessionLog = useSessionLog();
+  const decks = useDecks(lib.markPlayed, sessionLog.log);
 
   const ready = eng.status === "running";
 
@@ -54,10 +58,10 @@ export default function App() {
       <div className="main">
         {view === "home" && <Home eng={eng} onEnter={() => eng.enter().then(() => setView("decks"))} />}
         {view === "decks" && ready && <DecksView eng={eng} decks={decks} />}
-        {view === "library" && ready && <LibraryView lib={lib} decks={decks} eng={eng} />}
+        {view === "library" && ready && <LibraryView lib={lib} crates={crates} decks={decks} eng={eng} />}
         {view === "sampler" && ready && <SamplerView />}
         {view === "fx" && ready && <FxView eng={eng} />}
-        {view === "settings" && ready && <SettingsView eng={eng} />}
+        {view === "settings" && ready && <SettingsView eng={eng} sessionLog={sessionLog} />}
       </div>
     </div>
   );

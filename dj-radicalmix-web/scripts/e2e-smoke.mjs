@@ -74,6 +74,30 @@ try {
   console.log("top AI suggestion:", suggestionText);
   assert(suggestionText && suggestionText.length > 0, "RadicalAI produced a suggestion");
 
+  // Smart crate: BPM >= 129 should match only trackB (130.8), not trackA (128.0).
+  await page.click("text=+ Smart");
+  await page.fill('input[placeholder="e.g. Peak-Time Techno"]', "Fast");
+  await page.fill('input[placeholder="min"] >> nth=0', "129");
+  await page.click("text=Create");
+  await page.click("text=/Fast \\(/");
+  await page.waitForTimeout(200);
+  const fastCrateRows = await page.$$eval(".tracklist tbody tr", (trs) => trs.map((tr) => tr.textContent));
+  assert(fastCrateRows.length === 1 && fastCrateRows[0].includes("trackB_130_Amin"), `smart crate filtered to trackB only, got: ${JSON.stringify(fastCrateRows)}`);
+  await page.screenshot({ path: path.join(OUT, "03b-smart-crate.png") });
+
+  // Manual crate: create one, add trackA via its row checkbox, confirm the count updates.
+  await page.click("text=All tracks");
+  page.once("dialog", (d) => d.accept("Openers"));
+  await page.click("text=+ Manual");
+  await page.waitForTimeout(100);
+  await page.click("text=/Openers \\(/");
+  await page.waitForSelector('.tracklist thead th:has-text("In crate")');
+  await page.locator(".tracklist tbody tr", { hasText: "trackA_128_Cmaj" }).locator('input[type=checkbox]').check();
+  await page.waitForFunction(() => /Openers \(1\)/.test(document.querySelector(".crate-rail")?.textContent ?? ""), {
+    timeout: 5000,
+  });
+  await page.click("text=All tracks");
+
   // Load trackA onto Deck A (by name, not row position -- library order isn't
   // guaranteed) and verify the Decks screen reflects it.
   await page
@@ -82,7 +106,22 @@ try {
     .click();
   await page.click("text=Decks & Mixer");
   await page.waitForSelector("text=trackA_128_Cmaj", { timeout: 10000 });
+  await page.waitForTimeout(300); // let the waveform's useEffect paint the canvas
   await page.screenshot({ path: path.join(OUT, "04-deck-loaded.png") });
+
+  // Waveform: the deck with a track loaded should have drawn non-empty bars;
+  // the deck with nothing loaded should not.
+  const waveformPixels = await page.$$eval(".deck canvas", (canvases) =>
+    canvases.map((c) => {
+      const ctx = c.getContext("2d");
+      const data = ctx.getImageData(0, 0, c.width, c.height).data;
+      let nonTransparent = 0;
+      for (let i = 3; i < data.length; i += 4) if (data[i] > 0) nonTransparent++;
+      return nonTransparent;
+    }),
+  );
+  console.log("waveform canvas drawn-pixel counts:", waveformPixels);
+  assert(waveformPixels[0] > 100, `deck A (loaded) waveform has drawn pixels, got ${waveformPixels[0]}`);
 
   // Press play on the deck that has trackA loaded, and confirm the
   // transport + engine state actually changed.
@@ -109,6 +148,19 @@ try {
   await page.click("text=Settings");
   await page.waitForSelector("text=Engine");
   await page.screenshot({ path: path.join(OUT, "08-settings.png") });
+
+  // Recording: start, let it capture a moment of real (playing) audio, stop,
+  // and confirm both the audio and the auto-built tracklist are downloadable.
+  await page.click("text=Start recording");
+  await page.waitForTimeout(1000);
+  await page.click("text=Stop recording");
+  await page.waitForSelector("text=Download audio (.webm)", { timeout: 5000 });
+  await page.waitForSelector("text=Download tracklist (.txt)", { timeout: 5000 });
+  const tracklistHref = await page.getAttribute("text=Download tracklist (.txt)", "href");
+  const tracklistText = await page.evaluate((url) => fetch(url).then((r) => r.text()), tracklistHref);
+  console.log("tracklist contents:", JSON.stringify(tracklistText));
+  assert(tracklistText.includes("trackA_128_Cmaj"), "tracklist mentions the loaded track");
+  await page.screenshot({ path: path.join(OUT, "09-recorded.png") });
 
   assert(consoleErrors.length === 0, `no console errors, got: ${JSON.stringify(consoleErrors)}`);
 
