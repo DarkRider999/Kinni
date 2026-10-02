@@ -1,5 +1,7 @@
 # MixForge Studio (web)
 
+_by SplitFire Production_
+
 A real, working browser preview of MixForge Studio: an **AI Beat Generator** (genre-conditioned step
 sequencer), a **Melody & Bassline Creator** (scale-locked piano roll), a **2-deck DJ Mixer** (neon waveforms,
 auto-sync, filter/echo FX, crossfader, recording), a **Sample Library** (drag-and-drop one-shot kit) and
@@ -34,6 +36,13 @@ when installing it), not a Play Store release.
 
 To build it yourself instead: `npm ci && npm run build && npx cap sync android && cd android && ./gradlew
 assembleDebug` on a machine with the Android SDK (e.g. via Android Studio).
+
+**The native Android app is locked to landscape** (`android:screenOrientation="sensorLandscape"` in
+`android/app/src/main/AndroidManifest.xml`) — a 2-deck mixer needs the width, same as djay/Serato/etc. The web/
+PWA build isn't orientation-locked (desktop browsers ignore it anyway), but every view is responsive down to
+narrow portrait widths too: below 680px the DJ Mixer's two decks and crossfader stack vertically instead of
+being crushed into an unusably narrow 3-column row (`src/App.css`, the `.deck-row` media query) — that
+crushed-row layout was the alignment bug reported and fixed here.
 
 ## Installing it on a phone without an .apk
 

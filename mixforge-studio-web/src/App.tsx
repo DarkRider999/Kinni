@@ -3,6 +3,7 @@ import './App.css'
 import { BeatGenerator } from './views/BeatGenerator'
 import { DJMixer } from './views/DJMixer'
 import { Home } from './views/Home'
+import { Logo } from './components/Logo'
 import { MelodyCreator } from './views/MelodyCreator'
 import { SampleLibrary } from './views/SampleLibrary'
 import { StoreProvider, useStore } from './state/store'
@@ -24,11 +25,15 @@ function Shell() {
   if (!audioReady || !kitReady) {
     return (
       <div className="gate">
-        <h1 className="glow-text" style={{ color: 'var(--forge-cyan)' }}>
+        <div className="splash-logo">
+          <Logo size={120} animated />
+        </div>
+        <h1 className="glow-text splash-title" style={{ color: 'var(--forge-cyan)' }}>
           MixForge Studio
         </h1>
-        <p>Browsers require a tap before audio can start.</p>
-        <button className="btn-primary btn-large" onClick={() => void startAudio()}>
+        <p className="splash-byline">by SplitFire Production</p>
+        <p className="splash-hint">Browsers require a tap before audio can start.</p>
+        <button className="btn-primary btn-large splash-button" onClick={() => void startAudio()}>
           Enter the Studio
         </button>
       </div>
@@ -38,7 +43,10 @@ function Shell() {
   return (
     <div className="app-shell">
       <nav className="top-nav">
-        <span className="brand glow-text">MixForge</span>
+        <span className="brand glow-text">
+          <Logo size={22} className="brand-logo" />
+          MixForge
+        </span>
         {NAV.map((item) => (
           <button key={item.id} className={view === item.id ? 'nav-btn active' : 'nav-btn'} onClick={() => setView(item.id)}>
             {item.label}

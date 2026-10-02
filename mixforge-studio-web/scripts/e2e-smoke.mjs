@@ -35,7 +35,7 @@ try {
   const manifestHref = await page.getAttribute('link[rel=manifest]', 'href')
   assert(manifestHref === '/manifest.webmanifest', 'manifest link present')
   const manifest = await page.evaluate(async (href) => (await fetch(href)).json(), manifestHref)
-  assert(manifest.name === 'MixForge Studio', 'manifest name')
+  assert(manifest.name === 'MixForge Studio by SplitFire Production', 'manifest name')
   assert(manifest.display === 'standalone', 'manifest display mode')
   assert(manifest.icons.some((i) => i.sizes === '192x192') && manifest.icons.some((i) => i.sizes === '512x512'), 'manifest has 192 + 512 icons')
   for (const icon of manifest.icons) {

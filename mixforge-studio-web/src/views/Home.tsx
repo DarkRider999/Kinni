@@ -1,3 +1,4 @@
+import { Logo } from '../components/Logo'
 import { useStore } from '../state/store'
 
 interface HomeProps {
@@ -15,9 +16,15 @@ export function Home({ onNavigate }: HomeProps) {
   const { beats, melodies } = useStore()
   return (
     <section className="view">
-      <h1 className="glow-text" style={{ color: 'var(--forge-cyan)' }}>
-        MixForge Studio
-      </h1>
+      <div className="home-brand">
+        <Logo size={48} />
+        <div>
+          <h1 className="glow-text" style={{ color: 'var(--forge-cyan)', margin: 0 }}>
+            MixForge Studio
+          </h1>
+          <p className="home-byline">by SplitFire Production</p>
+        </div>
+      </div>
       <p className="view-sub">AI music creation + DJ mixing + Stem Lab — web preview build.</p>
 
       <div className="home-tiles">
