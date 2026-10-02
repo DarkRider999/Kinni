@@ -1,6 +1,22 @@
 // A single DJ-mixer deck: loads an AudioBuffer (a generated beat render or a sample-library
-// one-shot/loop), plays it with a filter + echo FX chain, and exposes a BPM so the mixer can
-// auto-sync the other deck's playback rate to it (Issue: Beginner-Friendly DJ Mixer, SPEC Sec 2D).
+// one-shot/loop), plays it with a filter + echo/reverb/flanger FX rack, and exposes a BPM so the
+// mixer can auto-sync the other deck's playback rate to it (Beginner-Friendly DJ Mixer + FX Rack,
+// SPEC Sec 2D/5E).
+
+/** A synthetic reverb impulse response (exponentially-decaying stereo noise) -- the standard
+ * trick for feeding a ConvolverNode without shipping a recorded IR file. Exported so it's
+ * independently unit-testable (decay.test.ts) without needing a live AudioContext. */
+export function createReverbImpulse(ctx: BaseAudioContext, duration = 2.2, decay = 3.5): AudioBuffer {
+  const length = Math.max(1, Math.floor(ctx.sampleRate * duration))
+  const impulse = ctx.createBuffer(2, length, ctx.sampleRate)
+  for (let channel = 0; channel < impulse.numberOfChannels; channel++) {
+    const data = impulse.getChannelData(channel)
+    for (let i = 0; i < length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, decay)
+    }
+  }
+  return impulse
+}
 
 export class Deck {
   readonly ctx: AudioContext
@@ -12,6 +28,12 @@ export class Deck {
   private delayNode: DelayNode
   private delayFeedback: GainNode
   private delayWet: GainNode
+  private reverbNode: ConvolverNode
+  private reverbWet: GainNode
+  private flangerDelay: DelayNode
+  private flangerFeedback: GainNode
+  private flangerWet: GainNode
+  private flangerLfo: OscillatorNode
   private dryGain: GainNode
   output: GainNode
 
@@ -32,17 +54,48 @@ export class Deck {
     this.delayFeedback.gain.value = 0.25
     this.delayWet = ctx.createGain()
     this.delayWet.gain.value = 0
+
+    this.reverbNode = ctx.createConvolver()
+    this.reverbNode.buffer = createReverbImpulse(ctx)
+    this.reverbWet = ctx.createGain()
+    this.reverbWet.gain.value = 0
+
+    // A short modulated delay with feedback -- the classic flanger topology. The LFO runs
+    // continuously from construction (silent until flangerWet is opened) rather than being
+    // started/stopped per use, since an OscillatorNode can only ever be started once.
+    this.flangerDelay = ctx.createDelay(0.02)
+    this.flangerDelay.delayTime.value = 0.004
+    this.flangerFeedback = ctx.createGain()
+    this.flangerFeedback.gain.value = 0.35
+    this.flangerWet = ctx.createGain()
+    this.flangerWet.gain.value = 0
+    this.flangerLfo = ctx.createOscillator()
+    this.flangerLfo.type = 'sine'
+    this.flangerLfo.frequency.value = 0.25
+    const flangerLfoDepth = ctx.createGain()
+    flangerLfoDepth.gain.value = 0.003
+    this.flangerLfo.connect(flangerLfoDepth).connect(this.flangerDelay.delayTime)
+    this.flangerLfo.start()
+
     this.dryGain = ctx.createGain()
     this.dryGain.gain.value = 1
 
     this.output = ctx.createGain()
 
-    // gain -> filter -> split to dry + delay (feedback loop) -> output
+    // gain -> filter -> dry, plus three parallel FX sends (echo, reverb, flanger) -> output.
     this.gainNode.connect(this.filterNode)
     this.filterNode.connect(this.dryGain).connect(this.output)
+
     this.filterNode.connect(this.delayNode)
     this.delayNode.connect(this.delayFeedback).connect(this.delayNode)
     this.delayNode.connect(this.delayWet).connect(this.output)
+
+    this.filterNode.connect(this.reverbNode)
+    this.reverbNode.connect(this.reverbWet).connect(this.output)
+
+    this.filterNode.connect(this.flangerDelay)
+    this.flangerDelay.connect(this.flangerFeedback).connect(this.flangerDelay)
+    this.flangerDelay.connect(this.flangerWet).connect(this.output)
   }
 
   loadBuffer(buffer: AudioBuffer, bpm: number) {
@@ -125,6 +178,14 @@ export class Deck {
 
   setEchoWet(value: number) {
     this.delayWet.gain.setTargetAtTime(Math.max(0, Math.min(1, value)), this.ctx.currentTime, 0.01)
+  }
+
+  setReverbWet(value: number) {
+    this.reverbWet.gain.setTargetAtTime(Math.max(0, Math.min(1, value)), this.ctx.currentTime, 0.01)
+  }
+
+  setFlangerWet(value: number) {
+    this.flangerWet.gain.setTargetAtTime(Math.max(0, Math.min(1, value)), this.ctx.currentTime, 0.01)
   }
 
   /** Match this deck's playback rate so its effective BPM equals targetBpm (DJ Mixer auto-sync). */

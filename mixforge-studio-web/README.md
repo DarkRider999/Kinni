@@ -4,9 +4,10 @@ _by SplitFire Production_
 
 A real, working browser preview of MixForge Studio: an **AI Beat Generator** (genre-conditioned step
 sequencer), a **Melody & Bassline Creator** (scale-locked piano roll), a **2-deck DJ Mixer** (neon waveforms,
-auto-sync, filter/echo FX, crossfader, recording), a **Sample Library** (drag-and-drop one-shot kit) and
-**One-Tap Mastering** (a real deterministic EQ/compressor/limiter chain) — all running on the Web Audio API
-in this tab, not a simulation. See [`docs/mixforge-studio/SPEC.md`](../docs/mixforge-studio/SPEC.md) for the
+auto-sync, a 4-effect FX rack — filter, echo, reverb, flanger — per deck, crossfader, and session recording
+that saves to the project rather than only downloading), a **Sample Library** (17 drag-and-drop one-shots
+across drums/percussion/bass/melodic/FX categories) and **One-Tap Mastering** (a real deterministic
+EQ/compressor/limiter chain) — all running on the Web Audio API in this tab, not a simulation. See [`docs/mixforge-studio/SPEC.md`](../docs/mixforge-studio/SPEC.md) for the
 full product blueprint and what of it this build does and doesn't implement (short version: the pattern
 generation, audio engine, DJ mixer and mastering chain are real; a trained generative model, licensed 10,000+
 sample catalog, AI stem separation, Auto Remix, cloud sync and accounts are not — they need GPU training
@@ -70,9 +71,11 @@ Everything runs locally in the tab — nothing is uploaded anywhere.
 |---|---|---|
 | §2A AI Beat Generator | **Real**: a genre-conditioned, seeded procedural pattern generator (`src/lib/beatPatterns.ts`) across 7 genre templates, editable 7-lane x 16-step grid, energy-weighted fills | Rule-based templates, not a trained sequence model — the spec's `/generateBeat` cloud endpoint (§6) is the real target architecture; training a generative model needs GPU infrastructure and training data this environment doesn't have |
 | §2B Melody & Bassline Creator | **Real**: scale-constrained note generation (`src/lib/melodyPatterns.ts`, 5 scales), a playable piano roll, "regenerate this half" | Same honesty note as the beat generator — procedural, not a trained model. Every note is still guaranteed in-key, which is the product's core promise |
-| §2D DJ Mixer | **Real**: two decks (`src/engine/deck.ts`), GPU-rendered-looking canvas waveforms, equal-power crossfader, filter + echo FX, BPM auto-sync (playback-rate matching against a known/entered BPM), MediaRecorder-based set recording | No automatic BPM/key *detection* on imported files (SPEC §3.11-equivalent) — generated beats carry an exact known BPM; an imported file needs its BPM entered, it isn't analyzed |
+| §2D DJ Mixer | **Real**: two decks (`src/engine/deck.ts`), GPU-rendered-looking canvas waveforms, equal-power crossfader, BPM auto-sync (playback-rate matching against a known/entered BPM) | No automatic BPM/key *detection* on imported files (SPEC §3.11-equivalent) — generated beats carry an exact known BPM; an imported file needs its BPM entered, it isn't analyzed |
+| §5E FX Rack | **Real**: 4 effects per deck — filter (LP/HP sweep), echo (feedback delay), reverb (`ConvolverNode` with a synthetically-generated impulse response, no IR file shipped), flanger (modulated short delay + feedback) — all independently wet-mixable | Only these 4; the spec also lists compressor/limiter/EQ/phaser/distortion/chorus (§5E) as part of the full Unified FX Rack |
+| DJ session recording | **Real**: `MediaRecorder` captures the mixed master bus; stopping a recording **saves it to the in-session project** (a `SavedSession`, SPEC §5D) rather than only downloading — the Recorded Sessions panel lists each one with playback preview, download and delete | In-memory only, same honest limit as beats/melodies/sessions generally — no backend to persist across a reload (§2H Cloud Sync is not implemented) |
 | §2G One-Tap Mastering | **Real**: a deterministic `OfflineAudioContext` chain — low/high shelf EQ, compressor, limiter (`src/engine/mastering.ts`), 3 genre-flavored presets, WAV export | Preset *parameters* are a fixed lookup table rather than an AI-selected set per the spec's cloud job (§6 `/masterTrack`) — same "deterministic chain, AI picks the knobs" split as the spec, just with a rule-based parameter table instead of a trained model |
-| §2F Sample Library (10,000+) | **Real UX**: genre/mood filtering, click-to-preview, drag-and-drop onto a Beat Generator lane to swap its sound | Only 8 procedurally synthesized placeholder one-shots (`src/engine/synthKit.ts`), not the licensed 10,000+ catalog |
+| §2F Sample Library (10,000+) | **Real UX**: 17 one-shots across 5 categories (drums/percussion/bass/melodic/FX), category/genre/mood filtering, click-to-preview, drag-and-drop onto a Beat Generator lane to swap its sound | Still procedurally synthesized placeholders (`src/engine/synthKit.ts`), not the licensed 10,000+ catalog |
 | §2C Stem Lab (AI stem separation) | **Not implemented** | Needs a trained source-separation model (Demucs-style) and GPU inference — not available here |
 | §2E Auto Remix Mode | **Not implemented** | Depends on Stem Lab + an AI remix-orchestration job; not buildable without the above |
 | §2H Cloud Sync, §11 accounts/master access | **Not implemented** | Needs a deployed backend, database and auth — this is a static client-only build |
@@ -85,7 +88,8 @@ Everything runs locally in the tab — nothing is uploaded anywhere.
   bass/rim/stab), baked to `AudioBuffer`s once via `OfflineAudioContext` and reused everywhere.
 - `src/engine/scheduler.ts` — a lookahead step scheduler (the standard "look ahead, schedule against
   `AudioContext.currentTime`" pattern) shared by the Beat Generator and Melody Creator.
-- `src/engine/deck.ts` — a DJ-mixer deck: gain → filter → dry/echo-send → output, with BPM-ratio
+- `src/engine/deck.ts` — a DJ-mixer deck: gain → filter → dry + 3 parallel FX sends (echo, reverb via a
+  synthetic-impulse `ConvolverNode`, flanger via an LFO-modulated short delay) → output, with BPM-ratio
   playback-rate sync.
 - `src/engine/mastering.ts` — the One-Tap Mastering DSP chain and a generic `renderMix` bounce helper
   (step pattern → single stereo buffer) shared by the Beat Generator's export flow and the DJ Mixer's

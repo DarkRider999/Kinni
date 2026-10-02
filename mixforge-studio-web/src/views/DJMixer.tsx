@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { Waveform } from '../components/Waveform'
 import { getAudioContext } from '../engine/context'
 import { Deck } from '../engine/deck'
+import { formatDuration } from '../lib/formatDuration'
 import { equalPowerCrossfade } from '../lib/mixerMath'
 import { renderBeatPatternToBuffer } from '../lib/renderBeat'
 import { downloadBlob } from '../lib/wav'
-import { useStore, type SavedBeat } from '../state/store'
+import { useStore, type SavedBeat, type SavedSession } from '../state/store'
 
 type DeckId = 'A' | 'B'
 
@@ -15,13 +16,24 @@ interface DeckUiState {
   playing: boolean
   filter: number
   echo: number
+  reverb: number
+  flanger: number
   progress: number
 }
 
-const INITIAL_DECK_STATE: DeckUiState = { name: 'Empty', bpm: 0, playing: false, filter: 0, echo: 0, progress: 0 }
+const INITIAL_DECK_STATE: DeckUiState = {
+  name: 'Empty',
+  bpm: 0,
+  playing: false,
+  filter: 0,
+  echo: 0,
+  reverb: 0,
+  flanger: 0,
+  progress: 0,
+}
 
 export function DJMixer() {
-  const { audioReady, oneShots, beats } = useStore()
+  const { audioReady, oneShots, beats, sessions, saveSession, deleteSession } = useStore()
   const deckARef = useRef<Deck | null>(null)
   const deckBRef = useRef<Deck | null>(null)
   const bufferARef = useRef<AudioBuffer | null>(null)
@@ -32,6 +44,7 @@ export function DJMixer() {
   const recordDestRef = useRef<MediaStreamAudioDestinationNode | null>(null)
   const recorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
+  const recordStartRef = useRef<number>(0)
 
   const [deckA, setDeckA] = useState<DeckUiState>(INITIAL_DECK_STATE)
   const [deckB, setDeckB] = useState<DeckUiState>(INITIAL_DECK_STATE)
@@ -154,6 +167,20 @@ export function DJMixer() {
     setDeck((prev) => ({ ...prev, echo: value }))
   }
 
+  function setReverb(deckId: DeckId, value: number) {
+    const deck = deckId === 'A' ? deckARef.current : deckBRef.current
+    deck?.setReverbWet(value)
+    const setDeck = deckId === 'A' ? setDeckA : setDeckB
+    setDeck((prev) => ({ ...prev, reverb: value }))
+  }
+
+  function setFlanger(deckId: DeckId, value: number) {
+    const deck = deckId === 'A' ? deckARef.current : deckBRef.current
+    deck?.setFlangerWet(value)
+    const setDeck = deckId === 'A' ? setDeckA : setDeckB
+    setDeck((prev) => ({ ...prev, flanger: value }))
+  }
+
   function toggleRecord() {
     const dest = recordDestRef.current
     if (!dest) return
@@ -162,12 +189,22 @@ export function DJMixer() {
       return
     }
     chunksRef.current = []
+    recordStartRef.current = Date.now()
     const recorder = new MediaRecorder(dest.stream)
     recorder.ondataavailable = (e) => chunksRef.current.push(e.data)
     recorder.onstop = () => {
       const blob = new Blob(chunksRef.current, { type: 'audio/webm' })
-      downloadBlob(blob, `mixforge-dj-session-${Date.now()}.webm`)
+      const durationSeconds = (Date.now() - recordStartRef.current) / 1000
+      saveSession({
+        id: `session_${Date.now()}`,
+        name: `DJ Session ${sessions.length + 1}`,
+        blob,
+        durationSeconds,
+        createdAt: Date.now(),
+      })
       setRecording(false)
+      setStatus('Session saved to project — see Recorded Sessions below.')
+      setTimeout(() => setStatus(''), 4000)
     }
     recorder.start()
     recorderRef.current = recorder
@@ -179,7 +216,7 @@ export function DJMixer() {
       <h1 className="glow-text" style={{ color: 'var(--forge-cyan)' }}>
         DJ Mixer
       </h1>
-      <p className="view-sub">Two decks, auto-sync, neon waveforms, filter + echo FX.</p>
+      <p className="view-sub">Two decks, auto-sync, neon waveforms, filter/echo/reverb/flanger FX.</p>
 
       <div className="deck-row">
         <DeckPanel
@@ -195,6 +232,8 @@ export function DJMixer() {
           onSync={() => sync('A')}
           onFilter={(v) => setFilter('A', v)}
           onEcho={(v) => setEcho('A', v)}
+          onReverb={(v) => setReverb('A', v)}
+          onFlanger={(v) => setFlanger('A', v)}
         />
         <div className="crossfader-col">
           <span className="value-pill">Crossfader</span>
@@ -208,7 +247,7 @@ export function DJMixer() {
             className="crossfader-slider"
           />
           <button className={recording ? 'btn-danger' : 'btn-primary'} onClick={toggleRecord} disabled={!audioReady}>
-            {recording ? '⏺ Stop Rec' : '⏺ Record'}
+            {recording ? 'Stop Rec' : 'Record'}
           </button>
         </div>
         <DeckPanel
@@ -224,10 +263,67 @@ export function DJMixer() {
           onSync={() => sync('B')}
           onFilter={(v) => setFilter('B', v)}
           onEcho={(v) => setEcho('B', v)}
+          onReverb={(v) => setReverb('B', v)}
+          onFlanger={(v) => setFlanger('B', v)}
         />
       </div>
       {status && <p className="status-line">{status}</p>}
+
+      <SessionsPanel sessions={sessions} onDelete={deleteSession} />
     </section>
+  )
+}
+
+function SessionsPanel({ sessions, onDelete }: { sessions: SavedSession[]; onDelete: (id: string) => void }) {
+  const [playingId, setPlayingId] = useState<string | null>(null)
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const urlRef = useRef<string | null>(null)
+
+  function playPreview(session: SavedSession) {
+    if (playingId === session.id) {
+      audioRef.current?.pause()
+      setPlayingId(null)
+      return
+    }
+    if (urlRef.current) URL.revokeObjectURL(urlRef.current)
+    const url = URL.createObjectURL(session.blob)
+    urlRef.current = url
+    const audio = audioRef.current ?? new Audio()
+    audioRef.current = audio
+    audio.src = url
+    audio.onended = () => setPlayingId(null)
+    void audio.play()
+    setPlayingId(session.id)
+  }
+
+  if (sessions.length === 0) {
+    return (
+      <div className="panel" style={{ marginTop: 20, padding: 16 }}>
+        <h2 style={{ marginTop: 0, fontSize: '1rem', color: 'var(--text-dim)' }}>Recorded Sessions</h2>
+        <p className="hint-line" style={{ padding: 0 }}>
+          Hit Record above to capture a mix — saved sessions (with playback and download) show up here.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="panel" style={{ marginTop: 20, padding: 16 }}>
+      <h2 style={{ marginTop: 0, fontSize: '1rem', color: 'var(--text-dim)' }}>Recorded Sessions</h2>
+      <ul className="session-list">
+        {sessions.map((session) => (
+          <li key={session.id} className="session-row">
+            <span className="session-name">{session.name}</span>
+            <span className="value-pill">{formatDuration(session.durationSeconds)}</span>
+            <button onClick={() => playPreview(session)}>{playingId === session.id ? 'Stop' : 'Play'}</button>
+            <button onClick={() => downloadBlob(session.blob, `${session.name.replace(/\s+/g, '-').toLowerCase()}.webm`)}>
+              Download
+            </button>
+            <button onClick={() => onDelete(session.id)}>Delete</button>
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
 
@@ -244,10 +340,13 @@ interface DeckPanelProps {
   onSync: () => void
   onFilter: (value: number) => void
   onEcho: (value: number) => void
+  onReverb: (value: number) => void
+  onFlanger: (value: number) => void
 }
 
 function DeckPanel(props: DeckPanelProps) {
-  const { id, color, state, buffer, beats, disabled, onLoadBeat, onLoadFile, onTogglePlay, onSync, onFilter, onEcho } = props
+  const { id, color, state, buffer, beats, disabled, onLoadBeat, onLoadFile, onTogglePlay, onSync, onFilter, onEcho, onReverb, onFlanger } =
+    props
   return (
     <div className="panel deck-panel">
       <div className="deck-header">
@@ -301,6 +400,14 @@ function DeckPanel(props: DeckPanelProps) {
       <label className="fx-slider">
         Echo
         <input type="range" min={0} max={1} step={0.01} value={state.echo} onChange={(e) => onEcho(Number(e.target.value))} />
+      </label>
+      <label className="fx-slider">
+        Reverb
+        <input type="range" min={0} max={1} step={0.01} value={state.reverb} onChange={(e) => onReverb(Number(e.target.value))} />
+      </label>
+      <label className="fx-slider">
+        Flanger
+        <input type="range" min={0} max={1} step={0.01} value={state.flanger} onChange={(e) => onFlanger(Number(e.target.value))} />
       </label>
     </div>
   )

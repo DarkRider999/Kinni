@@ -14,6 +14,15 @@ export type OneShotId =
   | 'bassHit'
   | 'rimshot'
   | 'stab'
+  | 'tomLow'
+  | 'tomHigh'
+  | 'conga'
+  | 'shaker'
+  | 'cowbell'
+  | 'pluck'
+  | 'riser'
+  | 'impact'
+  | 'subBass'
 
 const SAMPLE_RATE = 44100
 
@@ -151,6 +160,147 @@ async function buildStab(): Promise<AudioBuffer> {
   })
 }
 
+async function buildTom(lowPitch: boolean): Promise<AudioBuffer> {
+  const startFreq = lowPitch ? 120 : 220
+  const endFreq = lowPitch ? 55 : 110
+  return renderOneShot(0.45, (ctx, dest) => {
+    const osc = ctx.createOscillator()
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(startFreq, 0)
+    osc.frequency.exponentialRampToValueAtTime(endFreq, 0.25)
+    const gain = ctx.createGain()
+    expDecayGain(gain.gain, 0, 0.9, 0.4)
+    osc.connect(gain).connect(dest)
+    osc.start(0)
+    osc.stop(0.45)
+  })
+}
+
+async function buildConga(): Promise<AudioBuffer> {
+  return renderOneShot(0.3, (ctx, dest) => {
+    const osc = ctx.createOscillator()
+    osc.type = 'triangle'
+    osc.frequency.setValueAtTime(320, 0)
+    osc.frequency.exponentialRampToValueAtTime(180, 0.08)
+    const gain = ctx.createGain()
+    expDecayGain(gain.gain, 0, 0.8, 0.22)
+    osc.connect(gain).connect(dest)
+    osc.start(0)
+    osc.stop(0.3)
+  })
+}
+
+async function buildShaker(): Promise<AudioBuffer> {
+  const duration = 0.18
+  return renderOneShot(duration, (ctx, dest) => {
+    const noise = ctx.createBufferSource()
+    noise.buffer = noiseBuffer(ctx, duration)
+    const filter = ctx.createBiquadFilter()
+    filter.type = 'bandpass'
+    filter.frequency.value = 9000
+    filter.Q.value = 0.8
+    const gain = ctx.createGain()
+    gain.gain.setValueAtTime(0, 0)
+    gain.gain.linearRampToValueAtTime(0.4, 0.015)
+    expDecayGain(gain.gain, 0.015, 0.4, 0.12)
+    noise.connect(filter).connect(gain).connect(dest)
+    noise.start(0)
+  })
+}
+
+async function buildCowbell(): Promise<AudioBuffer> {
+  return renderOneShot(0.3, (ctx, dest) => {
+    const filter = ctx.createBiquadFilter()
+    filter.type = 'bandpass'
+    filter.frequency.value = 800
+    filter.Q.value = 2
+    const gain = ctx.createGain()
+    expDecayGain(gain.gain, 0, 0.6, 0.22)
+    gain.connect(filter).connect(dest)
+    ;[540, 800].forEach((freq) => {
+      const osc = ctx.createOscillator()
+      osc.type = 'square'
+      osc.frequency.value = freq
+      osc.connect(gain)
+      osc.start(0)
+      osc.stop(0.3)
+    })
+  })
+}
+
+async function buildPluck(): Promise<AudioBuffer> {
+  return renderOneShot(0.5, (ctx, dest) => {
+    const osc = ctx.createOscillator()
+    osc.type = 'triangle'
+    osc.frequency.value = 330
+    const filter = ctx.createBiquadFilter()
+    filter.type = 'lowpass'
+    filter.frequency.setValueAtTime(4000, 0)
+    filter.frequency.exponentialRampToValueAtTime(400, 0.35)
+    const gain = ctx.createGain()
+    expDecayGain(gain.gain, 0, 0.6, 0.4)
+    osc.connect(filter).connect(gain).connect(dest)
+    osc.start(0)
+    osc.stop(0.5)
+  })
+}
+
+async function buildRiser(): Promise<AudioBuffer> {
+  const duration = 1.5
+  return renderOneShot(duration, (ctx, dest) => {
+    const noise = ctx.createBufferSource()
+    noise.buffer = noiseBuffer(ctx, duration)
+    const filter = ctx.createBiquadFilter()
+    filter.type = 'bandpass'
+    filter.Q.value = 0.9
+    filter.frequency.setValueAtTime(300, 0)
+    filter.frequency.exponentialRampToValueAtTime(9000, duration)
+    const gain = ctx.createGain()
+    gain.gain.setValueAtTime(0.0001, 0)
+    gain.gain.exponentialRampToValueAtTime(0.7, duration * 0.9)
+    gain.gain.linearRampToValueAtTime(0, duration)
+    noise.connect(filter).connect(gain).connect(dest)
+    noise.start(0)
+  })
+}
+
+async function buildImpact(): Promise<AudioBuffer> {
+  return renderOneShot(1.1, (ctx, dest) => {
+    const sub = ctx.createOscillator()
+    sub.type = 'sine'
+    sub.frequency.setValueAtTime(90, 0)
+    sub.frequency.exponentialRampToValueAtTime(35, 0.5)
+    const subGain = ctx.createGain()
+    expDecayGain(subGain.gain, 0, 1, 0.9)
+    sub.connect(subGain).connect(dest)
+    sub.start(0)
+    sub.stop(1.1)
+
+    const noise = ctx.createBufferSource()
+    noise.buffer = noiseBuffer(ctx, 0.4)
+    const noiseFilter = ctx.createBiquadFilter()
+    noiseFilter.type = 'lowpass'
+    noiseFilter.frequency.value = 2500
+    const noiseGain = ctx.createGain()
+    expDecayGain(noiseGain.gain, 0, 0.8, 0.3)
+    noise.connect(noiseFilter).connect(noiseGain).connect(dest)
+    noise.start(0)
+  })
+}
+
+async function buildSubBass(): Promise<AudioBuffer> {
+  return renderOneShot(0.8, (ctx, dest) => {
+    const osc = ctx.createOscillator()
+    osc.type = 'sine'
+    osc.frequency.value = 45
+    const gain = ctx.createGain()
+    expDecayGain(gain.gain, 0, 0.9, 0.7)
+    osc.connect(gain).connect(dest)
+    osc.start(0)
+    osc.stop(0.8)
+  })
+}
+
 export const ONE_SHOT_BUILDERS: Record<OneShotId, () => Promise<AudioBuffer>> = {
   kick: buildKick,
   snare: buildSnare,
@@ -160,6 +310,15 @@ export const ONE_SHOT_BUILDERS: Record<OneShotId, () => Promise<AudioBuffer>> = 
   bassHit: buildBassHit,
   rimshot: buildRimshot,
   stab: buildStab,
+  tomLow: () => buildTom(true),
+  tomHigh: () => buildTom(false),
+  conga: buildConga,
+  shaker: buildShaker,
+  cowbell: buildCowbell,
+  pluck: buildPluck,
+  riser: buildRiser,
+  impact: buildImpact,
+  subBass: buildSubBass,
 }
 
 let kitPromise: Promise<Record<OneShotId, AudioBuffer>> | null = null

@@ -75,7 +75,7 @@ try {
   await page.click('button:has-text("Stop")')
   await page.screenshot({ path: path.join(OUT, '04-melody.png') })
 
-  // DJ Mixer: load the saved beat into Deck A, play it, move the crossfader.
+  // DJ Mixer: load the saved beat into Deck A, play it, move the crossfader and FX rack.
   await page.click('text=DJ Mixer')
   await page.waitForSelector('text=Deck A')
   await page.locator('.deck-panel select').first().selectOption({ index: 1 })
@@ -86,13 +86,41 @@ try {
   await page.locator('.deck-panel button:has-text("▶")').first().click()
   await page.waitForTimeout(400)
   await page.fill('.crossfader-slider', '0.5')
+  const fxSliders = page.locator('.deck-panel').first().locator('.fx-slider input')
+  assert((await fxSliders.count()) === 4, 'deck has 4 FX sliders (filter/echo/reverb/flanger)')
+  await fxSliders.nth(2).fill('0.6') // reverb
+  await fxSliders.nth(3).fill('0.4') // flanger
   await page.screenshot({ path: path.join(OUT, '05-mixer.png') })
 
-  // Sample Library: filter and preview a sample.
+  // Record a short session, stop it, and confirm it's saved to the project (not just downloaded).
+  await page.click('button:has-text("Record")')
+  await page.waitForTimeout(900)
+  await page.click('button:has-text("Stop Rec")')
+  await page.waitForSelector('text=Session saved to project')
+  await page.waitForSelector('.session-row')
+  const sessionCountAfterRecord = await page.locator('.session-row').count()
+  assert(sessionCountAfterRecord === 1, 'recorded session appears in Recorded Sessions')
+  const sessionRow = page.locator('.session-row').first()
+  await sessionRow.locator('button:has-text("Play")').click()
+  await page.waitForTimeout(300)
+  assert(await sessionRow.locator('button:has-text("Stop")').isVisible(), 'session preview plays back')
+  await sessionRow.locator('button:has-text("Stop")').click()
+  await page.screenshot({ path: path.join(OUT, '06-session-recorded.png') })
+  await sessionRow.locator('button:has-text("Delete")').click()
+  assert((await page.locator('.session-row').count()) === 0, 'deleting a session removes it from the list')
+
+  // Sample Library: 17 one-shots, category/genre/mood filtering, preview playback.
   await page.click('text=Samples')
   await page.waitForSelector('text=Sample Library')
+  const sampleCount = await page.locator('.sample-card').count()
+  assert(sampleCount === 17, `sample library has 17 one-shots (got ${sampleCount})`)
+  await page.selectOption('select', { label: 'Percussion' })
+  await page.waitForTimeout(100)
+  const percCount = await page.locator('.sample-card').count()
+  assert(percCount > 0 && percCount < sampleCount, 'category filter narrows the sample list')
+  await page.selectOption('select', { label: 'all' })
   await page.locator('.sample-card').first().click()
-  await page.screenshot({ path: path.join(OUT, '06-samples.png') })
+  await page.screenshot({ path: path.join(OUT, '07-samples.png') })
 
   const seriousErrors = consoleErrors.filter((e) => !/favicon/i.test(e))
   assert(seriousErrors.length === 0, `no console errors: ${seriousErrors.join(' | ')}`)
