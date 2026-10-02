@@ -119,10 +119,8 @@ fun SettingsScreen(c: AppContainer) {
                             .clickable { c.settingsRepo.update { it.copy(customAccent = col) } })
                     }
                 }
-                ToggleRow("Auto theme by genre", s.autoThemeByGenre) { on -> c.settingsRepo.update { it.copy(autoThemeByGenre = on) } }
                 ToggleRow("Auto theme by AI mood", s.autoThemeByMood) { on -> c.settingsRepo.update { it.copy(autoThemeByMood = on) } }
                 ToggleRow("Auto theme by time of day", s.autoThemeByTime) { on -> c.settingsRepo.update { it.copy(autoThemeByTime = on) } }
-                ToggleRow("Theme also sets the EQ", s.eqFollowsTheme) { on -> c.settingsRepo.update { it.copy(eqFollowsTheme = on) } }
             }
         }
 

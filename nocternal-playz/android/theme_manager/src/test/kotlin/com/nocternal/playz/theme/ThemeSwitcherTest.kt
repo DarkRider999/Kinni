@@ -26,7 +26,9 @@ class ThemeSwitcherTest {
         override fun applyPreset(preset: EqPreset) { eq = preset }
     }
 
-    private var settings = AppSettings()
+    // Auto theme-by-genre and EQ-follows-theme now default to off app-wide; the switching logic they
+    // gate is still fully exercised here with them explicitly turned on.
+    private var settings = AppSettings(autoThemeByGenre = true, eqFollowsTheme = true)
     private val store = ThemeStateStore()
     private val rec = Recorder()
     private val switcher = ThemeSwitcher(ThemeApplier(store, rec, rec, store), { settings })

@@ -24,11 +24,22 @@ object EqPresets {
     val INSTRUMENTAL_NATURAL = EqPreset("instrumental_natural", "Instrumental natural", listOf(1f, 1f, 0f, 0f, 0f, 0f, 0f, 1f, 1f, 1f), surround = 0.2f)
     val PODCAST_VOICE = EqPreset("podcast_voice", "Podcast voice", listOf(-6f, -4f, -1f, 0f, 2f, 3f, 4f, 2f, 0f, -2f), loudnessDb = 3f)
     val SPEAKER_BOOST = EqPreset("speaker_boost", "Speaker boost", listOf(-4f, -2f, 2f, 2f, 1f, 1f, 2f, 3f, 2f, 0f), preampDb = -2f, loudnessDb = 4f)
+    val ROCK = EqPreset("rock", "Rock", listOf(4f, 3f, 2f, 1f, -1f, -1f, 1f, 2f, 3f, 3f), preampDb = -2f)
+    val POP = EqPreset("pop", "Pop", listOf(-1f, 0f, 2f, 3f, 3f, 2f, 0f, -1f, -1f, -1f))
+    val JAZZ = EqPreset("jazz", "Jazz", listOf(2f, 1f, 0f, 1f, 2f, 2f, 1f, 1f, 2f, 3f), preampDb = -1f)
+    val CLASSICAL = EqPreset("classical", "Classical", listOf(3f, 2f, 1f, 0f, 0f, 0f, -1f, -1f, 0f, 2f), preampDb = -1f, surround = 0.25f)
+    val HIP_HOP = EqPreset("hip_hop", "Hip-hop", listOf(6f, 5f, 3f, 1f, -1f, 0f, 1f, 2f, 2f, 1f), preampDb = -4f, bassBoost = 0.45f)
+    val ACOUSTIC = EqPreset("acoustic", "Acoustic", listOf(1f, 1f, 1f, 1f, 1f, 1f, 1f, 2f, 2f, 1f), surround = 0.15f)
+    val METAL = EqPreset("metal", "Metal", listOf(5f, 3f, 1f, -1f, -2f, 0f, 2f, 3f, 4f, 3f), preampDb = -3f)
+    val TREBLE_BOOST = EqPreset("treble_boost", "Treble boost", listOf(-3f, -2f, -1f, -1f, 0f, 1f, 3f, 5f, 6f, 6f), preampDb = -2f)
+    val BASS_REDUCER = EqPreset("bass_reducer", "Bass reducer", listOf(-6f, -5f, -3f, -1f, 0f, 0f, 0f, 0f, 0f, 0f))
+    val LIVE_CONCERT = EqPreset("live_concert", "Live concert", listOf(3f, 2f, 1f, 1f, -1f, 0f, 1f, 2f, 2f, 2f), preampDb = -2f, surround = 0.4f)
 
     val all: List<EqPreset> = listOf(
         FLAT, VOCAL_CLARITY, AIRY_HIGHS, BALANCED_LOWS, WARM_MIDS, EDM_PUNCH, TRANCE_WIDE, TECHNO_SUB,
         NIGHT_DRIVE, LOFI_WARM, CHILL_SMOOTH, AMBIENT_SPACE, WORKOUT_BASS, FOCUS_NEUTRAL, ROMANTIC_WARM,
         PARTY_LOUD, MORNING_BRIGHT, INSTRUMENTAL_NATURAL, PODCAST_VOICE, SPEAKER_BOOST,
+        ROCK, POP, JAZZ, CLASSICAL, HIP_HOP, ACOUSTIC, METAL, TREBLE_BOOST, BASS_REDUCER, LIVE_CONCERT,
     )
 
     private val byId = all.associateBy { it.id }

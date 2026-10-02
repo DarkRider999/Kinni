@@ -8,11 +8,11 @@ data class AppSettings(
     val themeMode: ThemeMode = ThemeMode.NEON,
     /** When set, overrides the preset accent. */
     val customAccent: NeonColor? = null,
-    val autoThemeByGenre: Boolean = true,
+    val autoThemeByGenre: Boolean = false,
     val autoThemeByMood: Boolean = true,
     val autoThemeByTime: Boolean = false,
     /** When on, a theme switch also applies the genre EQ preset. */
-    val eqFollowsTheme: Boolean = true,
+    val eqFollowsTheme: Boolean = false,
     val autoFaderEnabled: Boolean = true,
     /** Overlap between songs. 0 = true gapless (no fade). 5 s default: long enough to feel continuous. */
     val crossfadeSeconds: Float = 5f,
