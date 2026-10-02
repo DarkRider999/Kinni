@@ -51,10 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.nocternal.playz.ai.NeonArtSpec
@@ -135,9 +132,7 @@ fun PlayerScreen(
                     LyricsView(lyrics, state.positionMs, Modifier.fillMaxSize(), loading = lyricsLoading, onLineClick = callbacks.seek)
                 } else {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        NeonFrame(spectrum.bass, Modifier.fillMaxWidth(0.96f).aspectRatio(1f)) {
-                            SpinningAlbumArt(track?.artworkUri, artSpec, spinning = state.isPlaying, modifier = Modifier.fillMaxSize())
-                        }
+                        SpinningAlbumArt(track?.artworkUri, artSpec, spinning = state.isPlaying, modifier = Modifier.fillMaxWidth(0.96f).aspectRatio(1f))
                     }
                 }
             }
@@ -218,23 +213,4 @@ fun PlayerScreen(
             Spacer(Modifier.height(12.dp))
         }
     }
-}
-
-/** Neon frame around album art: rotating sweep-gradient border whose thickness and glow follow the bass. */
-@Composable
-fun NeonFrame(bass: Float, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    val p = Neon.palette
-    val shape = RoundedCornerShape(28.dp)
-    Box(
-        modifier
-            .neonGlow(p.accent, p.glow * (0.6f + 0.6f * bass), radius = 28.dp, corner = 28.dp)
-            .drawBehind {
-                rotate(bass * 40f) {
-                    drawRoundRect(Brush.sweepGradient(listOf(p.accent, p.secondary, p.accent)), cornerRadius = androidx.compose.ui.geometry.CornerRadius(28.dp.toPx()), style = Stroke(3.dp.toPx() + 4.dp.toPx() * bass))
-                }
-            }
-            .padding(6.dp)
-            .clip(shape)
-            .border(1.dp, p.accent.copy(alpha = 0.5f), shape),
-    ) { content() }
 }

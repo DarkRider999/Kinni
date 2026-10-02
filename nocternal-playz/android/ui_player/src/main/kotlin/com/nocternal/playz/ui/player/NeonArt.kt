@@ -3,6 +3,7 @@ package com.nocternal.playz.ui.player
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode as AnimRepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -11,7 +12,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,6 +23,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -96,8 +97,9 @@ fun AlbumArt(artworkUri: String?, fallback: NeonArtSpec?, modifier: Modifier = M
     )
 }
 
-/** Album art as a spinning vinyl disc: a continuously rotating record while [spinning] (playback is on), with a
- * glossy rim and a center label hole, pausing in place when playback pauses — like a real turntable. */
+/** Album art as a real-looking spinning vinyl record: black disc with grooves and a glossy rim, the track's
+ * artwork as the round center label, and a tonearm that swings onto the record when [spinning] (playback is
+ * on) and lifts away when it isn't — like a real turntable. */
 @Composable
 fun SpinningAlbumArt(artworkUri: String?, fallback: NeonArtSpec?, spinning: Boolean, modifier: Modifier = Modifier) {
     val transition = rememberInfiniteTransition(label = "vinyl-spin")
@@ -107,13 +109,45 @@ fun SpinningAlbumArt(artworkUri: String?, fallback: NeonArtSpec?, spinning: Bool
         animationSpec = infiniteRepeatable(tween(9000, easing = LinearEasing), repeatMode = AnimRepeatMode.Restart),
         label = "vinyl-angle",
     )
+    val armAngle by animateFloatAsState(if (spinning) 1f else 0f, animationSpec = tween(600), label = "tonearm")
+
     Box(modifier, contentAlignment = Alignment.Center) {
-        Box(
-            Modifier.fillMaxSize()
-                .rotateModifier(if (spinning) angle else 0f)
-                .clip(CircleShape)
-                .border(3.dp, Color.White.copy(alpha = 0.12f), CircleShape),
-        ) { AlbumArt(artworkUri, fallback, Modifier.fillMaxSize()) }
-        Box(Modifier.size(18.dp).clip(CircleShape).background(Color.Black).border(1.dp, Color.White.copy(alpha = 0.35f), CircleShape))
+        // The record itself, sized to leave room in the top-right corner for the tonearm.
+        Box(Modifier.fillMaxSize(0.88f).align(Alignment.Center)) {
+            Box(Modifier.fillMaxSize().rotateModifier(if (spinning) angle else 0f)) {
+                Canvas(Modifier.fillMaxSize()) {
+                    val r = size.minDimension / 2f
+                    val c = Offset(size.width / 2f, size.height / 2f)
+                    drawCircle(Brush.radialGradient(listOf(Color(0xFF2B2B2E), Color(0xFF0A0A0B)), c, r), r, c)
+                    var groove = r * 0.4f
+                    while (groove < r * 0.98f) {
+                        drawCircle(Color.White.copy(alpha = 0.05f), groove, c, style = Stroke(1.1f))
+                        groove += r * 0.045f
+                    }
+                    drawCircle(Color.White.copy(alpha = 0.3f), r * 0.995f, c, style = Stroke(1.5f))
+                }
+                // Round center label: the track's own artwork, else generated neon art.
+                Box(
+                    Modifier.fillMaxSize(0.38f).align(Alignment.Center).clip(CircleShape)
+                        .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape),
+                ) { AlbumArt(artworkUri, fallback, Modifier.fillMaxSize()) }
+                // Spindle hole.
+                Box(Modifier.fillMaxSize(0.035f).align(Alignment.Center).clip(CircleShape).background(Color.Black))
+            }
+        }
+        // Tonearm: pivots from the top-right corner, swinging onto the record while playing.
+        Canvas(Modifier.fillMaxSize()) {
+            val pivot = Offset(size.width * 0.96f, size.height * 0.04f)
+            val armLen = size.minDimension * 0.46f
+            val deg = -2f + armAngle * 42f
+            val rad = deg * (PI.toFloat() / 180f)
+            val tip = Offset(pivot.x - cos(rad) * armLen, pivot.y + sin(rad) * armLen)
+            drawLine(Color(0xFFD8D8D8), pivot, tip, strokeWidth = size.minDimension * 0.012f, cap = StrokeCap.Round)
+            drawCircle(Color(0xFF9A9A9A), size.minDimension * 0.022f, pivot)
+            drawCircle(Color(0xFF3A3A3A), size.minDimension * 0.012f, pivot)
+            val perp = Offset(-sin(rad), -cos(rad))
+            val half = size.minDimension * 0.028f
+            drawLine(Color.Black, Offset(tip.x - perp.x * half, tip.y - perp.y * half), Offset(tip.x + perp.x * half, tip.y + perp.y * half), strokeWidth = size.minDimension * 0.02f, cap = StrokeCap.Round)
+        }
     }
 }
