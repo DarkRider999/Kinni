@@ -53,20 +53,22 @@ class LyricsRepository(
     suspend fun lyricsFor(track: Track): Lyrics? {
         val cached = cache.get(track.id)
         val cachedIsAi = cached?.contains(AI_MARKER) == true
-        if (cached != null && !cachedIsAi) return LrcParser.parse(cached, LyricsOrigin.CACHE)
-        for (p in offline) runCatching { p.find(track) }.getOrNull()?.let { return it }
+        // Real lyrics (cached, sidecar/embedded, LRCLIB) may come back in Devanagari/Gurmukhi script — always
+        // shown Romanized (Hinglish) to match the singer's words in English letters.
+        if (cached != null && !cachedIsAi) return Romanizer.romanize(LrcParser.parse(cached, LyricsOrigin.CACHE))
+        for (p in offline) runCatching { p.find(track) }.getOrNull()?.let { return Romanizer.romanize(it) }
         if (isOnlineAllowed()) {
             for (p in online) {
                 val found = runCatching { p.find(track) }.getOrNull() ?: continue
                 cache.put(track.id, LrcParser.toLrc(found))
-                return found
+                return Romanizer.romanize(found)
             }
         }
-        if (cached != null) return LrcParser.parse(cached, LyricsOrigin.AI_GENERATED)
+        if (cached != null) return Romanizer.romanize(LrcParser.parse(cached, LyricsOrigin.AI_GENERATED))
         for (g in generators) {
             val made = runCatching { g.find(track) }.getOrNull() ?: continue
             if (g.cacheable && made.lines.size > 2) cache.put(track.id, AI_MARKER + "\n" + LrcParser.toLrc(made))
-            return made
+            return Romanizer.romanize(made)
         }
         return null
     }

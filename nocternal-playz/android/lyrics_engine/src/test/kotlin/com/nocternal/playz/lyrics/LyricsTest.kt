@@ -59,6 +59,41 @@ class LyricsTest {
         assertEquals(LyricsOrigin.CACHE, repo.lyricsFor(t)!!.origin)
         assertEquals(1, onlineCalls)
     }
+
+    @Test fun repositoryRomanizesDevanagariLyricsFromEveryPath() = runTest {
+        val cache = InMemoryLyricsCache()
+        val online = LrcLibProvider(httpGet = { """{"syncedLyrics":"[00:01.00]क्यों ऐसे हमें सताने लगे"}""" })
+        var allowed = true
+        val repo = LyricsRepository(cache, offline = emptyList(), online = listOf(online), isOnlineAllowed = { allowed })
+        val t = Track("id", "/music/hai-rama.mp3", "Hai Rama", "Hariharan")
+        val fromOnline = repo.lyricsFor(t)!!.lines.single().text
+        assertFalse(Romanizer.containsIndicScript(fromOnline))
+        assertTrue(fromOnline.contains("Kyon"))
+        allowed = false
+        val fromCache = repo.lyricsFor(t)!!.lines.single().text
+        assertFalse(Romanizer.containsIndicScript(fromCache))
+        assertEquals(fromOnline, fromCache)
+    }
+}
+
+class RomanizerTest {
+    @Test fun transliteratesDevanagariToHinglish() {
+        assertEquals("Kyon", Romanizer.toRoman("क्यों"))
+        assertEquals("Aise", Romanizer.toRoman("ऐसे"))
+        assertEquals("Sataane Lage", Romanizer.toRoman("सताने लगे"))
+    }
+
+    @Test fun leavesPureEnglishLinesUntouchedInMixedLyrics() {
+        val l = Lyrics(listOf(LyricsLine(0, "क्या हुआ"), LyricsLine(1000, "Hello world")), synced = true, origin = LyricsOrigin.ONLINE)
+        val r = Romanizer.romanize(l)
+        assertEquals("Hello world", r.lines[1].text)
+        assertFalse(Romanizer.containsIndicScript(r.lines[0].text))
+    }
+
+    @Test fun passesThroughWhenNoIndicScriptPresent() {
+        val l = Lyrics(listOf(LyricsLine(0, "Just English words")), synced = true, origin = LyricsOrigin.ONLINE)
+        assertEquals(l, Romanizer.romanize(l))
+    }
 }
 
 class LyricsFallbackTest {
