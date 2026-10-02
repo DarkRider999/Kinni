@@ -3,7 +3,7 @@
 > Mobile (Android + iOS), Desktop (Windows + macOS) and a browser companion dashboard.
 > A next-generation DJ mixing ecosystem: an AI co-pilot that plans lineups and calls transitions,
 > a 10,000+ free sampler/plugin library, and a neon club-console UI built for real gigs in dark rooms.
-> Version 1.0 · Status: Blueprint — ready for engineering kickoff
+> Version 1.0 · Status: Blueprint, with a real working slice built — see §0.1
 > Companion doc in this repo: [`docs/dj-nexus-pro/SPEC.md`](../dj-nexus-pro/SPEC.md) (shares the C++ audio
 > core and AI training approach — see §0).
 
@@ -38,9 +38,14 @@ of extending it would be wasted work:
 |---|---|
 | §3.11 Precision Analysis Engine (BPM/key detection) | **Implemented and tested** — `djn_analyze_pcm`/`djn_analyze_file`, `dj-nexus-pro/engine/src/core/analysis.cpp` |
 | §4 AI Next-Track Radar scoring | **Implemented and tested** — `djn_advisor_score`, `dj-nexus-pro/engine/src/core/advisor.cpp` (the harmonic/tempo/energy/genre/recency formula from §4.3, minus the cloud-LLM set-planning and "why" explanations, which need an online model call) |
-| Everything else in this document (the Flutter mobile+desktop app, the 10,000+ sampler library and store, stem separation/vocal remover, RadicalSync backend, master-access entitlement server, billing) | **Not implemented.** Each needs something this engineering environment does not have: a Flutter SDK to build and verify a UI against, a trained stem-separation model, 10,000 licensed audio samples, a deployed database/backend, or app-store developer accounts. Building any of these without the means to verify them would mean shipping unverified code, which is worse than not shipping it |
+| §7 UI/UX System, §8 Technical Architecture (web companion) | **Implemented and working** — `dj-radicalmix-web/`, a real browser app: two decks, mixer, beat/colour FX, macros and a sampler all running the actual compiled engine (not a simulation), plus a local library with BPM/key detection and the RadicalAI advisor (JS ports of the two C++ modules above, kept in sync via a shared test-fixture contract). Built, type-checked, unit-tested and browser-verified (Playwright) — see `dj-radicalmix-web/README.md` |
+| §7/§8 Flutter mobile + desktop app (Android/iOS/Windows/macOS) | **Not implemented.** No Flutter SDK is available to build or verify one in this environment; the web app above covers the same engine/UI surface on desktop browsers in the meantime |
+| §5 the 10,000+ sampler/plugin library and store | **Not implemented** (needs licensed audio content). `dj-radicalmix-web` ships 8 synthesized placeholder one-shots so the sampler screen is real and playable today |
+| §6 Vocal remover & stem separation | **Not implemented** (needs a trained ML model) |
+| §9/§11 RadicalSync backend, master-access entitlement server, billing | **Not implemented** (needs a deployed database/backend and app-store developer accounts) |
 
-See `dj-nexus-pro/engine/README.md` for what the engine verifies today (79 unit/integration tests, ASan/UBSan clean).
+See `dj-nexus-pro/engine/README.md` for what the engine verifies today (80 unit/integration tests, ASan/UBSan
+clean) and `dj-radicalmix-web/README.md` for the web app's architecture, tests and known limitations.
 
 
 
