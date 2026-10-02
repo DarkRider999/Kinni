@@ -301,6 +301,72 @@ KeyEstimate estimateKey(const std::array<double, 12>& chroma) {
   return out;
 }
 
+// ---------------------------------------------------------------- structure
+
+constexpr double kEnergyWindowSec = 1.0;
+constexpr double kIntroThreshold = 0.6;  // fraction of peak energy
+constexpr double kOutroThreshold = 0.5;
+
+std::vector<double> computeEnergyCurve(const std::vector<float>& mono, int32_t sampleRate) {
+  const int windowSamples = std::max(1, int(kEnergyWindowSec * sampleRate));
+  const size_t numWindows = mono.size() / size_t(windowSamples);
+  std::vector<double> energy(numWindows);
+  for (size_t w = 0; w < numWindows; ++w) {
+    const size_t start = w * size_t(windowSamples);
+    double sum = 0.0;
+    for (int i = 0; i < windowSamples; ++i) {
+      const double s = mono[start + size_t(i)];
+      sum += s * s;
+    }
+    energy[w] = std::sqrt(sum / windowSamples);
+  }
+  return energy;
+}
+
+struct StructuralCues {
+  double introEndSec = -1.0;
+  double dropSec = -1.0;
+  double outroStartSec = -1.0;
+};
+
+StructuralCues detectStructure(const std::vector<double>& energy) {
+  StructuralCues out;
+  if (energy.empty()) return out;
+  const double peak = *std::max_element(energy.begin(), energy.end());
+  if (peak <= 1e-9) return out;  // silence throughout
+
+  const size_t dropIdx = size_t(std::max_element(energy.begin(), energy.end()) - energy.begin());
+
+  // The intro/outro thresholds are scaled to a *robust* loudness reference
+  // (the 90th percentile), not the single loudest moment: a brief, extreme
+  // "drop" would otherwise drag the scale up so high that the sustained main
+  // section never crosses it, and the intro/outro boundaries would never be
+  // found at all (they'd instead land right next to the drop itself).
+  std::vector<double> sorted(energy);
+  std::sort(sorted.begin(), sorted.end());
+  const size_t p90Idx = std::min(sorted.size() - 1, size_t(0.9 * double(sorted.size())));
+  const double robustPeak = sorted[p90Idx];
+
+  const auto toSec = [](size_t idx) { return (double(idx) + 0.5) * kEnergyWindowSec; };
+
+  for (size_t i = 0; i < energy.size(); ++i) {
+    if (energy[i] >= kIntroThreshold * robustPeak) {
+      out.introEndSec = toSec(i);
+      break;
+    }
+  }
+
+  out.dropSec = toSec(dropIdx);
+
+  for (size_t i = energy.size(); i-- > 0;) {
+    if (energy[i] >= kOutroThreshold * robustPeak) {
+      out.outroStartSec = toSec(std::min(i + 1, energy.size() - 1));
+      break;
+    }
+  }
+  return out;
+}
+
 }  // namespace
 
 AnalysisResult analyzeTrack(const float* interleaved, int64_t frames, int32_t channels,
@@ -321,6 +387,11 @@ AnalysisResult analyzeTrack(const float* interleaved, int64_t frames, int32_t ch
   result.key_pitch_class = key.pitchClass;
   result.key_is_minor = key.isMinor;
   result.key_confidence = key.confidence;
+
+  const auto structure = detectStructure(computeEnergyCurve(mono, sampleRate));
+  result.intro_end_sec = structure.introEndSec;
+  result.drop_sec = structure.dropSec;
+  result.outro_start_sec = structure.outroStartSec;
 
   return result;
 }

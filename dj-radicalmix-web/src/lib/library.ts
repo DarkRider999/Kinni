@@ -16,6 +16,11 @@ export interface Track {
   keyIsMinor: boolean;
   keyConfidence: number;
   camelot: string;
+  // Auto cue points (intro end / drop / outro start), -1 if undeterminable.
+  // Applied to hot cues 1-3 whenever this track is loaded to a deck.
+  introEndSec: number;
+  dropSec: number;
+  outroStartSec: number;
   energy: number; // 0..10, user-editable (no trained classifier in this build)
   genre: string;
   addedAt: number;
@@ -90,6 +95,9 @@ export function newTrackFromAnalysis(name: string, file: Blob, durationSec: numb
     keyIsMinor: a.keyIsMinor,
     keyConfidence: a.keyConfidence,
     camelot: a.camelot,
+    introEndSec: a.introEndSec,
+    dropSec: a.dropSec,
+    outroStartSec: a.outroStartSec,
     energy: 5,
     genre: "",
     addedAt: Date.now(),

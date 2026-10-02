@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import { engine } from "../engine/engineBridge";
+import { describeBinding } from "../lib/midi";
 import type { useEngine } from "../state/useEngine";
+import { MIDI_ACTIONS, type useMidi } from "../state/useMidi";
 import type { useSessionLog } from "../state/useSessionLog";
 
 function Recorder({ sessionLog }: { sessionLog: ReturnType<typeof useSessionLog> }) {
@@ -78,7 +80,78 @@ function Recorder({ sessionLog }: { sessionLog: ReturnType<typeof useSessionLog>
   );
 }
 
-export function SettingsView({ eng, sessionLog }: { eng: ReturnType<typeof useEngine>; sessionLog: ReturnType<typeof useSessionLog> }) {
+function MidiPanel({ midi }: { midi: ReturnType<typeof useMidi> }) {
+  if (!midi.supported) {
+    return (
+      <div className="panel" style={{ padding: 16 }}>
+        <h3 style={{ marginTop: 0 }}>MIDI controller</h3>
+        <p style={{ fontSize: 12, color: "var(--ink-dim)" }}>
+          Web MIDI isn't available in this browser (it needs Chrome, Edge or Opera over HTTPS or localhost --
+          Safari and Firefox don't support it). Any class-compliant MIDI mixer or controller works once it is.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="panel" style={{ padding: 16 }}>
+      <h3 style={{ marginTop: 0 }}>MIDI controller</h3>
+      <p style={{ fontSize: 12, color: "var(--ink-dim)" }}>
+        Works with any class-compliant MIDI mixer/controller via MIDI Learn -- click Learn, then move the
+        physical control you want bound. No per-device setup needed.
+      </p>
+      <p style={{ fontSize: 12, color: "var(--ink-dim)" }}>
+        Devices: {midi.deviceNames.length > 0 ? midi.deviceNames.join(", ") : "none detected"}
+      </p>
+      <table className="tracklist">
+        <thead>
+          <tr>
+            <th>Control</th>
+            <th>Binding</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {MIDI_ACTIONS.map((action) => {
+            const binding = midi.mappings[action.id];
+            const isLearning = midi.learning === action.id;
+            return (
+              <tr key={action.id}>
+                <td>{action.label}</td>
+                <td>{isLearning ? "move a control..." : binding ? describeBinding(binding) : "Not mapped"}</td>
+                <td>
+                  <div style={{ display: "flex", gap: 4 }}>
+                    <button
+                      className={`btn compact${isLearning ? " togglebtn on" : ""}`}
+                      onClick={() => (isLearning ? midi.cancelLearning() : midi.startLearning(action.id))}
+                    >
+                      {isLearning ? "Cancel" : "Learn"}
+                    </button>
+                    {binding && (
+                      <button className="btn compact" onClick={() => midi.clearMapping(action.id)}>
+                        &times;
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+export function SettingsView({
+  eng,
+  sessionLog,
+  midi,
+}: {
+  eng: ReturnType<typeof useEngine>;
+  sessionLog: ReturnType<typeof useSessionLog>;
+  midi: ReturnType<typeof useMidi>;
+}) {
   const s = eng.state;
   return (
     <div className="grid2">
@@ -100,6 +173,7 @@ export function SettingsView({ eng, sessionLog }: { eng: ReturnType<typeof useEn
         </dl>
       </div>
       <Recorder sessionLog={sessionLog} />
+      <MidiPanel midi={midi} />
       <div className="panel" style={{ padding: 16, gridColumn: "1 / -1" }}>
         <h3 style={{ marginTop: 0 }}>About this build</h3>
         <p style={{ fontSize: 13, color: "var(--ink-dim)" }}>

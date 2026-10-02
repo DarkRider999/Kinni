@@ -278,6 +278,12 @@ typedef struct djn_analysis_result {
   int32_t key_pitch_class;  /* 0=C .. 11=B, or -1 if no tonal center was found */
   int32_t key_is_minor;     /* 0/1, meaningful only when key_pitch_class >= 0 */
   double  key_confidence;   /* 0..1 */
+  /* Structural landmarks from the energy envelope, for auto-setting hot cues
+     on load; -1 when undeterminable (e.g. silence). Heuristic, not ground
+     truth -- a starting point a DJ can move. */
+  double  intro_end_sec;
+  double  drop_sec;
+  double  outro_start_sec;
 } djn_analysis_result;
 
 /* Analyzes a decoded buffer (same shape as djn_deck_load_pcm). No engine

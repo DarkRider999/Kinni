@@ -123,10 +123,22 @@ try {
   console.log("waveform canvas drawn-pixel counts:", waveformPixels);
   assert(waveformPixels[0] > 100, `deck A (loaded) waveform has drawn pixels, got ${waveformPixels[0]}`);
 
-  // Press play on the deck that has trackA loaded, and confirm the
-  // transport + engine state actually changed.
+  // Auto cue points: loading a track (no manual action) should already have
+  // set hot cues 1-3 to the detected intro/drop/outro positions. Trigger hot
+  // cue 1 ("Intro") via its keyboard shortcut and confirm the playhead
+  // actually jumped to a specific, non-zero position -- not just that the
+  // button exists, but that djn_deck_hot_cue_set_at really ran on load.
+  await page.keyboard.press("1");
+  await page.waitForTimeout(150);
+  const introCuePosition = await page.evaluate(() => window.__djEngine.state.decks[0].position);
+  console.log("auto intro-cue jumped deck A to:", introCuePosition);
+  assert(introCuePosition > 0, `hot cue 1 (auto-set "Intro") jumped to a real position, got ${introCuePosition}`);
+
+  // Triggering the hot cue above already started playback: a hot-cue
+  // trigger on a paused deck jumps to the cue AND plays, same as a real
+  // CDJ/Serato pad (see Deck::hotCueTrigger). So there's no separate "Play"
+  // button to click here -- just confirm the transport reflects it.
   const deckWithTrackA = page.locator(".deck", { hasText: "trackA_128_Cmaj" });
-  await deckWithTrackA.getByRole("button", { name: "Play", exact: true }).click();
   await page.waitForFunction(
     () => Array.from(document.querySelectorAll(".deck button.btn.primary")).some((b) => b.textContent === "Pause"),
     { timeout: 5000 },
@@ -197,10 +209,43 @@ try {
 
   await page.click("text=FX Rack");
   await page.waitForSelector("text=Performance macros");
+
+  // Smart FX: one tap should select the right type, turn the unit on, and
+  // actually apply it to the engine (checked via engine state, not just the
+  // dropdown -- the dropdown reflects React state, the FX unit's `on`/`type`
+  // in engine state reflects what the audio engine actually has active).
+  const fx1 = page.locator(".panel", { hasText: "FX 1" });
+  await fx1.locator("text=Smart Flanger").click();
+  await page.waitForTimeout(150);
+  await page.waitForFunction(() => {
+    const fx = window.__djEngine.state.fx[0];
+    return fx.on === 1 && fx.type === 4; // djn_fx_type FLANGER = 4
+  });
+  assert((await fx1.locator("select").first().inputValue()) === "4", "FX 1's Type dropdown shows Flanger after Smart Flanger");
+
+  const fx2 = page.locator(".panel", { hasText: "FX 2" });
+  await fx2.locator("text=Smart Reverb").click();
+  await page.waitForTimeout(150);
+  await page.waitForFunction(() => {
+    const fx = window.__djEngine.state.fx[1];
+    return fx.on === 1 && fx.type === 3; // djn_fx_type REVERB = 3
+  });
+  console.log("Smart FX: flanger on FX1, reverb on FX2, both confirmed in engine state");
   await page.screenshot({ path: path.join(OUT, "07-fx.png") });
 
   await page.click("text=Settings");
   await page.waitForSelector("text=Engine");
+  // Web MIDI isn't available in this headless Chromium build (no
+  // navigator.requestMIDIAccess) -- confirms the graceful-fallback path the
+  // real UI also takes in Safari/Firefox, which don't support it either.
+  await page.waitForSelector("text=MIDI controller");
+  const midiSupported = await page.evaluate(() => typeof navigator.requestMIDIAccess === "function");
+  console.log("Web MIDI supported in this browser:", midiSupported);
+  if (!midiSupported) {
+    await page.waitForSelector("text=Web MIDI isn't available in this browser");
+  } else {
+    await page.waitForSelector("text=Devices:");
+  }
   await page.screenshot({ path: path.join(OUT, "08-settings.png") });
 
   // Recording: start, let it capture a moment of real (playing) audio, stop,

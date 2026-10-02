@@ -40,6 +40,28 @@ std::vector<float> makeKickTrack(double bpm, double seconds, int sampleRate) {
   return buf;
 }
 
+// A track with a textbook loud/quiet envelope: quiet intro, loud main
+// section with one extra-loud "drop" moment, quiet outro -- for testing
+// structural cue detection, which works purely from the energy envelope.
+std::vector<float> makeShapedTrack(double seconds, int sampleRate) {
+  std::vector<float> buf(size_t(seconds * sampleRate), 0.0f);
+  const double introEnd = seconds * 0.2;
+  const double outroStart = seconds * 0.8;
+  const double dropAt = seconds * 0.5;
+  for (size_t i = 0; i < buf.size(); ++i) {
+    const double t = double(i) / sampleRate;
+    double amp;
+    if (t < introEnd) amp = 0.1;
+    else if (t > outroStart) amp = 0.1;
+    else if (std::fabs(t - dropAt) < 1.0)
+      amp = 1.0;  // a one-second louder "drop" in the middle of the main section
+    else
+      amp = 0.5;
+    buf[i] = float(amp * std::sin(2.0 * djn::kPi * 440.0 * i / sampleRate));
+  }
+  return buf;
+}
+
 // A sustained triad (three sine partials), the simplest signal with an
 // unambiguous tonal center for key detection.
 std::vector<float> makeChord(double rootHz, bool minorThird, double seconds, int sampleRate) {
@@ -132,6 +154,31 @@ TEST(stereo_input_is_downmixed_before_analysis) {
   }
   const auto r = djn::analyzeTrack(stereo.data(), int64_t(mono.size()), 2, sr);
   CHECK_NEAR(r.bpm, 140.0, 2.0);
+}
+
+TEST(structural_cues_find_intro_drop_and_outro) {
+  const int sr = 44100;
+  const double seconds = 30.0;  // long enough for a stable 1 s energy curve
+  const auto buf = makeShapedTrack(seconds, sr);
+  const auto r = djn::analyzeTrack(buf.data(), int64_t(buf.size()), 1, sr);
+  CHECK(r.intro_end_sec >= 0.0);
+  CHECK(r.drop_sec >= 0.0);
+  CHECK(r.outro_start_sec >= 0.0);
+  // Generous tolerances: this is a loudness heuristic, not exact segmentation.
+  CHECK_NEAR(r.intro_end_sec, seconds * 0.2, 2.0);
+  CHECK_NEAR(r.drop_sec, seconds * 0.5, 2.0);
+  CHECK_NEAR(r.outro_start_sec, seconds * 0.8, 2.0);
+  CHECK(r.intro_end_sec < r.drop_sec);
+  CHECK(r.drop_sec < r.outro_start_sec);
+}
+
+TEST(structural_cues_report_nothing_on_silence) {
+  const int sr = 44100;
+  std::vector<float> silence(size_t(5 * sr), 0.0f);
+  const auto r = djn::analyzeTrack(silence.data(), int64_t(silence.size()), 1, sr);
+  CHECK(r.intro_end_sec < 0.0);
+  CHECK(r.drop_sec < 0.0);
+  CHECK(r.outro_start_sec < 0.0);
 }
 
 TEST(camelot_code_matches_the_standard_wheel) {

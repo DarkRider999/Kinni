@@ -34,8 +34,33 @@ export function useDecks(
     });
   };
 
+  /** Auto 3 cue points: intro end / drop / outro start land on hot cues 1-3,
+   * set at an exact position (djn_deck_hot_cue_set_at) regardless of the
+   * current playhead -- unlike the manual "Set mode" flow in setHotCueAt. */
+  const applyAutoCues = useCallback((deck: 0 | 1, intro: number, drop: number, outro: number) => {
+    const positions: Record<number, number> = {};
+    [intro, drop, outro].forEach((pos, slot) => {
+      if (pos >= 0) {
+        engine.call("djn_deck_hot_cue_set_at", deck, slot, pos);
+        positions[slot] = pos;
+      }
+    });
+    setHotCues((prev) => {
+      const next = [...prev];
+      next[deck] = positions;
+      return next;
+    });
+  }, []);
+
   const applyToEngine = useCallback(
-    async (deck: 0 | 1, decoded: DecodedAudio, bpm: number, firstBeatSec: number, display: DeckTrack) => {
+    async (
+      deck: 0 | 1,
+      decoded: DecodedAudio,
+      bpm: number,
+      firstBeatSec: number,
+      display: DeckTrack,
+      cues: { intro: number; drop: number; outro: number },
+    ) => {
       const peaks = computeWaveformPeaks(decoded.channels, WAVEFORM_BINS);
       const { left, right } = toEngineStereo(decoded);
       await engine.load(deck, left, right, bpm, firstBeatSec);
@@ -44,14 +69,9 @@ export function useDecks(
         next[deck] = { ...display, peaks };
         return next;
       });
-      // A freshly loaded track starts with no hot cues set on it.
-      setHotCues((prev) => {
-        const next = [...prev];
-        next[deck] = {};
-        return next;
-      });
+      applyAutoCues(deck, cues.intro, cues.drop, cues.outro);
     },
-    [],
+    [applyAutoCues],
   );
 
   const loadToDeck = useCallback(
@@ -59,13 +79,20 @@ export function useDecks(
       setLoadingAt(deck, true);
       try {
         const decoded = await decodeAudioFile(track.file);
-        await applyToEngine(deck, decoded, track.bpm, track.firstBeatSec, {
-          name: track.name,
-          bpm: track.bpm,
-          camelot: track.camelot,
-          peaks: { min: new Float32Array(), max: new Float32Array() },
-          trackId: track.id,
-        });
+        await applyToEngine(
+          deck,
+          decoded,
+          track.bpm,
+          track.firstBeatSec,
+          {
+            name: track.name,
+            bpm: track.bpm,
+            camelot: track.camelot,
+            peaks: { min: new Float32Array(), max: new Float32Array() },
+            trackId: track.id,
+          },
+          { intro: track.introEndSec, drop: track.dropSec, outro: track.outroStartSec },
+        );
         markPlayed(track.id);
         onLoaded?.(deck, track.name, track.bpm, track.camelot);
       } finally {
@@ -83,12 +110,19 @@ export function useDecks(
         const decoded = await decodeAudioFile(file);
         const analysis = analyzeTrack(decoded.channels, decoded.sampleRate);
         const name = file.name.replace(/\.[^/.]+$/, "");
-        await applyToEngine(deck, decoded, analysis.bpm, analysis.firstBeatSec, {
-          name,
-          bpm: analysis.bpm,
-          camelot: analysis.camelot,
-          peaks: { min: new Float32Array(), max: new Float32Array() },
-        });
+        await applyToEngine(
+          deck,
+          decoded,
+          analysis.bpm,
+          analysis.firstBeatSec,
+          {
+            name,
+            bpm: analysis.bpm,
+            camelot: analysis.camelot,
+            peaks: { min: new Float32Array(), max: new Float32Array() },
+          },
+          { intro: analysis.introEndSec, drop: analysis.dropSec, outro: analysis.outroStartSec },
+        );
         onLoaded?.(deck, name, analysis.bpm, analysis.camelot);
       } finally {
         setLoadingAt(deck, false);

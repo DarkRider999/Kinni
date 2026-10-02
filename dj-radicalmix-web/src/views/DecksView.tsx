@@ -8,6 +8,9 @@ import type { useDecks } from "../state/useDecks";
 import type { useEngine } from "../state/useEngine";
 
 const HOT_CUES = [0, 1, 2, 3];
+// Slots 0-2 are auto-set on load (useDecks.applyAutoCues) to the track's
+// detected intro end / drop / outro start.
+const HOT_CUE_LABELS = ["Intro", "Drop", "Outro", "Hot cue 4"];
 
 function DeckPanel({
   deck,
@@ -102,6 +105,7 @@ function DeckPanel({
           <button
             key={slot}
             className="hotcue"
+            title={HOT_CUE_LABELS[slot]}
             onClick={() =>
               settingHotCue ? decks.setHotCueAt(deck, slot, s?.position ?? 0) : engine.call("djn_deck_hot_cue_trigger", deck, slot)
             }
@@ -189,11 +193,15 @@ function Mixer({
   autoMix,
   onToggleAutoMix,
   autoMixPhase,
+  smartOutroFx,
+  onToggleSmartOutroFx,
 }: {
   decks: ReturnType<typeof useDecks>;
   autoMix: boolean;
   onToggleAutoMix: () => void;
   autoMixPhase: string;
+  smartOutroFx: boolean;
+  onToggleSmartOutroFx: () => void;
 }) {
   return (
     <div className="panel mixer">
@@ -239,6 +247,10 @@ function Mixer({
           </span>
         )}
       </div>
+      <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 12, justifyContent: "center" }}>
+        <input type="checkbox" checked={smartOutroFx} onChange={onToggleSmartOutroFx} /> Smart Outro FX (reverb wash
+        on FX 2 during the crossfade)
+      </label>
       <p style={{ fontSize: 11, color: "var(--ink-dim)", textAlign: "center", margin: "4px 0 0" }}>
         Auto-Mix loads and crossfades into RadicalAI's top pick when the playing deck is within 20s of ending, if
         the other deck is idle.
@@ -305,7 +317,8 @@ export function DecksView({
   tracks: Track[];
 }) {
   const [autoMix, setAutoMix] = useState(false);
-  const { phase } = useAutoMix(autoMix, eng.state, decks, tracks);
+  const [smartOutroFx, setSmartOutroFx] = useState(true);
+  const { phase } = useAutoMix(autoMix, smartOutroFx, eng.state, decks, tracks);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -341,7 +354,14 @@ export function DecksView({
         <DeckPanel deck={0} eng={eng} decks={decks} />
         <DeckPanel deck={1} eng={eng} decks={decks} />
       </div>
-      <Mixer decks={decks} autoMix={autoMix} onToggleAutoMix={() => setAutoMix((v) => !v)} autoMixPhase={phase} />
+      <Mixer
+        decks={decks}
+        autoMix={autoMix}
+        onToggleAutoMix={() => setAutoMix((v) => !v)}
+        autoMixPhase={phase}
+        smartOutroFx={smartOutroFx}
+        onToggleSmartOutroFx={() => setSmartOutroFx((v) => !v)}
+      />
       <p style={{ fontSize: 11, color: "var(--ink-dim)", textAlign: "center", margin: "8px 0 0" }}>
         Keyboard: Space/Enter play A/B &middot; C/V cue A/B &middot; 1-4 hot cues A &middot; 7-0 hot cues B
       </p>

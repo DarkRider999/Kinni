@@ -16,6 +16,13 @@ export interface AnalysisResult {
   keyIsMinor: boolean;
   keyConfidence: number;
   camelot: string;
+  // Structural landmarks for auto-setting hot cues on load (the "auto 3 cue
+  // point" feature); -1 when undeterminable. Heuristic over the energy
+  // envelope, not real structural segmentation -- a starting point, not
+  // ground truth. See analysis.cpp's detectStructure() for the same logic.
+  introEndSec: number;
+  dropSec: number;
+  outroStartSec: number;
 }
 
 const MIN_BPM = 60;
@@ -273,11 +280,80 @@ function estimateKey(chroma: number[]): KeyEstimate {
   return { pitchClass, isMinor, confidence: Math.min(1, Math.max(0, best)) };
 }
 
+const ENERGY_WINDOW_SEC = 1.0;
+const INTRO_THRESHOLD = 0.6; // fraction of the robust (90th-percentile) peak
+const OUTRO_THRESHOLD = 0.5;
+
+interface StructuralCues {
+  introEndSec: number;
+  dropSec: number;
+  outroStartSec: number;
+}
+
+function computeEnergyCurve(mono: Float32Array, sampleRate: number): Float64Array {
+  const windowSamples = Math.max(1, Math.floor(ENERGY_WINDOW_SEC * sampleRate));
+  const numWindows = Math.floor(mono.length / windowSamples);
+  const energy = new Float64Array(numWindows);
+  for (let w = 0; w < numWindows; w++) {
+    const start = w * windowSamples;
+    let sum = 0;
+    for (let i = 0; i < windowSamples; i++) {
+      const s = mono[start + i];
+      sum += s * s;
+    }
+    energy[w] = Math.sqrt(sum / windowSamples);
+  }
+  return energy;
+}
+
+// See analysis.cpp's detectStructure() for why the intro/outro thresholds
+// scale to a robust (90th-percentile) loudness reference rather than the
+// single loudest moment: a brief "drop" would otherwise drag that scale up
+// so high the sustained main section never crosses it.
+function detectStructure(energy: Float64Array): StructuralCues {
+  const none: StructuralCues = { introEndSec: -1, dropSec: -1, outroStartSec: -1 };
+  if (energy.length === 0) return none;
+  let peak = 0;
+  let dropIdx = 0;
+  for (let i = 0; i < energy.length; i++) {
+    if (energy[i] > peak) {
+      peak = energy[i];
+      dropIdx = i;
+    }
+  }
+  if (peak <= 1e-9) return none;
+
+  const sorted = Array.from(energy).sort((a, b) => a - b);
+  const p90Idx = Math.min(sorted.length - 1, Math.floor(0.9 * sorted.length));
+  const robustPeak = sorted[p90Idx];
+
+  const toSec = (idx: number) => (idx + 0.5) * ENERGY_WINDOW_SEC;
+
+  let introEndSec = -1;
+  for (let i = 0; i < energy.length; i++) {
+    if (energy[i] >= INTRO_THRESHOLD * robustPeak) {
+      introEndSec = toSec(i);
+      break;
+    }
+  }
+
+  let outroStartSec = -1;
+  for (let i = energy.length - 1; i >= 0; i--) {
+    if (energy[i] >= OUTRO_THRESHOLD * robustPeak) {
+      outroStartSec = toSec(Math.min(i + 1, energy.length - 1));
+      break;
+    }
+  }
+
+  return { introEndSec, dropSec: toSec(dropIdx), outroStartSec };
+}
+
 export function analyzeTrack(channels: Float32Array[], sampleRate: number): AnalysisResult {
   const mono = downmix(channels);
   const tempo = estimateTempo(onsetNovelty(mono), sampleRate);
   const key = estimateKey(computeChroma(mono, sampleRate));
   const pos = key.pitchClass >= 0 ? camelotOf(key.pitchClass, key.isMinor) : null;
+  const structure = detectStructure(computeEnergyCurve(mono, sampleRate));
   return {
     bpm: tempo.bpm,
     bpmConfidence: tempo.confidence,
@@ -285,6 +361,9 @@ export function analyzeTrack(channels: Float32Array[], sampleRate: number): Anal
     keyPitchClass: key.pitchClass,
     keyIsMinor: key.isMinor,
     keyConfidence: key.confidence,
+    introEndSec: structure.introEndSec,
+    dropSec: structure.dropSec,
+    outroStartSec: structure.outroStartSec,
     camelot: pos ? `${pos.number}${pos.letter}` : "",
   };
 }

@@ -1,9 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import { engine } from "../engine/engineBridge";
 import type { Track } from "../lib/library";
+import { smartReverbPreset } from "../lib/smartFx";
 import { suggestNextTracks } from "../lib/suggestions";
 import type { useDecks } from "./useDecks";
 import type { EngineState } from "../engine/types";
+
+// Smart Outro FX borrows FX unit 2 for the duration of the crossfade -- the
+// engine only has two FX units, so this is a deliberate trade-off rather
+// than a dedicated bus. Avoid relying on FX 2 for anything else while an
+// Auto-Mix transition is in progress (watch `phase`).
+const SMART_OUTRO_FX_UNIT = 1;
 
 // How long before a track ends that Auto-Mix picks and starts the next one
 // (docs/dj-radicalmix Sec 2 Issue 24 -- "Limited Automation").
@@ -17,6 +24,7 @@ type Phase = "idle" | "loading" | "settling" | "fading";
 
 export function useAutoMix(
   enabled: boolean,
+  smartOutroFx: boolean,
   state: EngineState | null,
   decks: ReturnType<typeof useDecks>,
   tracks: Track[],
@@ -69,6 +77,16 @@ export function useAutoMix(
 
       window.setTimeout(() => {
         setPhase("fading");
+        if (smartOutroFx) {
+          const preset = smartReverbPreset();
+          engine.call("djn_fx_set_target", SMART_OUTRO_FX_UNIT, masterIdx);
+          engine.call("djn_fx_set_type", SMART_OUTRO_FX_UNIT, preset.type);
+          engine.call("djn_fx_set_beats", SMART_OUTRO_FX_UNIT, preset.beats);
+          engine.call("djn_fx_set_depth", SMART_OUTRO_FX_UNIT, preset.depth);
+          engine.call("djn_fx_set_wet", SMART_OUTRO_FX_UNIT, preset.wet);
+          engine.call("djn_fx_set_on", SMART_OUTRO_FX_UNIT, 1);
+        }
+
         const from = decks.crossfader;
         const to = idleIdx === 1 ? 1 : 0;
         const steps = 40;
@@ -80,12 +98,13 @@ export function useAutoMix(
           decks.setCrossfader(from + (to - from) * t);
           if (step >= steps) {
             clearFadeTimer();
+            if (smartOutroFx) engine.call("djn_fx_set_on", SMART_OUTRO_FX_UNIT, 0);
             setPhase("idle");
           }
         }, CROSSFADE_MS / steps);
       }, SETTLE_MS);
     })();
-  }, [enabled, state, phase, decks, tracks]);
+  }, [enabled, smartOutroFx, state, phase, decks, tracks]);
 
   return { phase };
 }

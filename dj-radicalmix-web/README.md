@@ -5,9 +5,13 @@ colour FX, performance macros and a sampler, all running the actual **DJ Nexus P
 (`../dj-nexus-pro/engine`) compiled to WebAssembly -- not a simulation. On top of that: a local track library
 with automatic BPM/key detection, smart + manual crates, and the **RadicalAI** next-track advisor (surfaced
 both in the library and as a live radar on the Decks screen), all JS ports of (or built on) that engine's
-native, unit-tested analyzer and scoring formula. An **Auto-Mix** mode will pick, load and crossfade into the
-AI's top suggestion as the playing deck nears its end. Recording a set also produces an auto-built tracklist
-alongside the audio. Keyboard shortcuts cover transport and hot cues.
+native, unit-tested analyzer and scoring formula. Loading a track also auto-detects its intro/drop/outro from
+its energy envelope and sets hot cues 1-3 to them -- no manual tagging needed. An **Auto-Mix** mode will pick,
+load and crossfade into the AI's top suggestion as the playing deck nears its end, optionally washing a Smart
+Reverb over the outgoing track during the transition. One-tap **Smart Flanger**/**Smart Reverb** presets sit
+on the FX Rack. Any class-compliant MIDI mixer/controller can drive transport, cue and fader controls via
+**MIDI Learn** (Web MIDI). Recording a set also produces an auto-built tracklist alongside the audio. Keyboard
+shortcuts cover transport and hot cues.
 
 See [`docs/dj-radicalmix/SPEC.md`](../docs/dj-radicalmix/SPEC.md) for the full product blueprint and what of
 it this build does and doesn't implement (short version: the real-time engine, BPM/key detection and the
@@ -55,9 +59,24 @@ uploaded anywhere.
   be a beat-grid-snapped position off by a hair if quantize moved it.
 - `src/lib/suggestions.ts` -- the next-track scoring/ranking shared by the Library screen's full RadicalAI
   panel and the Decks screen's compact **Next-Track Radar** rail, so the two never disagree.
+- **Auto cue points** -- `analyzeTrack()` (`src/engine/analysis.ts`, mirrored in the native
+  `analysis.cpp`/`detectStructure`) also computes a 1-second RMS energy envelope and picks an intro-end, drop
+  and outro-start from it (robust-peak thresholds, not the single loudest moment, so one brief loud hit can't
+  skew them). `useDecks.applyAutoCues` sets hot cues 1-3 to those positions the moment a track is loaded --
+  before the DJ has touched anything -- via `djn_deck_hot_cue_set_at` (an exact-position set, distinct from
+  the manual "Set mode" cue, which captures the current playhead instead).
+- `src/lib/smartFx.ts` -- one-tap **Smart Flanger**/**Smart Reverb** presets (type/beat-length/depth/wet) for
+  the FX Rack's two units, so a usable effect is one click away instead of five control tweaks.
 - `src/state/useAutoMix.ts` -- **Auto-Mix** (Issue 24): when the playing deck is within 20s of ending and the
   other deck is idle, loads RadicalAI's top pick onto it, plays it (sync on), and crossfades over 8s. Never
-  touches a deck the DJ has already loaded manually.
+  touches a deck the DJ has already loaded manually. Optionally (**Smart Outro FX**, on by default) washes
+  the Smart Reverb preset over the outgoing deck for the duration of the crossfade, borrowing FX unit 2 since
+  the engine only has two.
+- `src/lib/midi.ts` + `src/state/useMidi.ts` -- **MIDI controller support** via the Web MIDI API
+  (`navigator.requestMIDIAccess`). No per-device layouts: **MIDI Learn** binds any of a fixed action set
+  (deck A/B play-pause/cue, crossfader, channel faders) to whatever note/CC the DJ moves next, persisted to
+  `localStorage`. Falls back to a plain "not available" message in browsers without Web MIDI (Safari, Firefox).
+  Lives at the top of `App.tsx` rather than inside `DecksView` so a controller keeps working across tabs.
 - `src/state/useSessionLog.ts` -- an in-memory "what got loaded to a deck, and when" log for this session,
   exported as a .txt tracklist alongside a recording (Issue 13) -- no server needed.
 - `src/lib/starterSounds.ts` -- 8 procedurally synthesized sampler one-shots (kick/clap/hats/riser/impact/
@@ -75,8 +94,11 @@ npm run e2e    # builds, serves, and drives the built app in a real headless bro
                # smart crate and a manual crate, loads a deck, plays it, checks the waveform drew pixels
                # and a hot cue marker, checks a keyboard shortcut toggles playback, checks the Next-Track
                # Radar, runs a full Auto-Mix transition end to end (checks the second deck ends up loaded,
-               # playing and crossfaded in), records a few seconds, and checks the exported tracklist's
-               # contents. Screenshots land in scripts/.e2e-out/ (gitignored).
+               # playing and crossfaded in), checks the one-tap Smart Flanger/Smart Reverb presets actually
+               # reach the engine (not just the dropdown), checks the Settings MIDI panel renders (learn
+               # table or the graceful "unsupported" message, whichever this browser hits), records a few
+               # seconds, and checks the exported tracklist's contents. Screenshots land in
+               # scripts/.e2e-out/ (gitignored).
 ```
 
 `npm run build` type-checks (`tsc -b`) before bundling, so a broken type is a build failure, not a runtime
@@ -94,4 +116,9 @@ cues B. Disabled while focus is in a text input/select.
   but a real, complex mix may still fool it. Confidence scores are available on `AnalysisResult` for a UI to
   surface low-confidence results; this build doesn't yet show that in the library table.
 - **Recording** produces WebM/Opus (what `MediaRecorder` can do), not WAV/FLAC -- that needs a native build.
+- **Auto cue points** are a heuristic off the energy envelope, not beat-aware structure analysis -- a track
+  with an unconventional arrangement (no clear intro/drop/outro shape) will get three cues in plausible but
+  not necessarily musically "correct" places. They're a starting point, not a replacement for manual review.
+- **MIDI controller support** needs a browser with Web MIDI (Chrome, Edge, Opera over HTTPS or localhost) --
+  Safari and Firefox don't implement it, so those show a fallback message instead of the mapping table.
 - **No cross-device sync, no accounts** -- this is a single-tab, local-only build.

@@ -44,6 +44,23 @@ function makeChord(rootHz: number, minorThird: boolean, seconds: number, sampleR
   return buf;
 }
 
+function makeShapedTrack(seconds: number, sampleRate: number): Float32Array {
+  const buf = new Float32Array(Math.floor(seconds * sampleRate));
+  const introEnd = seconds * 0.2;
+  const outroStart = seconds * 0.8;
+  const dropAt = seconds * 0.5;
+  for (let i = 0; i < buf.length; i++) {
+    const t = i / sampleRate;
+    let amp: number;
+    if (t < introEnd) amp = 0.1;
+    else if (t > outroStart) amp = 0.1;
+    else if (Math.abs(t - dropAt) < 1.0) amp = 1.0;
+    else amp = 0.5;
+    buf[i] = amp * Math.sin((2 * Math.PI * 440 * i) / sampleRate);
+  }
+  return buf;
+}
+
 const SR = 44100;
 
 describe("BPM detection", () => {
@@ -102,6 +119,29 @@ describe("key detection", () => {
   it("reports nothing on silence", () => {
     const r = analyzeTrack([new Float32Array(5 * SR)], SR);
     expect(r.keyPitchClass).toBe(-1);
+  });
+});
+
+describe("structural cue detection", () => {
+  it("finds intro, drop, and outro on a shaped track", () => {
+    const seconds = 30;
+    const r = analyzeTrack([makeShapedTrack(seconds, SR)], SR);
+    expect(r.introEndSec).toBeGreaterThanOrEqual(0);
+    expect(r.dropSec).toBeGreaterThanOrEqual(0);
+    expect(r.outroStartSec).toBeGreaterThanOrEqual(0);
+    // Generous tolerances: this is a loudness heuristic, not exact segmentation.
+    expect(Math.abs(r.introEndSec - seconds * 0.2)).toBeLessThan(2);
+    expect(Math.abs(r.dropSec - seconds * 0.5)).toBeLessThan(2);
+    expect(Math.abs(r.outroStartSec - seconds * 0.8)).toBeLessThan(2);
+    expect(r.introEndSec).toBeLessThan(r.dropSec);
+    expect(r.dropSec).toBeLessThan(r.outroStartSec);
+  });
+
+  it("reports nothing on silence", () => {
+    const r = analyzeTrack([new Float32Array(5 * SR)], SR);
+    expect(r.introEndSec).toBeLessThan(0);
+    expect(r.dropSec).toBeLessThan(0);
+    expect(r.outroStartSec).toBeLessThan(0);
   });
 });
 

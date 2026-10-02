@@ -255,6 +255,9 @@ void fillAnalysisResult(const djn::AnalysisResult& r, djn_analysis_result* out) 
   out->key_pitch_class = r.key_pitch_class;
   out->key_is_minor = r.key_is_minor ? 1 : 0;
   out->key_confidence = r.key_confidence;
+  out->intro_end_sec = r.intro_end_sec;
+  out->drop_sec = r.drop_sec;
+  out->outro_start_sec = r.outro_start_sec;
 }
 }  // namespace
 

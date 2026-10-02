@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { engine } from "../engine/engineBridge";
 import { FX_TARGET_MASTER, Macro } from "../engine/types";
+import { smartFlangerPreset, smartReverbPreset, type FxPreset } from "../lib/smartFx";
 import type { useEngine } from "../state/useEngine";
 
 const FX_TYPE_NAMES = ["Echo", "Delay", "Ping-Pong", "Reverb", "Flanger", "Phaser", "Roll", "Stutter", "Trans", "Pitch", "Distortion", "Crush"];
@@ -13,6 +14,24 @@ const TARGETS: { label: string; value: number }[] = [
 
 function FxUnit({ unit }: { unit: 0 | 1 }) {
   const [on, setOn] = useState(false);
+  const [type, setType] = useState(0);
+  const [beats, setBeats] = useState(1);
+  const [depth, setDepth] = useState(0.5);
+  const [wet, setWet] = useState(0.5);
+
+  const applyPreset = (preset: FxPreset) => {
+    setType(preset.type);
+    setBeats(preset.beats);
+    setDepth(preset.depth);
+    setWet(preset.wet);
+    setOn(true);
+    engine.call("djn_fx_set_type", unit, preset.type);
+    engine.call("djn_fx_set_beats", unit, preset.beats);
+    engine.call("djn_fx_set_depth", unit, preset.depth);
+    engine.call("djn_fx_set_wet", unit, preset.wet);
+    engine.call("djn_fx_set_on", unit, 1);
+  };
+
   return (
     <div className="panel" style={{ padding: 16 }}>
       <h3 style={{ marginTop: 0 }}>
@@ -29,9 +48,26 @@ function FxUnit({ unit }: { unit: 0 | 1 }) {
           {on ? "On" : "Off"}
         </button>
       </h3>
+      <div className="transport">
+        <button className="btn small" onClick={() => applyPreset(smartFlangerPreset())} title="One-tap flanger: synced sweep, moderate depth/wet">
+          Smart Flanger
+        </button>
+        <button className="btn small" onClick={() => applyPreset(smartReverbPreset())} title="One-tap reverb: long wash, good for an outro">
+          Smart Reverb
+        </button>
+      </div>
       <div className="row">
         <label>Type</label>
-        <select className="field" style={{ flex: 1 }} onChange={(e) => engine.call("djn_fx_set_type", unit, parseInt(e.target.value, 10))}>
+        <select
+          className="field"
+          style={{ flex: 1 }}
+          value={type}
+          onChange={(e) => {
+            const v = parseInt(e.target.value, 10);
+            setType(v);
+            engine.call("djn_fx_set_type", unit, v);
+          }}
+        >
           {FX_TYPE_NAMES.map((n, i) => (
             <option key={n} value={i}>
               {n}
@@ -51,15 +87,48 @@ function FxUnit({ unit }: { unit: 0 | 1 }) {
       </div>
       <div className="row">
         <label>Beats</label>
-        <input type="range" min={0.0625} max={16} step={0.0625} defaultValue={1} onChange={(e) => engine.call("djn_fx_set_beats", unit, parseFloat(e.target.value))} />
+        <input
+          type="range"
+          min={0.0625}
+          max={16}
+          step={0.0625}
+          value={beats}
+          onChange={(e) => {
+            const v = parseFloat(e.target.value);
+            setBeats(v);
+            engine.call("djn_fx_set_beats", unit, v);
+          }}
+        />
       </div>
       <div className="row">
         <label>Depth</label>
-        <input type="range" min={0} max={1} step={0.01} defaultValue={0.5} onChange={(e) => engine.call("djn_fx_set_depth", unit, parseFloat(e.target.value))} />
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={depth}
+          onChange={(e) => {
+            const v = parseFloat(e.target.value);
+            setDepth(v);
+            engine.call("djn_fx_set_depth", unit, v);
+          }}
+        />
       </div>
       <div className="row">
         <label>Wet</label>
-        <input type="range" min={0} max={1} step={0.01} defaultValue={0.5} onChange={(e) => engine.call("djn_fx_set_wet", unit, parseFloat(e.target.value))} />
+        <input
+          type="range"
+          min={0}
+          max={1}
+          step={0.01}
+          value={wet}
+          onChange={(e) => {
+            const v = parseFloat(e.target.value);
+            setWet(v);
+            engine.call("djn_fx_set_wet", unit, v);
+          }}
+        />
       </div>
     </div>
   );

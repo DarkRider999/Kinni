@@ -32,7 +32,15 @@ int loadWithAnalysis(djn_engine* e, int32_t deck, const char* path, double bpmOv
     if (a.key_pitch_class >= 0) djn_camelot_code(a.key_pitch_class, a.key_is_minor, camelot, sizeof(camelot));
     std::printf("analyzed %s: %.1f BPM (confidence %.0f%%), key %s (confidence %.0f%%)\n", path, a.bpm,
                 a.bpm_confidence * 100, camelot, a.key_confidence * 100);
-    return djn_deck_load_file(e, deck, path, a.bpm, a.first_beat_sec);
+    const int r = djn_deck_load_file(e, deck, path, a.bpm, a.first_beat_sec);
+    if (r != DJN_OK) return r;
+    // Auto cue points: intro end / drop / outro start land on hot cues 1-3.
+    if (a.intro_end_sec >= 0.0) djn_deck_hot_cue_set_at(e, deck, 0, a.intro_end_sec);
+    if (a.drop_sec >= 0.0) djn_deck_hot_cue_set_at(e, deck, 1, a.drop_sec);
+    if (a.outro_start_sec >= 0.0) djn_deck_hot_cue_set_at(e, deck, 2, a.outro_start_sec);
+    std::printf("  auto cues: intro end %.1fs, drop %.1fs, outro start %.1fs\n", a.intro_end_sec, a.drop_sec,
+                a.outro_start_sec);
+    return DJN_OK;
   }
   if (ar != DJN_OK) std::fprintf(stderr, "analysis unavailable for %s (err %d); loading without a grid\n", path, ar);
   else std::printf("analyzed %s: no clear tempo found; loading without a grid\n", path);

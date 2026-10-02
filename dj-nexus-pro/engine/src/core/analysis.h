@@ -24,6 +24,18 @@ struct AnalysisResult {
   bool key_is_minor = false;
   // Correlation of the winning profile, 0..1 (negative correlations clamp to 0).
   double key_confidence = 0.0;
+
+  // Three structural landmarks from the track's 1-second energy envelope, for
+  // auto-setting hot cues on load (the "auto 3 cue point" feature): where the
+  // intro gives way to the main section, the single highest-energy moment
+  // (a reasonable proxy for "the drop" in a lot of club music), and where
+  // the energy falls off again toward the end. -1 when undeterminable (e.g.
+  // silence, or a track too short to have a meaningful envelope shape) --
+  // these are heuristics over loudness, not real structural segmentation, so
+  // treat them as a starting point a DJ can drag to taste, not ground truth.
+  double intro_end_sec = -1.0;
+  double drop_sec = -1.0;
+  double outro_start_sec = -1.0;
 };
 
 // Analyzes an already-decoded buffer (same shape djn_deck_load_pcm takes).
