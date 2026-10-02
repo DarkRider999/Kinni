@@ -3,10 +3,12 @@
 > Mobile (Android + iOS) and Desktop (Windows + macOS). A unified music-creation ecosystem: an AI beat/melody
 > generator, AI stem separation, a beginner-friendly 2-deck DJ mixer, auto remix mode, a 10,000+ free
 > loop/sample library, one-tap mastering and cross-device cloud sync — one app instead of five.
-> Version 1.0 · Status: Blueprint (implementation-ready; not yet built — see §0.1)
+> Version 1.0 · Status: Blueprint, with a real working web slice built — see §0.1
 > Related specs in this repo: [`docs/dj-radicalmix/SPEC.md`](../dj-radicalmix/SPEC.md) (DJ mixer/AI-DJ product
 > line), [`docs/dj-nexus-pro/SPEC.md`](../dj-nexus-pro/SPEC.md) (shared C++ audio engine, analysis engine and
 > entitlement/master-access pattern this spec reuses rather than reinvents — see §0.2).
+> Companion build in this repo: [`mixforge-studio-web/`](../../mixforge-studio-web/) (a real browser app
+> implementing §2A/B/D/F/G below).
 
 ---
 
@@ -31,12 +33,24 @@
 
 ### 0.1 Implementation status
 
-This is a **blueprint-level deliverable**: a complete, implementation-ready spec for an engineering team —
-problem/feature mapping, AI model design, UI/UX screens, architecture, data models, API contracts, user flows
-and monetization. No code has been written against it yet in this session; building the AI models (beat
-generation, melody generation, stem separation, mastering, remix) and the native audio engine is multi-month,
-multi-specialist work (ML engineers, DSP/audio engineers, mobile/desktop engineers) that cannot be fabricated
-as a "real working slice" the way a UI-only companion app can.
+This started as a blueprint-level deliverable; a first real slice of it has since been implemented as a
+browser companion app, `mixforge-studio-web/`, on the same reasoning already used for `dj-radicalmix-web`:
+real, working, testable code beats a UI mockup wherever it's actually buildable in this environment.
+
+| Blueprint item | Status |
+|---|---|
+| §2A AI Beat Generator (pattern generation, editable grid) | **Implemented and tested** — `mixforge-studio-web/src/lib/beatPatterns.ts`: a seeded, genre-conditioned procedural generator across 7 genre templates, energy-weighted fills, unit-tested for determinism and base-pattern correctness. A rule-based generator standing in for the spec's trained sequence model (§6 `/generateBeat`) — training one needs GPU infrastructure and training data this environment doesn't have |
+| §2B Melody & Bassline Creator (scale-locked generation, piano roll) | **Implemented and tested** — `mixforge-studio-web/src/lib/melodyPatterns.ts`: 5 scales, 3 part types (melody/bassline/chords), every generated note is in-key, "regenerate this half" leaves the rest untouched. Same honesty note as the beat generator — procedural, not a trained model |
+| §2D DJ Mixer (2 decks, waveforms, crossfader, FX, sync) | **Implemented and working** — `mixforge-studio-web/src/engine/deck.ts` + `src/views/DJMixer.tsx`: real decks on the Web Audio API, canvas peak waveforms, an equal-power crossfader, filter + echo FX, BPM-ratio auto-sync, and MediaRecorder-based set recording. Not the native C++ engine from §4.1/`dj-nexus-pro` — a browser-only Web Audio implementation, since this is a web companion, not the native app |
+| §2G One-Tap Mastering | **Implemented and working** — `mixforge-studio-web/src/engine/mastering.ts`: a real deterministic `OfflineAudioContext` chain (shelving EQ → compressor → limiter), 3 genre-flavored presets, WAV export. Preset parameters are a fixed lookup table rather than the spec's AI-selected set (§6 `/masterTrack`) — same "deterministic chain, parameters chosen upstream" split as the spec, just with a rule-based table instead of a trained model |
+| §2F Sample Library (10,000+ free loops/samples) | **UX implemented, content not** — genre/mood filtering, preview, and drag-and-drop onto a Beat Generator lane all work, but only 8 procedurally synthesized placeholder one-shots back it (`mixforge-studio-web/src/engine/synthKit.ts`), not the licensed 10,000+ catalog, which needs licensed content this environment doesn't have |
+| §2C Stem Lab (AI stem separation) | **Not implemented** — needs a trained source-separation model (Demucs-style) and GPU inference |
+| §2E Auto Remix Mode | **Not implemented** — depends on Stem Lab plus an AI remix-orchestration job |
+| §2H Cloud Sync, §11 accounts/master access, §4/§6 backend and billing | **Not implemented** — needs a deployed database/backend, auth and store accounts |
+| §4.1 Flutter mobile + desktop app (Android/iOS/Windows/macOS) | **Not implemented.** No Flutter SDK is available to build or verify one in this environment; `mixforge-studio-web` covers the same Beat/Melody/Mixer/Library surface on desktop browsers in the meantime |
+
+See `mixforge-studio-web/README.md` for the full real-vs-placeholder breakdown, architecture notes, and how
+to run its unit tests (`npm run test`) and full-browser smoke test (`npm run e2e`).
 
 ### 0.2 Why this reuses, not duplicates, existing work in this repo
 

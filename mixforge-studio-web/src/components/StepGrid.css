@@ -1,0 +1,65 @@
+.step-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 4px;
+}
+
+.step-grid-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.step-grid-label {
+  width: 110px;
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.lane-remap {
+  color: var(--hologram-magenta);
+}
+
+.step-grid-row {
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+
+.step-grid-row:hover {
+  background: #0f0f1a;
+}
+
+.step-grid-cells {
+  display: flex;
+  gap: 4px;
+}
+
+.step-cell {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  border: 1px solid var(--panel-border);
+  background: #15151f;
+  padding: 0;
+  transition: background 0.1s, box-shadow 0.1s;
+}
+
+.step-cell.beat-start {
+  border-color: #2a2a40;
+}
+
+.step-cell.on {
+  background: var(--forge-cyan);
+  box-shadow: 0 0 10px var(--forge-cyan);
+  border-color: var(--forge-cyan);
+}
+
+.step-cell.playhead {
+  outline: 2px solid var(--hologram-magenta);
+  outline-offset: 1px;
+}

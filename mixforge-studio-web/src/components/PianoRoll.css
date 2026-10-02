@@ -1,0 +1,50 @@
+.piano-roll {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.piano-roll-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.piano-roll-label {
+  width: 24px;
+  flex-shrink: 0;
+  text-align: right;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+
+.piano-roll-cells {
+  display: flex;
+  gap: 2px;
+}
+
+.roll-cell {
+  width: 18px;
+  height: 14px;
+  border-radius: 3px;
+  border: 1px solid #1a1a28;
+  background: #121220;
+  padding: 0;
+}
+
+.roll-cell.beat-start {
+  border-color: #262640;
+}
+
+.roll-cell.on {
+  background: var(--synth-violet);
+  box-shadow: 0 0 8px var(--synth-violet);
+  border-color: var(--synth-violet);
+}
+
+.roll-cell.playhead {
+  outline: 2px solid var(--hologram-magenta);
+}
