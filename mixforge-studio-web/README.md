@@ -19,15 +19,29 @@ npm run dev       # dev server with hot reload
 npm run build && npm run preview   # production build, served statically
 ```
 
-## Installing it on a phone (no .apk needed)
+## Getting a real .apk
 
-There's no Android/iOS app build here — this environment has no Android SDK or Flutter SDK, and network
-policy blocks downloading one (confirmed: `dl.google.com`/`android.clients.google.com` are rejected by the
-egress proxy). Instead, this is a installable **Progressive Web App**: deploy the `dist/` build to any HTTPS
-host (GitHub Pages, Vercel, Netlify, etc. — localhost also works for testing), open it in Chrome on Android
-or Safari on iOS, and use **"Install app"** / **"Add to Home Screen."** It then launches full-screen with its
-own icon, independent of the browser chrome, and the service worker lets it reopen without a network
-connection (after at least one successful online visit).
+This environment has no Android SDK and network policy blocks downloading one (confirmed:
+`dl.google.com`/`android.clients.google.com` are rejected by the egress proxy), so the APK can't be built or
+tested from inside this session. Instead, **[`.github/workflows/mixforge-studio-android.yml`](../.github/workflows/mixforge-studio-android.yml)**
+builds it on GitHub's own Ubuntu runners, which do ship the Android SDK: on every push that touches
+`mixforge-studio-web/**` it runs the unit tests, builds the web app, wraps it with
+[Capacitor](https://capacitorjs.com/) (`android/` — a thin native WebView shell around the same `dist/` build,
+added via `npx cap add android`), runs `./gradlew assembleDebug`, uploads the resulting debug APK as a build
+artifact, and attaches it to a `mixforge-studio-apk-<run_number>` GitHub Release for a stable download link.
+It's a debug-signed build meant for sideloading (enable "install unknown apps" for your browser/file manager
+when installing it), not a Play Store release.
+
+To build it yourself instead: `npm ci && npm run build && npx cap sync android && cd android && ./gradlew
+assembleDebug` on a machine with the Android SDK (e.g. via Android Studio).
+
+## Installing it on a phone without an .apk
+
+Independent of the native build above, this is also an installable **Progressive Web App**: deploy the
+`dist/` build to any HTTPS host (GitHub Pages, Vercel, Netlify, etc. — localhost also works for testing), open
+it in Chrome on Android or Safari on iOS, and use **"Install app"** / **"Add to Home Screen."** It then
+launches full-screen with its own icon, independent of the browser chrome, and the service worker lets it
+reopen without a network connection (after at least one successful online visit).
 
 - `public/manifest.webmanifest` — name, icons, `display: standalone`, theme/background color.
 - `public/service-worker.js` — a minimal network-first-with-cache-fallback worker (no Workbox/build-time
@@ -37,11 +51,6 @@ connection (after at least one successful online visit).
 - The e2e smoke test (`npm run e2e`) asserts the manifest serves, both icon sizes return `200`, and the
   service worker reaches the `active` state — the concrete conditions Chrome checks before offering
   "Install app."
-
-If you do want a real native build later (a true `.apk`, or an iOS/Windows/macOS build per
-[`docs/mixforge-studio/SPEC.md`](../docs/mixforge-studio/SPEC.md)'s Flutter architecture), that needs to
-happen somewhere with the Android SDK/Flutter toolchain and unrestricted network — your own machine with
-Android Studio, or a CI runner (e.g. GitHub Actions' Android-ready images).
 
 Open the printed URL and click **Enter the Studio** (browsers require a user gesture before audio can start).
 Everything runs locally in the tab — nothing is uploaded anywhere.

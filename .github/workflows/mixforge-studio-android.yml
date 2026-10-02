@@ -1,0 +1,93 @@
+name: MixForge Studio Android APK
+
+on:
+  push:
+    paths:
+      - "mixforge-studio-web/**"
+      - ".github/workflows/mixforge-studio-android.yml"
+  pull_request:
+    paths:
+      - "mixforge-studio-web/**"
+      - ".github/workflows/mixforge-studio-android.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    working-directory: mixforge-studio-web
+
+jobs:
+  build-apk:
+    name: Build debug APK
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: mixforge-studio-web/package-lock.json
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      # GitHub's ubuntu-24.04 runner image ships the Android SDK/cmdline-tools preinstalled
+      # (ANDROID_HOME is already set), but newer compileSdk platforms aren't always present --
+      # install exactly what this Capacitor project's android/variables.gradle asks for.
+      - name: Install required Android SDK platform
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Sync Capacitor Android project
+        run: npx cap sync android
+
+      - name: Build debug APK
+        working-directory: mixforge-studio-web/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Locate APK
+        id: apk
+        working-directory: mixforge-studio-web/android
+        run: |
+          APK_PATH=$(find app/build/outputs/apk/debug -name "*.apk" | head -n1)
+          echo "path=$APK_PATH" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mixforge-studio-debug-apk
+          path: mixforge-studio-web/android/${{ steps.apk.outputs.path }}
+          if-no-files-found: error
+
+      - name: Publish a downloadable release (push to main branches only)
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: mixforge-studio-apk-${{ github.run_number }}
+          name: MixForge Studio debug APK (build ${{ github.run_number }})
+          body: |
+            Debug-signed APK of MixForge Studio, built automatically from commit ${{ github.sha }}.
+            This is a debug build for sideloading/testing (install with "unknown sources" allowed on
+            your device), not a Play Store release.
+          files: mixforge-studio-web/android/${{ steps.apk.outputs.path }}
+          draft: false
+          prerelease: true
