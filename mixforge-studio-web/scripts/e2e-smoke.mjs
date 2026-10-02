@@ -29,6 +29,26 @@ try {
   assert((await page.title()) === 'MixForge Studio', 'page title')
   await page.screenshot({ path: path.join(OUT, '01-gate.png') })
 
+  // PWA installability: manifest + icons serve, and the service worker activates. This is what
+  // makes Chrome/Android offer "Install app" / "Add to Home Screen" since no .apk can be built in
+  // this environment (no Android SDK, and the network policy blocks downloading one).
+  const manifestHref = await page.getAttribute('link[rel=manifest]', 'href')
+  assert(manifestHref === '/manifest.webmanifest', 'manifest link present')
+  const manifest = await page.evaluate(async (href) => (await fetch(href)).json(), manifestHref)
+  assert(manifest.name === 'MixForge Studio', 'manifest name')
+  assert(manifest.display === 'standalone', 'manifest display mode')
+  assert(manifest.icons.some((i) => i.sizes === '192x192') && manifest.icons.some((i) => i.sizes === '512x512'), 'manifest has 192 + 512 icons')
+  for (const icon of manifest.icons) {
+    const status = await page.evaluate(async (src) => (await fetch(src)).status, icon.src)
+    assert(status === 200, `icon ${icon.src} serves`)
+  }
+  const swReady = await page.evaluate(async () => {
+    if (!('serviceWorker' in navigator)) return null
+    const reg = await navigator.serviceWorker.ready
+    return !!reg.active
+  })
+  assert(swReady === true, 'service worker activates')
+
   await page.click('text=Enter the Studio')
   await page.waitForSelector('text=AI Beat Generator', { state: 'hidden' }).catch(() => {})
   await page.waitForSelector('nav.top-nav')

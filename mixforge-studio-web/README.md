@@ -19,6 +19,30 @@ npm run dev       # dev server with hot reload
 npm run build && npm run preview   # production build, served statically
 ```
 
+## Installing it on a phone (no .apk needed)
+
+There's no Android/iOS app build here — this environment has no Android SDK or Flutter SDK, and network
+policy blocks downloading one (confirmed: `dl.google.com`/`android.clients.google.com` are rejected by the
+egress proxy). Instead, this is a installable **Progressive Web App**: deploy the `dist/` build to any HTTPS
+host (GitHub Pages, Vercel, Netlify, etc. — localhost also works for testing), open it in Chrome on Android
+or Safari on iOS, and use **"Install app"** / **"Add to Home Screen."** It then launches full-screen with its
+own icon, independent of the browser chrome, and the service worker lets it reopen without a network
+connection (after at least one successful online visit).
+
+- `public/manifest.webmanifest` — name, icons, `display: standalone`, theme/background color.
+- `public/service-worker.js` — a minimal network-first-with-cache-fallback worker (no Workbox/build-time
+  precache list, since Vite's output filenames are content-hashed per build).
+- `public/icon-192.png` / `icon-512.png` — generated from `public/icon-source.svg` (rendered to PNG via a
+  headless-Chromium screenshot, since this environment's ImageMagick has no `rsvg-convert` delegate).
+- The e2e smoke test (`npm run e2e`) asserts the manifest serves, both icon sizes return `200`, and the
+  service worker reaches the `active` state — the concrete conditions Chrome checks before offering
+  "Install app."
+
+If you do want a real native build later (a true `.apk`, or an iOS/Windows/macOS build per
+[`docs/mixforge-studio/SPEC.md`](../docs/mixforge-studio/SPEC.md)'s Flutter architecture), that needs to
+happen somewhere with the Android SDK/Flutter toolchain and unrestricted network — your own machine with
+Android Studio, or a CI runner (e.g. GitHub Actions' Android-ready images).
+
 Open the printed URL and click **Enter the Studio** (browsers require a user gesture before audio can start).
 Everything runs locally in the tab — nothing is uploaded anywhere.
 
