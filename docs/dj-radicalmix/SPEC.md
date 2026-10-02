@@ -28,6 +28,22 @@
 
 ## 0. Scope & Relationship to Existing Projects
 
+### 0.1 Implementation status
+
+This spec was written as a blueprint; a first real slice of it has since been implemented directly in
+`dj-nexus-pro/engine/` (the shared audio core, §8.1), on the reasoning that duplicating that engine instead
+of extending it would be wasted work:
+
+| Blueprint item | Status |
+|---|---|
+| §3.11 Precision Analysis Engine (BPM/key detection) | **Implemented and tested** — `djn_analyze_pcm`/`djn_analyze_file`, `dj-nexus-pro/engine/src/core/analysis.cpp` |
+| §4 AI Next-Track Radar scoring | **Implemented and tested** — `djn_advisor_score`, `dj-nexus-pro/engine/src/core/advisor.cpp` (the harmonic/tempo/energy/genre/recency formula from §4.3, minus the cloud-LLM set-planning and "why" explanations, which need an online model call) |
+| Everything else in this document (the Flutter mobile+desktop app, the 10,000+ sampler library and store, stem separation/vocal remover, RadicalSync backend, master-access entitlement server, billing) | **Not implemented.** Each needs something this engineering environment does not have: a Flutter SDK to build and verify a UI against, a trained stem-separation model, 10,000 licensed audio samples, a deployed database/backend, or app-store developer accounts. Building any of these without the means to verify them would mean shipping unverified code, which is worse than not shipping it |
+
+See `dj-nexus-pro/engine/README.md` for what the engine verifies today (79 unit/integration tests, ASan/UBSan clean).
+
+
+
 This repo already has two adjacent projects, and DJ RadicalMix is designed to sit on top of them rather
 than duplicate them:
 

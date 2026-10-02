@@ -6,6 +6,18 @@
 
 ---
 
+### Implementation status (real, in `dj-nexus-pro/engine/`, as of this pass)
+
+| Spec section | What's actually built and tested | What's still spec-only |
+|---|---|---|
+| §3.2 Analysis Output | **BPM + beat-grid + Camelot key detection**, DSP-based (onset autocorrelation with sub-harmonic summation and parabolic refinement; FFT-chroma + Krumhansl-Schmuckler key). `djn_analyze_pcm` / `djn_analyze_file`, `src/core/analysis.cpp`, 8 tests | Energy/mood/genre classifiers, section/cue detection and audio embeddings all need a *trained ML model* — no training data or GPU pipeline exists in this repo yet |
+| §3.4 Match Suggestions compatibility score | **The same key/tempo/energy formula, implemented and tested**: `djn_advisor_score`, `src/core/advisor.cpp`, 10 tests. Harmonic (Camelot distance), tempo (with half/double-time credit), energy-vs-target, genre (exact match) and play-recency sub-scores, tunable weights, a learned per-track bias hook | The "vibe" cosine-similarity term needs the audio embedding model above; Smart Queue's beam search and the "Why this?" natural-language explainer aren't wired up yet |
+| Everything else (decks, mixer, FX, sampler, macros, recording) | Was already real before this pass — see `engine/README.md` | Still needs: the Flutter UI (§9) and its `dart:ffi` bindings, the backend (§10/§11), billing, stem separation, and the actual sampler/plugin content library |
+
+61 unit tests existed before this pass; **79 now pass** (added 8 analysis + 10 advisor tests), verified under ASan+UBSan. This status block tracks `dj-radicalmix`'s companion spec too — see [`docs/dj-radicalmix/SPEC.md`](../dj-radicalmix/SPEC.md#0-scope--relationship-to-existing-projects).
+
+---
+
 ## Table of Contents
 
 0. [Scope Decisions](#0-scope-decisions)

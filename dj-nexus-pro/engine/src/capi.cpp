@@ -4,6 +4,8 @@
 #include <memory>
 #include <new>
 
+#include "core/advisor.h"
+#include "core/analysis.h"
 #include "core/engine.h"
 #include "core/platform.h"
 #include "decode/decoder.h"
@@ -240,6 +242,107 @@ DJN_API int djn_mixer_set_color_fx(djn_engine* e, djn_color_fx type) {
 DJN_API int djn_mixer_set_color_param(djn_engine* e, float value) {
   if (!e || !std::isfinite(value)) return DJN_ERR_INVALID_ARG;
   e->impl.resonance.store(djn::clampv(value, 0.0f, 1.0f));
+  return DJN_OK;
+}
+
+// ---------------------------------------------------------------- analysis
+
+namespace {
+void fillAnalysisResult(const djn::AnalysisResult& r, djn_analysis_result* out) {
+  out->bpm = r.bpm;
+  out->bpm_confidence = r.bpm_confidence;
+  out->first_beat_sec = r.first_beat_sec;
+  out->key_pitch_class = r.key_pitch_class;
+  out->key_is_minor = r.key_is_minor ? 1 : 0;
+  out->key_confidence = r.key_confidence;
+}
+}  // namespace
+
+DJN_API int djn_analyze_pcm(const float* interleaved, int64_t frames, int32_t channels,
+                            int32_t sample_rate, djn_analysis_result* out) {
+  if (!interleaved || frames <= 0 || channels <= 0 || sample_rate <= 0 || !out) return DJN_ERR_INVALID_ARG;
+  djn::AnalysisResult r;
+  DJN_TRY {
+    r = djn::analyzeTrack(interleaved, frames, channels, sample_rate);
+  }
+  DJN_CATCH_BAD_ALLOC(return DJN_ERR_NO_MEMORY)
+  fillAnalysisResult(r, out);
+  return DJN_OK;
+}
+
+DJN_API int djn_analyze_file(const char* utf8_path, djn_analysis_result* out) {
+  if (!utf8_path || !out) return DJN_ERR_INVALID_ARG;
+  djn::DecodedAudio audio;
+  int r;
+  DJN_TRY {
+    r = djn::decodeFile(utf8_path, audio);
+  }
+  DJN_CATCH_BAD_ALLOC(return DJN_ERR_NO_MEMORY)
+  if (r != DJN_OK) return r;
+  return djn_analyze_pcm(audio.samples.data(), audio.frames, audio.channels, audio.sampleRate, out);
+}
+
+DJN_API int djn_camelot_code(int32_t pitch_class, int32_t is_minor, char* out_buf, int32_t out_buf_size) {
+  if (pitch_class < 0 || pitch_class > 11 || !out_buf || out_buf_size < 4) return DJN_ERR_INVALID_ARG;
+  const std::string code = djn::camelotCode(pitch_class, is_minor != 0);
+  if (code.empty()) return DJN_ERR_INVALID_ARG;
+  std::copy(code.begin(), code.end(), out_buf);
+  out_buf[code.size()] = '\0';
+  return DJN_OK;
+}
+
+// ---------------------------------------------------------------- advisor
+
+namespace {
+djn::TrackInfo toTrackInfo(const djn_track_info& t) {
+  djn::TrackInfo out;
+  out.bpm = t.bpm;
+  out.key_pitch_class = t.key_pitch_class;
+  out.key_is_minor = t.key_is_minor != 0;
+  out.energy = t.energy;
+  out.genre = t.genre ? t.genre : "";
+  out.seconds_since_played = t.seconds_since_played;
+  out.user_bias = t.user_bias;
+  return out;
+}
+
+djn::AdvisorWeights toWeights(const djn_advisor_weights& w) {
+  djn::AdvisorWeights out;
+  out.harmonic = w.harmonic;
+  out.tempo = w.tempo;
+  out.energy = w.energy;
+  out.genre = w.genre;
+  out.recency = w.recency;
+  out.bias = w.bias;
+  out.recency_horizon_sec = w.recency_horizon_sec;
+  return out;
+}
+}  // namespace
+
+DJN_API void djn_advisor_default_weights(djn_advisor_weights* out) {
+  if (!out) return;
+  const djn::AdvisorWeights w;
+  out->harmonic = w.harmonic;
+  out->tempo = w.tempo;
+  out->energy = w.energy;
+  out->genre = w.genre;
+  out->recency = w.recency;
+  out->bias = w.bias;
+  out->recency_horizon_sec = w.recency_horizon_sec;
+}
+
+DJN_API int djn_advisor_score(const djn_track_info* current, const djn_track_info* candidate,
+                              double target_energy, const djn_advisor_weights* weights,
+                              djn_next_track_score* out) {
+  if (!current || !candidate || !out) return DJN_ERR_INVALID_ARG;
+  const djn::AdvisorWeights w = weights ? toWeights(*weights) : djn::AdvisorWeights();
+  const auto r = djn::scoreNextTrack(toTrackInfo(*current), toTrackInfo(*candidate), target_energy, w);
+  out->total = r.total;
+  out->harmonic = r.harmonic;
+  out->tempo = r.tempo;
+  out->energy = r.energy;
+  out->genre = r.genre;
+  out->recency = r.recency;
   return DJN_OK;
 }
 

@@ -3,6 +3,9 @@
 //
 //   djnexus_play A.mp3 [BPM_A] [B.mp3] [BPM_B]
 //
+// A BPM of 0 (or omitted) runs the offline analyzer (djn_analyze_file) to
+// detect BPM, first-beat and musical key before loading.
+//
 // Commands (deck is a or b):  a play | a cue | a sync | a key | a loop 4 | a exit
 //   a pitch 0.04 | a hot 0 | a sethot 0 | a eq low -26 | a filter -0.5 | x 0.5 | rec out.wav | stop | info | q
 #include <cstdio>
@@ -15,6 +18,29 @@
 #include "djnexus/djnexus.h"
 #include "utf8_args.h"
 
+namespace {
+
+// Loads `path` onto `deck`, analyzing for BPM/key first when `bpmOverride`
+// is 0 (not supplied on the command line).
+int loadWithAnalysis(djn_engine* e, int32_t deck, const char* path, double bpmOverride) {
+  if (bpmOverride > 0.0) return djn_deck_load_file(e, deck, path, bpmOverride, 0.0);
+
+  djn_analysis_result a;
+  const int ar = djn_analyze_file(path, &a);
+  if (ar == DJN_OK && a.bpm > 0.0) {
+    char camelot[8] = "?";
+    if (a.key_pitch_class >= 0) djn_camelot_code(a.key_pitch_class, a.key_is_minor, camelot, sizeof(camelot));
+    std::printf("analyzed %s: %.1f BPM (confidence %.0f%%), key %s (confidence %.0f%%)\n", path, a.bpm,
+                a.bpm_confidence * 100, camelot, a.key_confidence * 100);
+    return djn_deck_load_file(e, deck, path, a.bpm, a.first_beat_sec);
+  }
+  if (ar != DJN_OK) std::fprintf(stderr, "analysis unavailable for %s (err %d); loading without a grid\n", path, ar);
+  else std::printf("analyzed %s: no clear tempo found; loading without a grid\n", path);
+  return djn_deck_load_file(e, deck, path, 0.0, 0.0);
+}
+
+}  // namespace
+
 int main(int argc, char** argv) {
   argv = utf8Argv(argc, argv);
   if (argc < 2) {
@@ -24,10 +50,10 @@ int main(int argc, char** argv) {
   djn_engine_config cfg{djn_host_preferred_sample_rate(), 1024, 2};
   djn_engine* e = djn_engine_create(&cfg);
   if (!e) return 1;
-  if (djn_deck_load_file(e, 0, argv[1], argc > 2 ? std::atof(argv[2]) : 0, 0) != DJN_OK) {
+  if (loadWithAnalysis(e, 0, argv[1], argc > 2 ? std::atof(argv[2]) : 0.0) != DJN_OK) {
     std::fprintf(stderr, "could not load %s\n", argv[1]);
   }
-  if (argc > 3 && djn_deck_load_file(e, 1, argv[3], argc > 4 ? std::atof(argv[4]) : 0, 0) != DJN_OK) {
+  if (argc > 3 && loadWithAnalysis(e, 1, argv[3], argc > 4 ? std::atof(argv[4]) : 0.0) != DJN_OK) {
     std::fprintf(stderr, "could not load %s\n", argv[3]);
   }
   djn_mixer_set_xfader_assign(e, 0, DJN_XF_A);
