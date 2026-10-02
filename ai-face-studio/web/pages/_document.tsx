@@ -11,6 +11,13 @@ export default function Document() {
           rel="stylesheet"
         />
         <meta name="theme-color" content="#0A0A0F" />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <link rel="icon" href="/favicon.png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Face Studio" />
+        <meta name="mobile-web-app-capable" content="yes" />
       </Head>
       <body className="bg-ink-950">
         <Main />
