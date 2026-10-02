@@ -7,7 +7,8 @@
 > Related specs in this repo: [`docs/ai-media-editor/SPEC.md`](../ai-media-editor/SPEC.md) ("NeonForge AI" —
 > an enhancement/face-swap/outfit-swap editor with an overlapping feature set; see §0.3 for how the two are
 > positioned relative to each other), [`docs/neonforge-studio/SPEC.md`](../neonforge-studio/SPEC.md)
-> ("NeonForge Studio" — the general-purpose free photo editor & design suite built as a companion to this app).
+> ("NeonForge Studio by SplitFire Production" — the general-purpose free photo editor & design suite built
+> as a companion to this app).
 
 ---
 
@@ -63,13 +64,14 @@ reading of the brief's own §48/§76, not a looser one.
 | Spec | Relationship |
 |---|---|
 | `docs/ai-media-editor/SPEC.md` ("NeonForge AI") | A narrower, already-specced product: AI enhancement, face editing/swap, and outfit replacement for photo & video, with its own safety section (§0 there). AI Face Studio is the **broader studio** (adds Body/Character/Beauty/Photo-restoration/Discover/Templates/AI-Creator-with-plan-preview/Owner-dashboard on top). Where both specs cover the same ground — face-swap pipeline stages, NSFW/minor gating, provenance watermarking — this spec reuses NeonForge AI's policy decisions rather than re-deriving them, and the two products should share one `FaceSwapModel` / `SafetyService` implementation rather than building two. |
-| `docs/neonforge-studio/SPEC.md` ("NeonForge Studio") | A separate, general-purpose free editor (crop/filters/fonts/stickers/collage/templates) with no identity-manipulation tools. Cross-links to this app for anything face-related rather than re-implementing face swap. |
+| `docs/neonforge-studio/SPEC.md` ("NeonForge Studio by SplitFire Production") | A separate, general-purpose free editor (crop/filters/fonts/stickers/collage/templates) with no identity-manipulation tools. Cross-links to this app for anything face-related rather than re-implementing face swap. |
 | `expertprompter/`, `docs/mixforge-studio/SPEC.md`, `docs/dj-radicalmix/SPEC.md` | Source of the **Owner/Master-access pattern** reused unchanged in §15: email-based recognition, no plaintext password ever stored or committed, audit-logged. |
 
-**Naming note:** two unrelated specs in this repo now contain "NeonForge" in the title (`ai-media-editor` =
-"NeonForge AI", and the new `neonforge-studio` = "NeonForge Studio"). They are different products built in
-different commits. Before shipping either under that brand, pick one app to rename to avoid user-facing brand
-confusion — this spec does not resolve that naming collision on its own.
+**Naming note (resolved):** two unrelated specs in this repo contain "NeonForge" in the title —
+`ai-media-editor`'s unattributed "NeonForge AI," and `neonforge-studio`'s **"NeonForge Studio by SplitFire
+Production."** The full attributed name is the one to use on any public listing, splash screen or legal
+reference for this product; "NeonForge AI" remains a separate, unrelated spec with no production-house
+attribution of its own.
 
 ---
 

@@ -1,4 +1,4 @@
-# NeonForge Studio — Ultimate Free AI Photo Editor & Design Suite: Product & Technical Specification
+# NeonForge Studio by SplitFire Production — Ultimate Free AI Photo Editor & Design Suite: Product & Technical Specification
 
 > Cross-platform (mobile + web + desktop) free-first photo editing and design app in the vein of Picsart,
 > Snapseed and Canva: full manual editing toolkit, AI tools, fonts, stickers, filters, templates and
@@ -35,13 +35,18 @@ contracts and a phased roadmap — not a working app in this commit. The AI tool
 provider-agnostic interface (same pattern as `docs/ai-face-studio/SPEC.md §8.3`) so open models (Stable
 Diffusion, Real-ESRGAN, U²-Net/MODNet, inpainting models) can be wired in without an app-wide refactor.
 
-### 0.2 Naming collision — flagged, not resolved here
+### 0.2 Naming collision — resolved via SplitFire Production attribution
 
-This repo already contains an unrelated spec titled **"NeonForge AI"** (`docs/ai-media-editor/SPEC.md`), a
-face-swap/enhancement/outfit-swap product. **NeonForge Studio** (this document) is a different product —
-Picsart/Canva-style general editing and design, with no identity-manipulation tools — but the brand name
-overlaps closely enough to confuse users and app-store listings. Recommend renaming one of the two before
-either ships publicly; this spec does not pick which.
+This repo also contains an unrelated spec titled **"NeonForge AI"** (`docs/ai-media-editor/SPEC.md`), a
+face-swap/enhancement/outfit-swap product with no production-house attribution (it even names a subscription
+tier "NeonForge Studio" internally, at `docs/ai-media-editor/SPEC.md` line ~1336 — a second, unrelated
+collision). **This product's name is now "NeonForge Studio by SplitFire Production"** — the full, branded
+name to use on every store listing, splash screen and legal entity reference, distinguishing it from the
+unattributed "NeonForge AI" spec. This is a different product either way: Picsart/Canva-style general editing
+and design with no identity-manipulation tools (§0.3), built and owned by SplitFire Production (the same
+studio behind `docs/ai-face-studio/SPEC.md`, `splitfire-production/`, and the DJ app line). The short form
+"NeonForge Studio" may still appear in-app (icons, nav labels) where space is tight, but the full attributed
+name is what resolves the collision in any public-facing listing.
 
 ### 0.3 Relationship to AI Face Studio
 
