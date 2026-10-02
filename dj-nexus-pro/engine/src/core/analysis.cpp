@@ -64,27 +64,40 @@ std::vector<float> downmix(const float* interleaved, int64_t frames, int32_t cha
 
 constexpr double kMinBpm = 60.0;
 constexpr double kMaxBpm = 200.0;
-constexpr int kOnsetFrame = 512;
-constexpr int kOnsetHop = 128;
+constexpr int kOnsetFft = 1024;
+constexpr int kOnsetHop = 256;
 
-// Half-wave-rectified first difference of short-time energy: a simple, cheap
-// onset novelty curve that responds strongly to drum hits and other transients.
+// Spectral flux: half-wave-rectified frame-to-frame increase in magnitude,
+// summed across frequency bins. A plain energy-based novelty curve (the
+// first version of this function) fires on any amplitude change, including
+// the slow beating of a sustained chord or bassline -- on a real track that
+// background "noise" can easily out-correlate the actual drum hits. Spectral
+// flux only counts energy *appearing in a frequency bin that didn't have it
+// a moment ago*, which a steady tonal bed doesn't do but a drum transient
+// (broadband, sudden) does, so it stays locked onto the beat under a full mix.
 std::vector<double> onsetNovelty(const std::vector<float>& mono, int32_t sampleRate) {
   (void)sampleRate;
-  if (mono.size() < size_t(kOnsetFrame) + size_t(kOnsetHop)) return {};
-  const size_t numFrames = (mono.size() - kOnsetFrame) / kOnsetHop + 1;
-  std::vector<double> energy(numFrames);
+  const size_t fftSize = size_t(kOnsetFft);
+  if (mono.size() < fftSize + size_t(kOnsetHop)) return {};
+  std::vector<double> window(fftSize);
+  for (int i = 0; i < kOnsetFft; ++i) window[size_t(i)] = 0.5 - 0.5 * std::cos(2.0 * kPi * i / (kOnsetFft - 1));
+
+  const size_t numFrames = (mono.size() - fftSize) / kOnsetHop + 1;
+  std::vector<double> novelty(numFrames, 0.0);
+  std::vector<double> prevMag(fftSize / 2, 0.0);
+  std::vector<Complex> buf(fftSize);
   for (size_t f = 0; f < numFrames; ++f) {
     const size_t start = f * kOnsetHop;
-    double sum = 0.0;
-    for (int i = 0; i < kOnsetFrame; ++i) {
-      const double s = mono[start + size_t(i)];
-      sum += s * s;
+    for (size_t i = 0; i < size_t(kOnsetFft); ++i) buf[i] = Complex(mono[start + i] * window[i], 0.0);
+    fft(buf);
+    double flux = 0.0;
+    for (size_t bin = 1; bin < size_t(kOnsetFft) / 2; ++bin) {
+      const double mag = std::abs(buf[bin]);
+      flux += std::max(0.0, mag - prevMag[bin]);
+      prevMag[bin] = mag;
     }
-    energy[f] = std::sqrt(sum / kOnsetFrame);
+    novelty[f] = flux;
   }
-  std::vector<double> novelty(numFrames, 0.0);
-  for (size_t f = 1; f < numFrames; ++f) novelty[f] = std::max(0.0, energy[f] - energy[f - 1]);
   return novelty;
 }
 

@@ -24,6 +24,22 @@ std::vector<float> makeClickTrack(double bpm, double seconds, int sampleRate) {
   return buf;
 }
 
+// A punchy kick-like transient: a decaying low sine, closer to a real drum
+// hit than makeClickTrack's broadband impulse.
+std::vector<float> makeKickTrack(double bpm, double seconds, int sampleRate) {
+  std::vector<float> buf(size_t(seconds * sampleRate), 0.0f);
+  const double period = 60.0 / bpm;
+  const int kickLen = int(0.05 * sampleRate);  // 50 ms
+  for (double t = 0.0; t < seconds; t += period) {
+    const int start = int(t * sampleRate);
+    for (int i = 0; i < kickLen && start + i < int(buf.size()); ++i) {
+      const double decay = std::exp(-30.0 * i / kickLen);
+      buf[size_t(start + i)] += float(0.9 * decay * std::sin(2.0 * djn::kPi * 90.0 * i / sampleRate));
+    }
+  }
+  return buf;
+}
+
 // A sustained triad (three sine partials), the simplest signal with an
 // unambiguous tonal center for key detection.
 std::vector<float> makeChord(double rootHz, bool minorThird, double seconds, int sampleRate) {
@@ -56,6 +72,23 @@ TEST(bpm_detection_scales_with_tempo) {
   const auto fast = djn::analyzeTrack(makeClickTrack(174.0, 12.0, sr).data(), int64_t(12.0 * sr), 1, sr);
   CHECK_NEAR(slow.bpm, 90.0, 2.0);
   CHECK_NEAR(fast.bpm, 174.0, 2.0);
+}
+
+TEST(bpm_detection_survives_a_sustained_chord_under_the_beat) {
+  // Regression test: a plain energy-based onset curve (this function's first
+  // version) locked onto the chord's own beating pattern instead of the kick
+  // -- 128 BPM measured as ~186 BPM -- because a continuous multi-tone bed
+  // modulates broadband energy just as much as a drum hit does. Spectral
+  // flux (energy appearing in a bin that didn't have it a moment ago) is what
+  // fixed it, since a sustained chord doesn't do that but a kick does.
+  const int sr = 44100;
+  auto buf = makeKickTrack(128.0, 15.0, sr);
+  const auto chord = makeChord(261.63, false, 15.0, sr);
+  // makeChord() already averages its 3 partials (divides by 3); undo that so
+  // the chord here has the same per-partial amplitude (0.05) as the bug repro.
+  for (size_t i = 0; i < buf.size(); ++i) buf[i] += 0.15f * chord[i];
+  const auto r = djn::analyzeTrack(buf.data(), int64_t(buf.size()), 1, sr);
+  CHECK_NEAR(r.bpm, 128.0, 2.0);
 }
 
 TEST(bpm_detection_reports_nothing_on_silence) {
