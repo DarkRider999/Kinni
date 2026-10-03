@@ -1887,7 +1887,21 @@ function tone(freq,dur=.18,type='sine',vol=.16){
   try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return; }
   if(AC.state!=='running'){
     try{ AC.resume(); }catch(e){}
-    setTimeout(function(){ if(AC.state==='running')_playNote(freq,dur,type,vol); },70);
+    /* A rhyme/lullaby schedules its whole melody as a batch of setTimeout
+       calls the instant Play is tapped. AudioContext.resume() is async and,
+       on a real Android WebView, can take noticeably longer than a single
+       70ms grace window to actually finish waking up - especially the very
+       first time audio plays after the app launches. A one-shot retry that
+       gives up after 70ms meant EVERY note in a melody could get silently
+       dropped the same way, so the whole song played in total silence.
+       Keep retrying for close to a second before finally giving up. */
+    let tries=0;
+    const retry=function(){
+      tries++;
+      if(AC.state==='running'){ _playNote(freq,dur,type,vol); return; }
+      if(tries<9) setTimeout(retry,100);
+    };
+    setTimeout(retry,70);
     return;
   }
   _playNote(freq,dur,type,vol);
@@ -3813,11 +3827,8 @@ const ANIMALS=[
 ];
 const GROUP_NAME={farm:'Farm friends',bird:'Birds',wild:'Wild animals',pet:'Pets'};
 
-function noiseBurst(dur,vol,freqStart,freqEnd){
-  if(!audioOn())return;
+function _playNoiseBurst(dur,vol,freqStart,freqEnd){
   try{
-    AC=AC||new (window.AudioContext||window.webkitAudioContext)();
-    if(AC.state==='suspended')AC.resume();
     const n=AC.sampleRate*dur, buf=AC.createBuffer(1,n,AC.sampleRate), d=buf.getChannelData(0);
     for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*(1-i/n);
     const src=AC.createBufferSource(); src.buffer=buf;
@@ -3827,6 +3838,25 @@ function noiseBurst(dur,vol,freqStart,freqEnd){
     const g=AC.createGain(); g.gain.value=vol;
     src.connect(f); f.connect(g); g.connect(AC.destination); src.start();
   }catch(e){}
+}
+function noiseBurst(dur,vol,freqStart,freqEnd){
+  if(!audioOn())return;
+  try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return; }
+  if(AC.state!=='running'){
+    // Same fix as tone(): resume() is async, so starting the buffer source
+    // right away (the old code) could fire it into a still-suspended
+    // context, where it produces no sound and is never retried.
+    try{ AC.resume(); }catch(e){}
+    let tries=0;
+    const retry=function(){
+      tries++;
+      if(AC.state==='running'){ _playNoiseBurst(dur,vol,freqStart,freqEnd); return; }
+      if(tries<9) setTimeout(retry,100);
+    };
+    setTimeout(retry,70);
+    return;
+  }
+  _playNoiseBurst(dur,vol,freqStart,freqEnd);
 }
 const ASFX={
   moo(){tone(120,.7,'sawtooth',.13); setTimeout(()=>tone(95,.6,'sawtooth',.11),220);},
