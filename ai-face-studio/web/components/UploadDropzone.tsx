@@ -12,19 +12,51 @@ export interface UploadedFile {
 const ACCEPTED = 'image/png,image/jpeg,image/webp';
 const MAX_BYTES = 20 * 1024 * 1024;
 
-function readFile(file: File): Promise<{ dataUrl: string; width: number; height: number }> {
+function readAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = () => reject(reader.error);
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      const img = new Image();
-      img.onload = () => resolve({ dataUrl, width: img.naturalWidth, height: img.naturalHeight });
-      img.onerror = reject;
-      img.src = dataUrl;
-    };
+    reader.onerror = () => reject(reader.error ?? new Error('FileReader failed'));
+    reader.onload = () => resolve(reader.result as string);
     reader.readAsDataURL(file);
   });
+}
+
+/** Reads dimensions via <img> decode, but never blocks the upload on it: on some Android WebViews
+ *  a just-captured camera photo or certain JPEG color profiles fail to decode as an <img> even
+ *  though the underlying bytes (and the later <canvas> draw in aiProvider.ts) are fine. Width/height
+ *  are only used for display/heuristics, so 0x0 is an acceptable fallback, not a hard failure. */
+function probeDimensions(dataUrl: string): Promise<{ width: number; height: number }> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+    img.onerror = () => resolve({ width: 0, height: 0 });
+    img.src = dataUrl;
+  });
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/** On Android, a file just handed back by the system photo picker or camera intent can briefly be
+ *  unreadable while its content provider finishes writing (a real, documented WebView/content://
+ *  timing race) — FileReader fails with no useful error. A few short retries clear this up without
+ *  the user having to notice; only a genuinely unreadable file still surfaces an error. */
+async function readFile(file: File): Promise<{ dataUrl: string; width: number; height: number }> {
+  const delays = [0, 200, 500];
+  let lastError: unknown;
+  for (const delay of delays) {
+    if (delay) await wait(delay);
+    try {
+      const dataUrl = await readAsDataUrl(file);
+      const { width, height } = await probeDimensions(dataUrl);
+      return { dataUrl, width, height };
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  console.error('UploadDropzone: could not read file after retries', file.name, file.type, file.size, lastError);
+  throw lastError;
 }
 
 export function UploadDropzone({
@@ -69,7 +101,7 @@ export function UploadDropzone({
         );
         onFilesChange([...files, ...read]);
       } catch {
-        setError('Could not read that file — try again.');
+        setError('Could not read that file — try again, or try "Take photo" / "Choose photo" instead.');
       }
     },
     [files, maxFiles, onFilesChange],
