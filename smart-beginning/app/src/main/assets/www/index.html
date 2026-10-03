@@ -845,6 +845,8 @@ body{font-size:15px}
               <span><span class="an">3D shape hunt</span><span class="ad">Cube, sphere, cylinder, cone, pyramid</span></span><span class="go">›</span></button>
             <button class="act" data-act="quiz" data-arg="shapes3d"><span class="ico" style="background:#e9f2ff">⚽</span>
               <span><span class="an">Name that 3D shape</span><span class="ad">Faces, points and rolls</span></span><span class="go">›</span></button>
+            <button class="act" data-act="sorter"><span class="ico" style="background:#eef2ff">🧩</span>
+              <span><span class="an">Shape Sorter</span><span class="ad">Tap the matching outline · 8 rounds</span></span><span class="go">›</span></button>
           </div>
           <div class="card" style="margin-top:14px">
             <h3>Why this comes first</h3>
@@ -867,6 +869,8 @@ body{font-size:15px}
               <span><span class="an">Word match</span><span class="ad">Tap the picture that matches the word</span></span><span class="go">›</span></button>
             <button class="act" data-act="trace"><span class="ico" style="background:#eafaf3">✏️</span>
               <span><span class="an">Trace a letter</span><span class="ad">Follow the dotted line with your finger</span></span><span class="go">›</span></button>
+            <button class="act" data-act="wordbuild"><span class="ico" style="background:#fff0e6">🧩</span>
+              <span><span class="an">Build a Word</span><span class="ad">Tap the letters in order to spell 16 picture words</span></span><span class="go">›</span></button>
             <button class="act" data-act="story" data-arg="moon"><span class="ico" style="background:#fff0e6">📖</span>
               <span><span class="an">Mira and the Moon Lantern</span><span class="ad">A reading story · 4 pages</span></span><span class="go">›</span></button>
           </div>
@@ -891,6 +895,8 @@ body{font-size:15px}
               <span><span class="an">What comes next?</span><span class="ad">Patterns and sequences</span></span><span class="go">›</span></button>
             <button class="act" data-act="quiz" data-arg="treasure"><span class="ico" style="background:#fff0e6">🗺️</span>
               <span><span class="an">Bingo's Treasure Hunt</span><span class="ad">Add &amp; subtract to open the chest</span></span><span class="go">›</span></button>
+            <button class="act" data-act="bubbles"><span class="ico" style="background:#e8f4ff">🫧</span>
+              <span><span class="an">Bubble Pop Counting</span><span class="ad">Pop and count up to 8 bubbles</span></span><span class="go">›</span></button>
           </div>
         </section>
 
@@ -925,6 +931,8 @@ body{font-size:15px}
               <span><span class="an">Space explorer</span><span class="ad">Slide through 4 planets</span></span><span class="go">›</span></button>
             <button class="act" data-act="quiz" data-arg="float"><span class="ico" style="background:#f0f6ff">🧪</span>
               <span><span class="an">Float or sink?</span><span class="ad">Kitchen experiment · predict first</span></span><span class="go">›</span></button>
+            <button class="act" data-act="peekaboo"><span class="ico" style="background:#fff4e2">🚪</span>
+              <span><span class="an">Animal Peekaboo</span><span class="ad">Tap a door to meet 10 animals</span></span><span class="go">›</span></button>
           </div>
         </section>
 
@@ -1565,6 +1573,52 @@ body{font-size:15px}
             <div class="tiny">PARTS FOUND</div>
             <div class="starrow" id="bodyStars">☆☆☆☆☆☆☆☆</div>
           </div>
+        </section>
+
+        <!-- ================= BUILD A WORD ================= -->
+        <section class="screen" id="s-act-wordbuild">
+          <div class="hdr"><button class="back" data-go="reading">←</button>
+            <div><h2>Build a Word</h2><div class="sub">Tap the letters, in order, to spell it</div></div></div>
+          <div class="bigcard">
+            <div style="font-size:72px;line-height:1" id="wbEmoji">🐱</div>
+            <div class="alWord" id="wbBlanks" style="font-size:38px;letter-spacing:10px;margin-top:10px">_ _ _</div>
+          </div>
+          <div class="lgrid" id="wbTiles"></div>
+          <p class="tiny" style="text-align:center;margin-top:12px">No wrong answers here — a letter in the wrong place just bounces back. Try another!</p>
+          <div id="wbEnd" style="display:none"></div>
+        </section>
+
+        <!-- ================= ANIMAL PEEKABOO ================= -->
+        <section class="screen" id="s-act-peekaboo">
+          <div class="hdr"><button class="back" data-go="science">←</button>
+            <div><h2>Animal Peekaboo</h2><div class="sub">Tap a door to meet the animal</div></div></div>
+          <div class="band"><div class="big" data-char="roborex"></div>
+            <div class="bubble" id="pkSay">Knock knock! Tap any door to see who's hiding.</div></div>
+          <div class="memgrid" id="pkGrid"></div>
+          <div id="pkEnd" style="display:none"></div>
+        </section>
+
+        <!-- ================= SHAPE SORTER ================= -->
+        <section class="screen" id="s-act-sorter">
+          <div class="hdr"><button class="back" data-go="colors">←</button>
+            <div><h2>Shape Sorter</h2><div class="sub">Tap the matching outline</div></div></div>
+          <div class="card" style="text-align:center">
+            <div class="tiny">ROUND <span id="ssRound">1</span> OF <span id="ssTotal">8</span></div>
+            <div style="font-size:84px;line-height:1.2" id="ssTarget">⚪</div>
+            <div class="tiny" id="ssName">Circle</div>
+          </div>
+          <div class="gsopts" id="ssOpts"></div>
+          <div id="ssEnd" style="display:none"></div>
+        </section>
+
+        <!-- ================= BUBBLE POP COUNTING ================= -->
+        <section class="screen" id="s-act-bubbles">
+          <div class="hdr"><button class="back" data-go="math">←</button>
+            <div><h2>Bubble Pop Counting</h2><div class="sub">Pop every bubble and count along</div></div></div>
+          <div class="band"><div class="big" data-char="bingo"></div>
+            <div class="bubble" id="bpSay">Pop the bubbles one by one — count with me!</div></div>
+          <p class="tiny" style="text-align:center;margin-top:6px" id="bpCount">Popped: 0 of 5</p>
+          <div class="sboard" id="bpGrid"></div>
         </section>
 
         <section class="screen" id="s-act-space">
@@ -2653,6 +2707,10 @@ document.addEventListener('click',e=>{
   else if(k==='trace'){showScreen('act-trace');tctx=fitCanvas(tc);}
   else if(k==='memory'){showScreen('act-memory');startMemory();}
   else if(k==='body'){showScreen('act-body');renderBody();}
+  else if(k==='wordbuild'){showScreen('act-wordbuild');wbStart();}
+  else if(k==='peekaboo'){showScreen('act-peekaboo');pkStart();}
+  else if(k==='sorter'){showScreen('act-sorter');ssStart();}
+  else if(k==='bubbles'){showScreen('act-bubbles');bpStart();}
 });
 
 /* ============================================================
@@ -2718,6 +2776,166 @@ $$('.bhot').forEach(b=>{
       if(bodyFound.size===8){ addXP(25); unlockSticker(); toast('Found every part!','🧍'); }
     }
   };
+});
+
+/* ============================================================
+   14d. BUILD A WORD — drag-free Endless-Alphabet-style word builder.
+   Tiles are always the target word's own letters, shuffled; a wrong
+   tap just bounces back, so there is no fail state, only progress.
+   ============================================================ */
+const WORD_BUILD=[
+  {w:'CAT',e:'🐱'},{w:'DOG',e:'🐶'},{w:'SUN',e:'☀️'},{w:'HAT',e:'🎩'},
+  {w:'CUP',e:'☕'},{w:'BUS',e:'🚌'},{w:'BED',e:'🛏️'},{w:'PIG',e:'🐷'},
+  {w:'BOX',e:'📦'},{w:'FOX',e:'🦊'},{w:'BEE',e:'🐝'},{w:'EGG',e:'🥚'},
+  {w:'OWL',e:'🦉'},{w:'FROG',e:'🐸'},{w:'DUCK',e:'🦆'},{w:'STAR',e:'⭐'}
+];
+let WB={i:0,order:[],filled:0,tiles:[],done:0};
+function wbStart(){
+  WB.i=0; WB.done=0; WB.order=shuffle(WORD_BUILD.map((_,i)=>i));
+  $('#wbEnd').style.display='none'; wbLoad();
+}
+function wbLoad(){
+  const item=WORD_BUILD[WB.order[WB.i]];
+  WB.filled=0; WB.tiles=shuffle(item.w.split(''));
+  $('#wbEmoji').textContent=item.e;
+  wbRenderBlanks(item); wbRenderTiles();
+}
+function wbRenderBlanks(item){
+  $('#wbBlanks').textContent=item.w.split('').map((ch,i)=>i<WB.filled?ch:'_').join(' ');
+}
+function wbRenderTiles(){
+  $('#wbTiles').innerHTML=WB.tiles.map((ch,i)=>`<button class="ltile" data-wi="${i}">${ch}</button>`).join('');
+}
+$('#wbTiles').addEventListener('click',e=>{
+  const b=e.target.closest('[data-wi]'); if(!b||b.classList.contains('gone'))return;
+  const idx=+b.dataset.wi, ch=WB.tiles[idx];
+  const item=WORD_BUILD[WB.order[WB.i]];
+  const need=item.w[WB.filled];
+  if(ch===need){
+    sfxYes(); buzz(16); sparkle(b,6);
+    WB.filled++; b.classList.add('right','gone'); wbRenderBlanks(item);
+    if(WB.filled===item.w.length){
+      setTimeout(()=>{
+        say(item.w); sparkle($('#wbEmoji')); toast('You spelled '+item.w+'!','🎉');
+        WB.done++; const allDone=WB.done>=WORD_BUILD.length;
+        addXP(10,'Spelled '+item.w+'!');
+        setTimeout(()=>{
+          WB.i=(WB.i+1)%WORD_BUILD.length;
+          if(allDone){
+            WB.done=0; unlockSticker(); toast('Word Builder champion!','📚');
+            $('#wbEnd').style.display=''; $('#wbEnd').innerHTML='<div class="card" style="text-align:center;margin-top:10px"><h3>Every word built! 🎉</h3></div>';
+          }
+          wbLoad();
+        },700);
+      },150);
+    }
+  }else{
+    sfxTap();
+    b.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:260});
+  }
+});
+
+/* ============================================================
+   14e. ANIMAL PEEKABOO — Peekaboo-Barn-style tap-and-reveal doors,
+   pure cause-and-effect play for the youngest children.
+   ============================================================ */
+const ANIMALS_PK=[
+  {e:'🐄',n:'Cow',s:'Moo! I am a cow.'},{e:'🐑',n:'Sheep',s:'Baa! I am a sheep.'},
+  {e:'🐖',n:'Pig',s:'Oink oink! I am a pig.'},{e:'🐔',n:'Hen',s:'Cluck cluck! I am a hen.'},
+  {e:'🐶',n:'Dog',s:'Woof woof! I am a dog.'},{e:'🐱',n:'Cat',s:'Meow! I am a cat.'},
+  {e:'🦆',n:'Duck',s:'Quack quack! I am a duck.'},{e:'🐴',n:'Horse',s:'Neigh! I am a horse.'},
+  {e:'🦁',n:'Lion',s:'Roar! I am a lion.'},{e:'🐘',n:'Elephant',s:'Toot! I am an elephant.'}
+];
+let PK={open:new Set()};
+function pkStart(){
+  PK.open=new Set(); pkRender(); $('#pkEnd').style.display='none';
+  $('#pkSay').textContent="Knock knock! Tap any door to see who's hiding.";
+}
+function pkRender(){
+  $('#pkGrid').innerHTML=ANIMALS_PK.map((a,i)=>{
+    const open=PK.open.has(i);
+    return `<button class="memcard${open?' flip':''}" data-pk="${i}" aria-label="${a.n}">${open?a.e:'🚪'}</button>`;
+  }).join('');
+}
+$('#pkGrid').addEventListener('click',e=>{
+  const b=e.target.closest('[data-pk]'); if(!b)return;
+  const a=ANIMALS_PK[+b.dataset.pk];
+  sfxTap(); buzz(14); sparkle(b,8);
+  PK.open.add(+b.dataset.pk); pkRender();
+  $('#pkSay').textContent=a.s; say(a.s);
+  if(PK.open.size===ANIMALS_PK.length){
+    addXP(25); unlockSticker(); toast('Found every animal!','🐮');
+    $('#pkEnd').style.display=''; $('#pkEnd').innerHTML='<div class="card" style="text-align:center;margin-top:10px"><h3>All animals found! 🎉</h3></div>';
+  }
+});
+
+/* ============================================================
+   14f. SHAPE SORTER — tap the outline that matches the shape shown.
+   ============================================================ */
+const SHAPES_SS=[{e:'⚪',n:'Circle'},{e:'⬛',n:'Square'},{e:'🔺',n:'Triangle'},{e:'⭐',n:'Star'},{e:'❤️',n:'Heart'},{e:'🔷',n:'Diamond'}];
+let SS={round:0,total:8,seq:[]};
+function ssStart(){
+  SS.round=0; SS.seq=[];
+  for(let i=0;i<SS.total;i++)SS.seq.push(SHAPES_SS[Math.floor(Math.random()*SHAPES_SS.length)]);
+  $('#ssTotal').textContent=SS.total; $('#ssEnd').style.display='none';
+  ssLoad();
+}
+function ssLoad(){
+  const target=SS.seq[SS.round];
+  $('#ssRound').textContent=SS.round+1;
+  $('#ssTarget').textContent=target.e; $('#ssName').textContent=target.n;
+  const distract=shuffle(SHAPES_SS.filter(s=>s.n!==target.n)).slice(0,2);
+  const opts=shuffle([target,...distract]);
+  $('#ssOpts').innerHTML=opts.map(o=>`<button class="gsopt" data-sn="${o.n}">${o.e}<br>${o.n}</button>`).join('');
+  $('#ssOpts').dataset.target=target.n;
+}
+$('#ssOpts').addEventListener('click',e=>{
+  const b=e.target.closest('[data-sn]'); if(!b)return;
+  if(b.dataset.sn===$('#ssOpts').dataset.target){
+    b.classList.add('ok'); sfxYes(); buzz(16); sparkle(b,8); addXP(8);
+    setTimeout(()=>{
+      SS.round++;
+      if(SS.round>=SS.total){
+        addXP(20); unlockSticker(); toast('Shape sorting champion!','🧩');
+        $('#ssEnd').style.display=''; $('#ssEnd').innerHTML='<div class="card" style="text-align:center;margin-top:10px"><h3>All shapes sorted! 🎉</h3></div>';
+      }else ssLoad();
+    },550);
+  }else{
+    sfxTap(); b.classList.add('no');
+    b.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:260});
+    setTimeout(()=>b.classList.remove('no'),500);
+  }
+});
+
+/* ============================================================
+   14g. BUBBLE POP COUNTING — pop bubbles one at a time, counting aloud.
+   ============================================================ */
+let BP={total:0,popped:0};
+function bpStart(){
+  BP.total=4+Math.floor(Math.random()*5);
+  BP.popped=0;
+  $('#bpSay').textContent='Pop the bubbles one by one — count with me!';
+  bpRender();
+}
+function bpRender(){
+  $('#bpCount').textContent='Popped: '+BP.popped+' of '+BP.total;
+  let html=''; for(let i=0;i<BP.total;i++)html+=`<button class="sb" data-bp="${i}">🫧</button>`;
+  $('#bpGrid').innerHTML=html;
+}
+$('#bpGrid').addEventListener('click',e=>{
+  const b=e.target.closest('[data-bp]'); if(!b||b.disabled)return;
+  b.disabled=true; b.style.visibility='hidden';
+  sfxYes(); buzz(14); sparkle(b,5); tone(700+Math.random()*200,.08,'sine',.08);
+  BP.popped++; say(String(BP.popped));
+  $('#bpCount').textContent='Popped: '+BP.popped+' of '+BP.total;
+  if(BP.popped===BP.total){
+    addXP(15);
+    setTimeout(()=>{
+      say('You popped '+BP.total+' bubbles!'); toast('All popped! '+BP.total+' bubbles.','🫧');
+      if(BP.total>=7)unlockSticker();
+      setTimeout(bpStart,1400);
+    },300);
+  }
 });
 
 /* ============================================================

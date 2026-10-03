@@ -110,6 +110,33 @@ Zone now goes down to 0 ("under 1") instead of starting at 2.
 - **Memory Match** (Creative Studio) — a 6-pair flip-card matching game.
 - **My Body** (Real-World Skills) — tap a body part (hair, eyes, nose, mouth,
   ears, tummy, hands, feet) to hear its name and collect a star for each.
+- **Build a Word** (Early Reading) — an Endless Alphabet-style word builder:
+  16 picture words (CAT, DOG, FROG, STAR…), tiles are always the target
+  word's own letters shuffled, and a wrong tap just bounces back harmlessly.
+  There is no fail state, only progress — tap in order and the word locks in
+  letter by letter until Kinni says the whole word aloud.
+- **Animal Peekaboo** (Science & Discovery) — a Peekaboo-Barn-style grid of
+  10 doors; tapping one reveals an animal with its sound ("Moo! I am a
+  cow."), spoken aloud. Pure tap-and-reveal cause-and-effect play, aimed at
+  the youngest end of the 1 month–5 year range where toddlers are still
+  learning that their own actions change what they see and hear.
+- **Shape Sorter** (Colours & 3D Shapes) — 8 rounds of "which outline
+  matches this shape", reusing the colour/shape vocabulary already taught
+  there (circle, square, triangle, star, heart, diamond).
+- **Bubble Pop Counting** (Math Adventures) — pop a random 4–8 bubbles one
+  at a time; each pop is spoken as the running count, and the round ends
+  with the total said aloud — built for the littlest counters, no reading
+  required.
+
+These four were chosen after researching what the best-rated kids' apps
+(Khan Academy Kids, Endless Alphabet, Sago Mini, Lingokids, Peekaboo Barn)
+lean on most: finger/tap tracing and fine-motor practice (the app already
+had this — see "Trace it" under Alphabet Time), drag-free zero-fail word
+building, tap-and-reveal cause-and-effect for infants and young toddlers,
+and shape/pattern sorting as early geometry. All four reuse the app's
+existing visual language (`.ltile`, `.memgrid`/`.memcard`, `.gsopts`,
+`.sboard`) and reward system (`addXP`, `unlockSticker`) rather than
+introducing new UI patterns.
 
 ## Building this project
 
