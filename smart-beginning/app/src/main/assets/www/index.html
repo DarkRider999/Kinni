@@ -321,6 +321,22 @@ canvas.paint{width:100%;height:330px;border-radius:20px;background:#fffdf7;displ
 .dots{display:flex;gap:12px;justify-content:center;margin:18px 0 4px}
 .dots i{width:15px;height:15px;border-radius:50%;background:#e6e1f5;box-shadow:inset 0 2px 3px rgba(59,53,85,.12)}
 .dots i.f{background:var(--lumi)}
+/* Family Photos' own optional PIN pad - visually identical to .pinkey, but a
+   distinct class so it isn't swept up by the Parent Zone PIN's one-time
+   $$('.pinkey') click-binding at page load. */
+.vkey{border:0;cursor:pointer;border-radius:22px;background:#fff;box-shadow:0 5px 0 #e4dff5;font-family:var(--font-display);
+  font-weight:800;font-size:22px;padding:16px 0;color:var(--ink)}
+.vkey:active{transform:translateY(4px);box-shadow:0 1px 0 #e4dff5}
+/* ---------- Family Photos ---------- */
+.vaultgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:14px}
+.vcell{position:relative;border:0;cursor:pointer;border-radius:16px;aspect-ratio:1;overflow:hidden;
+  background:linear-gradient(150deg,#eef4ff,#fff);box-shadow:var(--lift);display:flex;align-items:center;justify-content:center}
+.vcell img{width:100%;height:100%;object-fit:cover;display:block}
+.vcell .vtype{font-size:34px}
+.vcell .vshare{position:absolute;bottom:4px;right:4px;width:28px;height:28px;border-radius:50%;border:0;
+  background:rgba(255,255,255,.92);box-shadow:0 2px 6px rgba(43,37,67,.3);font-size:13px;display:grid;place-items:center;cursor:pointer}
+.vcell .vdel{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;border:0;
+  background:rgba(255,255,255,.92);box-shadow:0 2px 6px rgba(43,37,67,.3);font-size:11px;display:grid;place-items:center;cursor:pointer}
 .rep{display:flex;flex-direction:column;gap:4px;margin-top:9px}
 .rep .lab{display:flex;justify-content:space-between;font-size:12px;font-weight:800;color:var(--ink-soft)}
 .rep .tr{height:9px;background:#f1eefb;border-radius:99px;overflow:hidden}
@@ -1422,6 +1438,12 @@ body{font-size:15px}
             </div>
 
             <div class="card" style="margin-top:12px">
+              <h3>📸 Family Photos</h3>
+              <p class="muted" style="margin:6px 0 0">Take photos and short videos of your child, kept only on this device — never the phone's public gallery, never uploaded anywhere unless you tap Share yourself. You're already past the Parent Zone PIN to see this.</p>
+              <button class="toy sm mint" style="margin-top:11px;width:100%" data-act="vault">Open Family Photos</button>
+            </div>
+
+            <div class="card" style="margin-top:12px">
               <h3>Children</h3>
               <p class="muted" style="margin:6px 0 0">Add the child who will use this app. Only a first name and an age — no email, no photo, no location, ever.</p>
               <div class="stack" style="margin-top:12px">
@@ -1527,6 +1549,54 @@ body{font-size:15px}
               <button class="toy sm ghost" id="colClear">Start over</button>
               <button class="toy sm mint" id="colSave">Save to gallery</button>
             </div>
+          </div>
+        </section>
+
+        <!-- ================= FAMILY PHOTOS ================= -->
+        <section class="screen" id="s-act-vault">
+          <div class="hdr"><button class="back" data-go="parent">←</button>
+            <div><h2>📸 Family Photos</h2><div class="sub">Private to this device · not the phone gallery</div></div></div>
+
+          <div id="vaultNoCam" style="display:none">
+            <div class="card" style="text-align:center;margin-top:10px">
+              <h3>No camera found</h3>
+              <p class="muted" style="margin:6px 0 0">This device doesn't seem to have a working camera, so Family Photos can't take new pictures here.</p>
+            </div>
+          </div>
+
+          <div id="vaultLockedView" style="display:none">
+            <div class="card" style="margin-top:8px;text-align:center">
+              <h3>🔒 Enter the photos PIN</h3>
+              <p class="muted" style="margin:6px 0 0">An extra, optional lock you set yourself — separate from the main Parent Zone PIN.</p>
+              <div class="dots" id="vaultPinDots"><i></i><i></i><i></i><i></i></div>
+              <div class="pinpad">
+                <button class="vkey" data-vk="1">1</button><button class="vkey" data-vk="2">2</button><button class="vkey" data-vk="3">3</button>
+                <button class="vkey" data-vk="4">4</button><button class="vkey" data-vk="5">5</button><button class="vkey" data-vk="6">6</button>
+                <button class="vkey" data-vk="7">7</button><button class="vkey" data-vk="8">8</button><button class="vkey" data-vk="9">9</button>
+                <button class="vkey" data-vk="c">⌫</button><button class="vkey" data-vk="0">0</button><button class="vkey" data-vk="ok">✓</button>
+              </div>
+              <p class="tiny" id="vaultPinMsg" style="margin-top:10px;color:var(--coral)"></p>
+            </div>
+          </div>
+
+          <div id="vaultMainView" style="display:none">
+            <div class="band"><div class="big" data-char="lumi"></div>
+              <div class="bubble" id="vaultSay">Take a photo or a short video — it's saved only on this device.</div></div>
+            <div class="row" style="gap:10px;margin-top:10px">
+              <button class="toy sm mint" id="vaultPhoto" style="flex:1">📷 Take Photo</button>
+              <button class="toy sm teal" id="vaultVideo" style="flex:1">🎥 Take Video</button>
+            </div>
+            <p class="tiny" id="vaultEmpty" style="text-align:center;margin-top:20px;display:none">No photos yet — tap "Take Photo" to add your first one.</p>
+            <div class="vaultgrid" id="vaultGrid"></div>
+            <div class="card" style="margin-top:16px">
+              <h3>Lock settings</h3>
+              <p class="muted" style="margin:6px 0 0" id="vaultLockStatus">No extra PIN set.</p>
+              <div class="row" style="gap:9px;margin-top:10px">
+                <button class="toy sm ghost" id="vaultSetPin">Set a PIN</button>
+                <button class="toy sm ghost" id="vaultClearPin" style="display:none">Remove PIN</button>
+              </div>
+            </div>
+            <p class="tiny" style="text-align:center;margin:14px 20px 0">Photos and videos stay in this app's own private storage — not the phone's Gallery app, not any cloud. Tapping Share hands a file to Android's own share sheet, which is the only time anything leaves the device, and only when you choose to and pick where.</p>
           </div>
         </section>
 
@@ -2611,6 +2681,101 @@ $('#colClear').onclick=()=>{sfxTap();colDrawOutline();};
 $('#colSave').onclick=(e)=>{sfxYes();sparkle(e.target);addXP(20,'Saved to the gallery');};
 
 /* ============================================================
+   7c. FAMILY PHOTOS ("vault") — camera + a private on-device gallery.
+   Reached only through the already-PIN-gated Parent Zone, with an
+   optional second PIN a parent can set just for this section. Photos
+   and videos live in the native shell's own app-private storage
+   (window.AndroidVault, backed by MainActivity's VaultBridge) - never
+   the phone's public gallery, never uploaded anywhere. Sharing hands a
+   file to Android's own share sheet only when a parent taps Share.
+   ============================================================ */
+let vaultPinBuf='',vaultPinMode='enter',VAULT={items:[]};
+function vaultHasBridge(){ return !!(window.AndroidVault&&window.AndroidVault.listMedia); }
+function vaultNotice(title,body){
+  $('#vaultNoCam').style.display='';
+  $('#vaultNoCam').innerHTML='<div class="card" style="text-align:center;margin-top:10px"><h3>'+title+'</h3><p class="muted" style="margin:6px 0 0">'+body+'</p></div>';
+}
+function vaultOpen(){
+  $('#vaultPinMsg').textContent=''; $('#vaultNoCam').style.display='none';
+  if(!vaultHasBridge()){
+    vaultNotice('Needs the Android app','Family Photos uses the phone’s camera, which only works inside the installed Android app, not this preview.');
+    $('#vaultLockedView').style.display='none'; $('#vaultMainView').style.display='none';
+    return;
+  }
+  let pin=null; try{pin=localStorage.getItem('sb_vault_pin');}catch(e){}
+  if(pin){
+    vaultPinBuf=''; vaultPinMode='enter'; renderVaultPinDots();
+    $('#vaultLockedView').style.display=''; $('#vaultMainView').style.display='none';
+  }else vaultShowMain();
+}
+function renderVaultPinDots(){ $$('#vaultPinDots i').forEach((d,i)=>d.classList.toggle('f',i<vaultPinBuf.length)); }
+$$('.vkey').forEach(k=>k.onclick=()=>{
+  const v=k.dataset.vk; sfxTap();
+  if(v==='c'){ vaultPinBuf=vaultPinBuf.slice(0,-1); renderVaultPinDots(); return; }
+  if(v==='ok'){
+    if(vaultPinBuf.length!==4){ $('#vaultPinMsg').textContent='Enter 4 digits.'; return; }
+    if(vaultPinMode==='set'){
+      try{localStorage.setItem('sb_vault_pin',vaultPinBuf);}catch(e){}
+      toast('Photos PIN set','🔒'); vaultShowMain();
+    }else{
+      let saved=null; try{saved=localStorage.getItem('sb_vault_pin');}catch(e){}
+      if(vaultPinBuf===saved){ vaultShowMain(); }
+      else{ $('#vaultPinMsg').textContent='Wrong PIN — try again.'; vaultPinBuf=''; renderVaultPinDots(); }
+    }
+    return;
+  }
+  if(vaultPinBuf.length<4)vaultPinBuf+=v;
+  renderVaultPinDots();
+});
+function vaultShowMain(){
+  $('#vaultLockedView').style.display='none'; $('#vaultMainView').style.display='';
+  let hasCam=true; try{hasCam=window.AndroidVault.hasCamera();}catch(e){}
+  $('#vaultPhoto').style.display=hasCam?'':'none';
+  $('#vaultVideo').style.display=hasCam?'':'none';
+  if(!hasCam)vaultNotice('No camera found','This device doesn’t seem to have a working camera, so Family Photos can’t take new pictures here.');
+  let hasPin=false; try{hasPin=!!localStorage.getItem('sb_vault_pin');}catch(e){}
+  $('#vaultLockStatus').textContent=hasPin?'A PIN is set — this section locks every time you open it.':'No extra PIN set.';
+  $('#vaultSetPin').textContent=hasPin?'Change PIN':'Set a PIN';
+  $('#vaultClearPin').style.display=hasPin?'':'none';
+  vaultRefresh();
+}
+function vaultRefresh(){
+  let items=[]; try{ items=JSON.parse(window.AndroidVault.listMedia()||'[]'); }catch(e){ items=[]; }
+  VAULT.items=items;
+  $('#vaultEmpty').style.display=items.length?'none':'';
+  $('#vaultGrid').innerHTML=items.map((it,i)=>
+    `<button class="vcell" data-vopen="${i}">${it.type==='photo'?`<img data-vimg="${i}" alt="">`:'<span class="vtype">🎥</span>'}`+
+    `<button class="vshare" data-vshare="${i}" aria-label="Share">📤</button>`+
+    `<button class="vdel" data-vdel="${i}" aria-label="Delete">✕</button></button>`).join('');
+  items.forEach((it,i)=>{
+    if(it.type!=='photo')return;
+    try{
+      const b64=window.AndroidVault.readThumb(it.name);
+      if(b64){ const img=$('#vaultGrid [data-vimg="'+i+'"]'); if(img)img.src=b64; }
+    }catch(e){}
+  });
+}
+$('#vaultGrid').addEventListener('click',e=>{
+  const share=e.target.closest('[data-vshare]'),del=e.target.closest('[data-vdel]'),open=e.target.closest('[data-vopen]');
+  if(share){ e.stopPropagation(); sfxTap(); const it=VAULT.items[+share.dataset.vshare]; try{window.AndroidVault.shareMedia(it.name);}catch(err){} return; }
+  if(del){ e.stopPropagation(); sfxTap(); const it=VAULT.items[+del.dataset.vdel];
+    try{window.AndroidVault.deleteMedia(it.name);}catch(err){} vaultRefresh(); return; }
+  if(open){ sfxTap(); const it=VAULT.items[+open.dataset.vopen]; try{window.AndroidVault.openMedia(it.name);}catch(err){} }
+});
+$('#vaultPhoto').onclick=()=>{ sfxTap(); try{window.AndroidVault.takePhoto();}catch(e){} };
+$('#vaultVideo').onclick=()=>{ sfxTap(); try{window.AndroidVault.takeVideo();}catch(e){} };
+$('#vaultSetPin').onclick=()=>{
+  sfxTap(); vaultPinBuf=''; vaultPinMode='set'; renderVaultPinDots();
+  $('#vaultPinMsg').textContent='Choose a new 4-digit PIN.';
+  $('#vaultMainView').style.display='none'; $('#vaultLockedView').style.display='';
+};
+$('#vaultClearPin').onclick=()=>{ sfxTap(); try{localStorage.removeItem('sb_vault_pin');}catch(e){} toast('PIN removed','🔓'); vaultShowMain(); };
+window.onVaultCaptureResult=function(success,name){
+  if(success){ sfxYes(); toast('Saved to Family Photos','📸'); vaultRefresh(); }
+  else{ sfxNo(); toast('Camera permission is needed, or it was cancelled','📷'); }
+};
+
+/* ============================================================
    8. MUSIC MAKER
    ============================================================ */
 const NOTES=[{n:'Do',f:523,c:'#ff9d8a'},{n:'Re',f:587,c:'#ffd98e'},{n:'Mi',f:659,c:'#8fdcbf'},{n:'Fa',f:698,c:'#7fc4f5'},{n:'Sol',f:784,c:'#c3b0f2'}];
@@ -2907,6 +3072,7 @@ document.addEventListener('click',e=>{
   else if(k==='count'){startCount(arg);showScreen('act-count');}
   else if(k==='draw'){showScreen('act-draw');pctx=fitCanvas(pc);}
   else if(k==='coloring'){showScreen('act-coloring');startColoring(arg);}
+  else if(k==='vault'){showScreen('act-vault');vaultOpen();}
   else if(k==='music'){showScreen('act-music');if(arg==='sing')setTimeout(()=>{playTune(SING_TUNE);toast('Sing along — tap the bars with me!','🎵');},500);}
   else if(k==='hunt')startFind('toys');
   else if(k==='find')startFind(arg);

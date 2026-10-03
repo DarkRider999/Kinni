@@ -23,6 +23,8 @@ and bridges two things JS alone can't do inside a WebView:
   device's default language if a requested one has no voice pack installed.
 - **`window.AndroidOrientation`** — lets the Music Studio run in landscape (held
   sideways, like a real toy instrument) while every other screen stays portrait.
+- **`window.AndroidVault`** — Parent Zone → Family Photos (see below): camera
+  capture, a private gallery, and handing a file to Android's own share sheet.
 
 A handful of fixed, high-frequency narration clips (the alphabet and numbers 1–10)
 are instead *real recorded audio* in a single warm, gentle voice (ElevenLabs
@@ -166,6 +168,46 @@ introducing new UI patterns.
   real recorded clips, not device TTS, so they can't follow a speech-rate
   setting; instead the clip itself now plays back at 0.84x speed with pitch
   allowed to drop with it, for a gentler toddler-appropriate read.
+
+## Family Photos (round 3)
+
+Reached only from Parent Zone → Family Photos (so it sits behind the Parent
+Zone PIN that already exists), with an optional second PIN a parent can set
+just for this section from inside it.
+
+- **Camera**: `AndroidVault.takePhoto()` / `takeVideo()` request the CAMERA
+  permission at runtime if needed, then launch the device's own camera app
+  (`MediaStore.ACTION_IMAGE_CAPTURE` / `ACTION_VIDEO_CAPTURE`) with its output
+  pointed at a file in this app's private storage (`filesDir/vault/`) via a
+  `FileProvider`. Video capture is capped at 60 seconds.
+- **Storage**: everything lives in that private `vault/` folder — never the
+  phone's public Gallery/DCIM, never synced or uploaded anywhere by this app.
+  `MainActivity.safeVaultFile()` strips any path components from a filename
+  before touching disk, so the bridge can never read, share, or delete
+  outside that one folder.
+- **Gallery**: `listMedia()` returns the file list as JSON; `readThumb()`
+  decodes and downscales each photo to a small base64 JPEG for the grid
+  (videos get a plain icon instead of a decoded frame, to keep this fast and
+  simple). `openMedia()` hands the full file to the device's own photo
+  viewer / video player.
+- **Sharing**: `shareMedia()` is the one deliberate way anything leaves the
+  device, and only when a parent explicitly taps Share — it hands the file
+  to Android's native share sheet (`Intent.ACTION_SEND` + `createChooser`),
+  which lists whatever's installed (WhatsApp, Instagram, Facebook, Signal,
+  Gmail, ...). This app never talks to any of those services directly and
+  has no accounts, API keys, or upload step of its own.
+- **The PIN is a privacy screen, not encryption** — same honest framing as
+  the existing Parent Zone PIN. It's stored in `localStorage` on the device;
+  anyone who could read the app's own storage could read it too. It stops a
+  curious child from poking around, not a determined adult.
+
+This is the single biggest piece of native Android code added so far
+(permissions, `FileProvider`, activity-result handling, bitmap downscaling)
+and, like the WebView crash found earlier, this class of bug only fully
+reveals itself on a real device — it compiles and its web-side logic is
+Playwright-tested with the native bridge mocked out, but the actual
+camera/permission/share flow has not yet been exercised on physical
+hardware.
 
 ## Building this project
 

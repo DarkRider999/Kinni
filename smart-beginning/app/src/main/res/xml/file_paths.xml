@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Family Photos lives entirely in the app's own private storage
+         (filesDir/vault), never in the phone's public gallery/DCIM, so this
+         is the only path a FileProvider content:// URI is ever issued for. -->
+    <files-path name="vault_media" path="vault/" />
+</paths>

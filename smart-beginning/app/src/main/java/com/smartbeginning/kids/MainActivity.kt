@@ -1,14 +1,20 @@
 package com.smartbeginning.kids
 
+import android.Manifest
 import android.app.Activity
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.provider.MediaStore
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.text.method.ScrollingMovementMethod
+import android.util.Base64
 import android.view.Gravity
 import android.view.View
 import android.view.WindowInsets
@@ -20,6 +26,11 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.ScrollView
 import android.widget.TextView
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import java.io.ByteArrayOutputStream
+import java.io.File
 import java.io.PrintWriter
 import java.io.StringWriter
 import java.util.Locale
@@ -37,6 +48,14 @@ class MainActivity : Activity() {
     private var webView: WebView? = null
     private var tts: TextToSpeech? = null
     private var ttsReady = false
+    private var pendingCameraAction: (() -> Unit)? = null
+    private var pendingCaptureFile: File? = null
+
+    companion object {
+        private const val REQ_CAMERA_PERMISSION = 2001
+        private const val REQ_PHOTO = 2002
+        private const val REQ_VIDEO = 2003
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -50,6 +69,7 @@ class MainActivity : Activity() {
             configureWebView(wv)
             wv.addJavascriptInterface(TtsBridge(), "AndroidTTS")
             wv.addJavascriptInterface(OrientationBridge(), "AndroidOrientation")
+            wv.addJavascriptInterface(VaultBridge(), "AndroidVault")
             wv.loadUrl("file:///android_asset/www/index.html")
         } catch (t: Throwable) {
             // A WebView-based app has exactly one way to fail hard: the
@@ -196,6 +216,76 @@ class MainActivity : Activity() {
         super.onDestroy()
     }
 
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == REQ_CAMERA_PERMISSION) {
+            val granted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
+            val action = pendingCameraAction
+            pendingCameraAction = null
+            if (granted && action != null) action() else notifyVaultResult(false, null)
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQ_PHOTO || requestCode == REQ_VIDEO) {
+            val ok = resultCode == Activity.RESULT_OK
+            val file = pendingCaptureFile
+            pendingCaptureFile = null
+            if (!ok) { try { file?.delete() } catch (t: Throwable) {} }
+            notifyVaultResult(ok, if (ok) file?.name else null)
+        }
+    }
+
+    /** Tells the web layer a capture attempt finished (or failed/was denied) so it can refresh the gallery. */
+    private fun notifyVaultResult(success: Boolean, name: String?) {
+        val wv = webView ?: return
+        runOnUiThread {
+            try {
+                val arg = if (name != null) "'" + name.replace("'", "") + "'" else "null"
+                wv.evaluateJavascript(
+                    "window.onVaultCaptureResult&&window.onVaultCaptureResult($success,$arg)", null
+                )
+            } catch (t: Throwable) {}
+        }
+    }
+
+    private fun vaultDir(): File = File(filesDir, "vault")
+
+    /** Strips any directory components so a bridge call can never read/write/delete outside the vault folder. */
+    private fun safeVaultFile(name: String): File = File(vaultDir(), File(name).name)
+
+    private fun withCameraPermission(action: () -> Unit) {
+        runOnUiThread {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+                action()
+            } else {
+                pendingCameraAction = action
+                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.CAMERA), REQ_CAMERA_PERMISSION)
+            }
+        }
+    }
+
+    private fun startCapture(photo: Boolean) {
+        try {
+            val dir = vaultDir(); dir.mkdirs()
+            val file = if (photo) File(dir, "IMG_${System.currentTimeMillis()}.jpg")
+                       else File(dir, "VID_${System.currentTimeMillis()}.mp4")
+            val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+            val action = if (photo) MediaStore.ACTION_IMAGE_CAPTURE else MediaStore.ACTION_VIDEO_CAPTURE
+            val intent = Intent(action).apply {
+                putExtra(MediaStore.EXTRA_OUTPUT, uri)
+                if (!photo) putExtra(MediaStore.EXTRA_DURATION_LIMIT, 60)
+                addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            }
+            if (intent.resolveActivity(packageManager) == null) { notifyVaultResult(false, null); return }
+            pendingCaptureFile = file
+            startActivityForResult(intent, if (photo) REQ_PHOTO else REQ_VIDEO)
+        } catch (t: Throwable) {
+            notifyVaultResult(false, null)
+        }
+    }
+
     /** Resolves a BCP-47-ish tag ("ta-IN", "en-US", ...) to a Locale and checks it's installed. */
     private fun localeFor(tag: String?): Locale {
         if (tag.isNullOrBlank()) return Locale.US
@@ -258,6 +348,100 @@ class MainActivity : Activity() {
         @JavascriptInterface
         fun lockPortrait() {
             runOnUiThread { requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT }
+        }
+    }
+
+    /**
+     * Exposed to JS as `window.AndroidVault` - Parent Zone's "Family Photos".
+     * Everything lives in this app's own private storage (filesDir/vault),
+     * never the phone's public gallery/DCIM and never uploaded anywhere.
+     * Sharing is the one deliberate exception, and even then only when a
+     * parent explicitly taps Share: it hands the file to Android's own
+     * share sheet (Intent.ACTION_SEND) so WhatsApp, Instagram, Facebook,
+     * Signal, or whatever else is installed can appear as a destination -
+     * this app never talks to any of those services directly.
+     */
+    inner class VaultBridge {
+        @JavascriptInterface
+        fun hasCamera(): Boolean {
+            return try { packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY) } catch (t: Throwable) { true }
+        }
+
+        @JavascriptInterface
+        fun takePhoto() { withCameraPermission { startCapture(photo = true) } }
+
+        @JavascriptInterface
+        fun takeVideo() { withCameraPermission { startCapture(photo = false) } }
+
+        /** Returns a JSON array of {name,type,time} for everything in the vault, newest first. */
+        @JavascriptInterface
+        fun listMedia(): String {
+            return try {
+                val files = vaultDir().listFiles()?.sortedByDescending { it.lastModified() } ?: emptyList()
+                val items = files.joinToString(",") { f ->
+                    val type = if (f.name.startsWith("VID_")) "video" else "photo"
+                    "{\"name\":\"${f.name}\",\"type\":\"$type\",\"time\":${f.lastModified()}}"
+                }
+                "[$items]"
+            } catch (t: Throwable) { "[]" }
+        }
+
+        /** A small downscaled JPEG as a data URI, for the gallery grid. Photos only - videos get a plain icon in JS. */
+        @JavascriptInterface
+        fun readThumb(name: String): String {
+            return try {
+                val f = safeVaultFile(name)
+                if (!f.exists() || !f.name.startsWith("IMG_")) return ""
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeFile(f.absolutePath, bounds)
+                var sample = 1
+                val maxDim = 480
+                while (bounds.outWidth / sample > maxDim || bounds.outHeight / sample > maxDim) sample *= 2
+                val opts = BitmapFactory.Options().apply { inSampleSize = sample }
+                val bmp = BitmapFactory.decodeFile(f.absolutePath, opts) ?: return ""
+                val out = ByteArrayOutputStream()
+                bmp.compress(Bitmap.CompressFormat.JPEG, 70, out)
+                bmp.recycle()
+                "data:image/jpeg;base64," + Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
+            } catch (t: Throwable) { "" }
+        }
+
+        /** Opens the full-resolution photo or plays the video in the device's own viewer/player. */
+        @JavascriptInterface
+        fun openMedia(name: String) {
+            runOnUiThread {
+                try {
+                    val f = safeVaultFile(name); if (!f.exists()) return@runOnUiThread
+                    val uri = FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", f)
+                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                        setDataAndType(uri, if (f.name.startsWith("VID_")) "video/*" else "image/*")
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    if (intent.resolveActivity(packageManager) != null) startActivity(intent)
+                } catch (t: Throwable) {}
+            }
+        }
+
+        /** Hands the file to Android's native share sheet - WhatsApp/Instagram/Facebook/Signal/etc, whatever is installed. */
+        @JavascriptInterface
+        fun shareMedia(name: String) {
+            runOnUiThread {
+                try {
+                    val f = safeVaultFile(name); if (!f.exists()) return@runOnUiThread
+                    val uri = FileProvider.getUriForFile(this@MainActivity, "$packageName.fileprovider", f)
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = if (f.name.startsWith("VID_")) "video/mp4" else "image/jpeg"
+                        putExtra(Intent.EXTRA_STREAM, uri)
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    }
+                    startActivity(Intent.createChooser(intent, "Share"))
+                } catch (t: Throwable) {}
+            }
+        }
+
+        @JavascriptInterface
+        fun deleteMedia(name: String): Boolean {
+            return try { safeVaultFile(name).delete() } catch (t: Throwable) { false }
         }
     }
 }
