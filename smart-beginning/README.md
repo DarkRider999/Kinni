@@ -327,6 +327,51 @@ You'll need the Android SDK installed and `ANDROID_HOME`/`local.properties`
 pointing at it, same as any Android Studio project. Open the `smart-beginning/`
 folder directly in Android Studio and it should sync normally.
 
+## Round 7: the real reason rhymes were silent, plus animal sounds and a bigger Colouring Book
+
+Three rounds of patching the Web Audio retry/resume logic never fixed "rhymes
+and lullabies don't play," because that was never the bug. The actual cause,
+found by reading the navigation code rather than theorizing about audio
+timing further: `openRhyme()` (called when you tap any rhyme, lullaby, action
+song or story card) tried to switch to the player screen with
+`showScreen('s-act-rhyme')` — but `showScreen()` already prepends `s-` itself,
+so this looked for an element id `s-s-act-rhyme`, found nothing, and silently
+did nothing. The title/lyrics text updated invisibly in the background, but
+the screen holding the actual Play/Stop/Sing buttons never appeared, so there
+was never anything to tap. Animal sound effects were unaffected because that
+button grid calls the sound function directly, with no screen change
+involved — which is also why they were the only thing that worked, and why
+the bug looked like an audio engine problem rather than the one-line
+navigation typo it actually was. Fixed by removing the stray `s-` prefix.
+Verified with a Playwright test that taps an actual rhyme and lullaby card
+through the real UI (not by calling the player function directly, which
+would have missed this) and confirms the player screen opens and notes
+fire when Play is tapped.
+
+Also addressed from the same report:
+- **Animal sound character.** These are still synthesised oscillator tones,
+  not recordings — the app's "nothing downloaded, nothing streamed" design
+  means there's no bundled audio asset to fall back on. What was making them
+  sound like knocking/a doorbell was a flat, static pitch per tone. Every
+  animal cry now gives its tone a glide target so the pitch actually slides
+  during the note (a moo drops, a tweet rises, etc.), which reads as far more
+  "alive" than a fixed-frequency beep, even though it's the same waveform
+  under the hood. This is a real improvement within what pure synthesis can
+  do, not a claim that these now sound like real animals.
+- **Colouring Book expanded.** Was 4 fixed pictures (one letter, one number,
+  one face, one — not very recognisable — camel). Now: all 26 letters, numbers
+  1–10, and 8 animals (camel, cat, dog, fish, bird, turtle, butterfly,
+  elephant), organised as a category picker (Letters / Numbers / Faces /
+  Animals) with a second row to pick the specific item, rather than one long
+  flat list. The old camel was rebuilt as several closed shapes (body, neck,
+  head) instead of one long chain of curves that didn't read as a complete
+  animal; cat, dog, fish, bird, turtle and butterfly all came out clearly
+  recognisable on visual review, elephant is the weakest of the eight (legible
+  but not as crisp as the others) and would be the one to revisit first if
+  this gets another pass. The old Parent Zone deep links (Tracing sheet /
+  Counting to 15 / Feelings faces / UAE animals) still work, now landing on
+  the matching category.
+
 ## Known gaps / honest limitations
 
 - Tamil and Kannada interface text is a first machine-assisted translation
@@ -336,11 +381,11 @@ folder directly in Android Studio and it should sync normally.
   same as the original build intended.
 - `autoTune()`-generated melodies are pleasant placeholders, not transcriptions
   of the real traditional tunes, for the rhymes added in this pass.
-- The Colouring Book's four pictures are simple procedural line art (drawn
-  with canvas paths, not illustrated), and colouring is free-draw over the
-  outline rather than a flood-fill that respects the lines — the same
-  forgiving approach most toddler colouring apps use, since "stay inside the
-  lines" isn't a realistic expectation at this age anyway.
+- The Colouring Book's pictures are simple procedural line art (drawn with
+  canvas paths, not illustrated), and colouring is free-draw over the outline
+  rather than a flood-fill that respects the lines — the same forgiving
+  approach most toddler colouring apps use, since "stay inside the lines"
+  isn't a realistic expectation at this age anyway.
 - XP, level, and stickers live only in memory for the current app session —
   there's no save/load to the device yet, so progress resets on every app
   restart. Round 6 made the *displayed* numbers honest (zero on a fresh

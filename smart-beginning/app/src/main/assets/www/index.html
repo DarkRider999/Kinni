@@ -1576,6 +1576,7 @@ body{font-size:15px}
           <div class="hdr"><button class="back" data-go="creative">←</button>
             <div><h2>Colouring Book</h2><div class="sub">Pick a picture, then colour it in</div></div></div>
           <div class="watchcats" id="colPics"></div>
+          <div class="watchcats" id="colSubPics"></div>
           <div class="pad">
             <canvas class="paint" id="colCanvas"></canvas>
             <div class="swatches" id="colSwatches"></div>
@@ -1904,17 +1905,25 @@ function audioReady(){ try{ return !!AC&&AC.state==='running'; }catch(e){ return
   window.addEventListener(ev,function(){ audioUnlock(); setTimeout(audioUnlock,250); });
 });
 window.addEventListener('load',function(){ audioUnlock(); setTimeout(audioUnlock,300); });
-function _playNote(freq,dur,type,vol){
+function _playNote(freq,dur,type,vol,bendTo){
   try{
     const o=AC.createOscillator(),g=AC.createGain();
-    o.type=type;o.frequency.value=freq;o.connect(g);g.connect(AC.destination);
+    o.type=type;o.frequency.setValueAtTime(freq,AC.currentTime);
+    /* An optional glide target: a single tone that slides from freq to
+       bendTo over its duration reads far more like a living creature's
+       cry than a flat, static pitch - this is what turns a plain beep
+       into something closer to a moo/meow/tweet. */
+    if(bendTo&&typeof bendTo==='number'&&isFinite(bendTo)&&bendTo>0){
+      try{ o.frequency.exponentialRampToValueAtTime(bendTo,AC.currentTime+dur); }catch(e){}
+    }
+    o.connect(g);g.connect(AC.destination);
     g.gain.setValueAtTime(0,AC.currentTime);
     g.gain.linearRampToValueAtTime(vol,AC.currentTime+.02);
     g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+dur);
     o.start();o.stop(AC.currentTime+dur+.02);
   }catch(e){}
 }
-function tone(freq,dur=.18,type='sine',vol=.16){
+function tone(freq,dur=.18,type='sine',vol=.16,bendTo){
   if(!audioOn())return;
   if(typeof freq!=='number'||!isFinite(freq))return;
   vol=vol*(typeof state!=='undefined'&&state.keyVol!=null?state.keyVol:1);
@@ -1932,13 +1941,13 @@ function tone(freq,dur=.18,type='sine',vol=.16){
     let tries=0;
     const retry=function(){
       tries++;
-      if(AC.state==='running'){ _playNote(freq,dur,type,vol); return; }
+      if(AC.state==='running'){ _playNote(freq,dur,type,vol,bendTo); return; }
       if(tries<9) setTimeout(retry,100);
     };
     setTimeout(retry,70);
     return;
   }
-  _playNote(freq,dur,type,vol);
+  _playNote(freq,dur,type,vol,bendTo);
 }
 const sfxTap=()=>{ if(!playClip('tap'))tone(660,.09,'triangle',.1); };
 const sfxYes=()=>{ if(!playClip('yes')){tone(784,.14,'sine',.14);setTimeout(()=>tone(1046,.22,'sine',.14),130);} };
@@ -2698,57 +2707,225 @@ $('#paintSave').onclick=(e)=>{sfxYes();sparkle(e.target);addXP(20,'Saved to the 
    and colour over it with a pencil, instead of the old Parent Zone
    "Printables" buttons that only showed a fake "queued for PDF" toast.
    ============================================================ */
-const COLORING_PICS=[
-  {k:'tracing',label:'🔤 Letter A',draw:function(ctx,w,h){
-    ctx.lineWidth=10;ctx.strokeStyle='#2b2543';ctx.font='bold '+Math.round(h*0.62)+'px sans-serif';
-    ctx.textAlign='center';ctx.textBaseline='middle';ctx.strokeText('A',w/2,h/2+h*0.04);
-  }},
-  {k:'counting',label:'🔢 Number 5',draw:function(ctx,w,h){
-    ctx.lineWidth=10;ctx.strokeStyle='#2b2543';ctx.font='bold '+Math.round(h*0.62)+'px sans-serif';
-    ctx.textAlign='center';ctx.textBaseline='middle';ctx.strokeText('5',w/2,h/2+h*0.04);
-  }},
-  {k:'feelings',label:'😊 Happy Face',draw:function(ctx,w,h){
+function colStroke(ctx){ ctx.lineWidth=8;ctx.strokeStyle='#2b2543';ctx.lineCap='round';ctx.lineJoin='round'; }
+function colCircle(ctx,x,y,r){ ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.stroke(); }
+function colEllipse(ctx,x,y,rx,ry){ ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.stroke(); }
+function glyphDraw(ch){
+  return function(ctx,w,h){
+    ctx.lineWidth=10;ctx.strokeStyle='#2b2543';
+    ctx.font='bold '+Math.round(h*(ch.length>1?0.48:0.62))+'px sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.strokeText(ch,w/2,h/2+h*0.04);
+  };
+}
+const LETTER_PICS='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(L=>({k:'L_'+L,label:'🔤 Letter '+L,draw:glyphDraw(L)}));
+const NUMBER_PICS=['1','2','3','4','5','6','7','8','9','10'].map(N=>({k:'N_'+N,label:'🔢 Number '+N,draw:glyphDraw(N)}));
+const FACE_PICS=[
+  {k:'happy',label:'😊 Happy Face',draw:function(ctx,w,h){
     const cx=w/2,cy=h/2,r=Math.min(w,h)*0.34;
-    ctx.lineWidth=8;ctx.strokeStyle='#2b2543';ctx.lineCap='round';
-    ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();
-    ctx.beginPath();ctx.arc(cx-r*0.38,cy-r*0.25,r*0.09,0,Math.PI*2);ctx.stroke();
-    ctx.beginPath();ctx.arc(cx+r*0.38,cy-r*0.25,r*0.09,0,Math.PI*2);ctx.stroke();
+    colStroke(ctx);
+    colCircle(ctx,cx,cy,r);
+    colCircle(ctx,cx-r*0.38,cy-r*0.25,r*0.09);
+    colCircle(ctx,cx+r*0.38,cy-r*0.25,r*0.09);
     ctx.beginPath();ctx.arc(cx,cy+r*0.05,r*0.55,0.15*Math.PI,0.85*Math.PI);ctx.stroke();
-  }},
-  {k:'animals',label:'🐪 Camel',draw:function(ctx,w,h){
-    const cx=w/2,cy=h/2+h*0.08;
-    ctx.lineWidth=8;ctx.strokeStyle='#2b2543';ctx.lineCap='round';ctx.lineJoin='round';
-    ctx.beginPath();
-    ctx.moveTo(cx-w*0.30,cy+h*0.12);
-    ctx.quadraticCurveTo(cx-w*0.30,cy-h*0.10,cx-w*0.17,cy-h*0.05);
-    ctx.quadraticCurveTo(cx-w*0.12,cy-h*0.22,cx-w*0.04,cy-h*0.06);
-    ctx.quadraticCurveTo(cx+w*0.02,cy-h*0.20,cx+w*0.10,cy-h*0.04);
-    ctx.quadraticCurveTo(cx+w*0.22,cy-h*0.02,cx+w*0.28,cy+h*0.12);
-    ctx.lineTo(cx+w*0.24,cy+h*0.30);
-    ctx.moveTo(cx+w*0.16,cy+h*0.12);ctx.lineTo(cx+w*0.16,cy+h*0.30);
-    ctx.moveTo(cx-w*0.08,cy+h*0.12);ctx.lineTo(cx-w*0.08,cy+h*0.30);
-    ctx.moveTo(cx-w*0.22,cy+h*0.12);ctx.lineTo(cx-w*0.24,cy+h*0.30);
-    ctx.moveTo(cx-w*0.17,cy-h*0.05);ctx.quadraticCurveTo(cx-w*0.26,cy-h*0.08,cx-w*0.30,cy+h*0.02);
-    ctx.stroke();
   }}
 ];
-let colPic='tracing',colCtx=null,colDraw=false,colPX=0,colPY=0,colColor='#ff5a36';
+/* Each animal is built from a handful of CLOSED shapes (circles, ellipses,
+   closed paths) rather than one long chain of bezier curves - that was the
+   problem with the old single-shape camel (it read as a tangle of loose
+   lines, "half drawn"). Closed, overlapping primitives read as a complete,
+   recognisable silhouette even to a toddler, and are far more reliable to
+   get right without visual feedback. */
+function camelDraw(ctx,w,h){
+  const cx=w/2,cy=h/2+h*0.1,r=Math.min(w,h);
+  colStroke(ctx);
+  // humped back + belly, one closed shape
+  ctx.beginPath();
+  ctx.moveTo(cx-r*0.32,cy+r*0.14);
+  ctx.lineTo(cx-r*0.30,cy-r*0.02);
+  ctx.quadraticCurveTo(cx-r*0.28,cy-r*0.22,cx-r*0.18,cy-r*0.20);
+  ctx.quadraticCurveTo(cx-r*0.12,cy-r*0.18,cx-r*0.10,cy-r*0.08);
+  ctx.quadraticCurveTo(cx-r*0.02,cy-r*0.22,cx+r*0.06,cy-r*0.20);
+  ctx.quadraticCurveTo(cx+r*0.14,cy-r*0.18,cx+r*0.18,cy-r*0.04);
+  ctx.lineTo(cx+r*0.30,cy+r*0.14);
+  ctx.closePath(); ctx.stroke();
+  // neck - two roughly-parallel curves, reads as a tube rather than a blob
+  ctx.beginPath();
+  ctx.moveTo(cx+r*0.16,cy-r*0.04);
+  ctx.quadraticCurveTo(cx+r*0.26,cy-r*0.20,cx+r*0.33,cy-r*0.34);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx+r*0.25,cy-r*0.02);
+  ctx.quadraticCurveTo(cx+r*0.35,cy-r*0.18,cx+r*0.43,cy-r*0.32);
+  ctx.stroke();
+  // head - a clearly distinct oval at the top of the neck
+  colEllipse(ctx,cx+r*0.40,cy-r*0.41,r*0.09,r*0.13);
+  colCircle(ctx,cx+r*0.37,cy-r*0.51,r*0.022);
+  colCircle(ctx,cx+r*0.43,cy-r*0.43,r*0.011);
+  ctx.beginPath(); ctx.moveTo(cx+r*0.39,cy-r*0.30); ctx.lineTo(cx+r*0.44,cy-r*0.27); ctx.stroke();
+  [-0.27,-0.12,0.08,0.24].forEach(dx=>{
+    ctx.beginPath(); ctx.moveTo(cx+r*dx,cy+r*0.13); ctx.lineTo(cx+r*dx,cy+r*0.32); ctx.stroke();
+  });
+  ctx.beginPath(); ctx.moveTo(cx-r*0.32,cy+r*0.05); ctx.quadraticCurveTo(cx-r*0.38,cy+r*0.12,cx-r*0.35,cy+r*0.20); ctx.stroke();
+}
+function catDraw(ctx,w,h){
+  const cx=w/2,cy=h*0.4,r=Math.min(w,h)*0.26;
+  colStroke(ctx);
+  ctx.beginPath();ctx.moveTo(cx-r*0.75,cy-r*0.65);ctx.lineTo(cx-r*1.15,cy-r*1.55);ctx.lineTo(cx-r*0.15,cy-r*0.95);ctx.closePath();ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx+r*0.75,cy-r*0.65);ctx.lineTo(cx+r*1.15,cy-r*1.55);ctx.lineTo(cx+r*0.15,cy-r*0.95);ctx.closePath();ctx.stroke();
+  colCircle(ctx,cx,cy,r);
+  colCircle(ctx,cx-r*0.35,cy-r*0.1,r*0.09);
+  colCircle(ctx,cx+r*0.35,cy-r*0.1,r*0.09);
+  ctx.beginPath();ctx.moveTo(cx-r*0.08,cy+r*0.15);ctx.lineTo(cx+r*0.08,cy+r*0.15);ctx.lineTo(cx,cy+r*0.28);ctx.closePath();ctx.stroke();
+  ctx.beginPath();ctx.arc(cx-r*0.15,cy+r*0.3,r*0.18,Math.PI*0.1,Math.PI*0.9);ctx.stroke();
+  ctx.beginPath();ctx.arc(cx+r*0.15,cy+r*0.3,r*0.18,Math.PI*0.1,Math.PI*0.9);ctx.stroke();
+  [-1,1].forEach(side=>{for(let i=0;i<3;i++){
+    ctx.beginPath();ctx.moveTo(cx+side*r*0.5,cy+r*0.1+i*r*0.12);ctx.lineTo(cx+side*r*1.3,cy+r*0.02+i*r*0.12);ctx.stroke();
+  }});
+  colEllipse(ctx,cx,cy+r*1.7,r*1.1,r*0.95);
+  ctx.beginPath();ctx.moveTo(cx+r*1.0,cy+r*1.9);ctx.quadraticCurveTo(cx+r*2.0,cy+r*1.6,cx+r*1.7,cy+r*0.7);ctx.stroke();
+}
+function dogDraw(ctx,w,h){
+  const cx=w/2,cy=h*0.32,r=Math.min(w,h)*0.17;
+  colStroke(ctx);
+  colEllipse(ctx,cx-r*1.05,cy-r*0.1,r*0.38,r*0.6);
+  colEllipse(ctx,cx+r*1.05,cy-r*0.1,r*0.38,r*0.6);
+  colCircle(ctx,cx,cy,r);
+  colEllipse(ctx,cx,cy+r*0.45,r*0.5,r*0.32);
+  colCircle(ctx,cx,cy+r*0.35,r*0.1);
+  colCircle(ctx,cx-r*0.32,cy-r*0.15,r*0.09);
+  colCircle(ctx,cx+r*0.32,cy-r*0.15,r*0.09);
+  colEllipse(ctx,cx,cy+r*1.9,r*1.15,r*1.0);
+  [-0.7,-0.25,0.25,0.7].forEach(dx=>{
+    ctx.beginPath();ctx.moveTo(cx+dx*r,cy+r*2.7);ctx.lineTo(cx+dx*r,cy+r*3.3);ctx.stroke();
+  });
+  ctx.beginPath();ctx.moveTo(cx+r*1.1,cy+r*1.6);ctx.quadraticCurveTo(cx+r*1.9,cy+r*1.1,cx+r*1.7,cy+r*0.5);ctx.stroke();
+}
+function fishDraw(ctx,w,h){
+  const cx=w/2,cy=h/2,r=Math.min(w,h)*0.3;
+  colStroke(ctx);
+  colEllipse(ctx,cx-r*0.1,cy,r*0.95,r*0.6);
+  ctx.beginPath();ctx.moveTo(cx-r*1.0,cy);ctx.lineTo(cx-r*1.55,cy-r*0.55);ctx.lineTo(cx-r*1.55,cy+r*0.55);ctx.closePath();ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx-r*0.1,cy-r*0.58);ctx.lineTo(cx+r*0.1,cy-r*1.0);ctx.lineTo(cx+r*0.35,cy-r*0.55);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx-r*0.05,cy+r*0.58);ctx.lineTo(cx+r*0.1,cy+r*0.95);ctx.lineTo(cx+r*0.3,cy+r*0.55);ctx.stroke();
+  colCircle(ctx,cx+r*0.55,cy-r*0.12,r*0.09);
+  ctx.beginPath();ctx.arc(cx+r*0.85,cy+r*0.05,r*0.12,Math.PI*0.2,Math.PI*0.8);ctx.stroke();
+}
+function birdDraw(ctx,w,h){
+  const cx=w/2,cy=h*0.55,r=Math.min(w,h)*0.24;
+  colStroke(ctx);
+  colEllipse(ctx,cx,cy,r*0.85,r*1.05);
+  colCircle(ctx,cx+r*0.55,cy-r*1.05,r*0.5);
+  ctx.beginPath();ctx.moveTo(cx+r*1.0,cy-r*1.08);ctx.lineTo(cx+r*1.45,cy-r*0.95);ctx.lineTo(cx+r*1.0,cy-r*0.82);ctx.closePath();ctx.stroke();
+  colCircle(ctx,cx+r*0.65,cy-r*1.2,r*0.07);
+  ctx.beginPath();ctx.moveTo(cx-r*0.1,cy-r*0.3);ctx.quadraticCurveTo(cx+r*0.5,cy-r*0.1,cx+r*0.1,cy+r*0.6);ctx.quadraticCurveTo(cx-r*0.3,cy+r*0.3,cx-r*0.1,cy-r*0.3);ctx.stroke();
+  [0,0.18,-0.18].forEach(off=>{
+    ctx.beginPath();ctx.moveTo(cx-r*0.75,cy+r*0.6);ctx.lineTo(cx-r*1.5,cy+r*0.9+off*r);ctx.stroke();
+  });
+  [-0.2,0.15].forEach(dx=>{
+    ctx.beginPath();ctx.moveTo(cx+dx*r,cy+r*1.0);ctx.lineTo(cx+dx*r,cy+r*1.45);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx+dx*r-r*0.12,cy+r*1.5);ctx.lineTo(cx+dx*r+r*0.12,cy+r*1.5);ctx.stroke();
+  });
+}
+function turtleDraw(ctx,w,h){
+  const cx=w/2,cy=h/2,r=Math.min(w,h)*0.3;
+  colStroke(ctx);
+  colEllipse(ctx,cx,cy,r*1.0,r*0.75);
+  colEllipse(ctx,cx,cy,r*0.6,r*0.42);
+  [-1,1].forEach(s=>{
+    ctx.beginPath();ctx.moveTo(cx,cy-r*0.75);ctx.lineTo(cx+s*r*0.55,cy-r*0.2);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx,cy+r*0.75);ctx.lineTo(cx+s*r*0.55,cy+r*0.2);ctx.stroke();
+  });
+  colCircle(ctx,cx+r*1.25,cy+r*0.05,r*0.28);
+  colCircle(ctx,cx+r*1.33,cy-r*0.02,r*0.04);
+  colEllipse(ctx,cx-r*0.75,cy-r*0.65,r*0.3,r*0.2);
+  colEllipse(ctx,cx-r*0.75,cy+r*0.65,r*0.3,r*0.2);
+  colEllipse(ctx,cx+r*0.55,cy-r*0.75,r*0.26,r*0.18);
+  colEllipse(ctx,cx+r*0.55,cy+r*0.75,r*0.26,r*0.18);
+  ctx.beginPath();ctx.moveTo(cx-r*1.0,cy);ctx.lineTo(cx-r*1.25,cy);ctx.stroke();
+}
+function butterflyDraw(ctx,w,h){
+  const cx=w/2,cy=h/2,r=Math.min(w,h)*0.3;
+  colStroke(ctx);
+  ctx.beginPath();ctx.moveTo(cx,cy-r*0.9);ctx.lineTo(cx,cy+r*0.9);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx,cy-r*0.85);ctx.quadraticCurveTo(cx-r*0.2,cy-r*1.2,cx-r*0.35,cy-r*1.3);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx,cy-r*0.85);ctx.quadraticCurveTo(cx+r*0.2,cy-r*1.2,cx+r*0.35,cy-r*1.3);ctx.stroke();
+  colEllipse(ctx,cx-r*0.65,cy-r*0.4,r*0.65,r*0.5);
+  colEllipse(ctx,cx+r*0.65,cy-r*0.4,r*0.65,r*0.5);
+  colEllipse(ctx,cx-r*0.5,cy+r*0.45,r*0.48,r*0.4);
+  colEllipse(ctx,cx+r*0.5,cy+r*0.45,r*0.48,r*0.4);
+}
+function elephantDraw(ctx,w,h){
+  const cx=w/2,cy=h*0.28,r=Math.min(w,h)*0.15;
+  colStroke(ctx);
+  // ear - a big oval offset well to the side so it clearly reads as a separate
+  // shape from the head, instead of just another overlapping circle
+  colEllipse(ctx,cx-r*1.5,cy+r*0.2,r*0.85,r*1.05);
+  // head
+  colCircle(ctx,cx,cy,r);
+  colCircle(ctx,cx-r*0.3,cy-r*0.1,r*0.08);
+  // trunk hangs from the centre-bottom of the face, not off to one side,
+  // so it is unmistakably a trunk rather than a stray curl
+  ctx.beginPath();
+  ctx.moveTo(cx-r*0.05,cy+r*0.95);
+  ctx.quadraticCurveTo(cx-r*0.25,cy+r*1.4,cx-r*0.05,cy+r*1.8);
+  ctx.quadraticCurveTo(cx+r*0.1,cy+r*2.05,cx+r*0.35,cy+r*2.0);
+  ctx.stroke();
+  // body
+  colEllipse(ctx,cx+r*0.1,cy+r*2.1,r*1.2,r*1.0);
+  [-0.7,-0.25,0.3,0.8].forEach(dx=>{
+    ctx.beginPath();ctx.moveTo(cx+dx*r+r*0.1,cy+r*2.9);ctx.lineTo(cx+dx*r+r*0.1,cy+r*3.45);ctx.stroke();
+  });
+  ctx.beginPath();ctx.moveTo(cx-r*1.0,cy+r*1.9);ctx.quadraticCurveTo(cx-r*1.3,cy+r*2.15,cx-r*1.15,cy+r*2.5);ctx.stroke();
+}
+const ANIMAL_PICS=[
+  {k:'camel',label:'🐪 Camel',draw:camelDraw},
+  {k:'cat',label:'🐱 Cat',draw:catDraw},
+  {k:'dog',label:'🐶 Dog',draw:dogDraw},
+  {k:'fish',label:'🐟 Fish',draw:fishDraw},
+  {k:'bird',label:'🐦 Bird',draw:birdDraw},
+  {k:'turtle',label:'🐢 Turtle',draw:turtleDraw},
+  {k:'butterfly',label:'🦋 Butterfly',draw:butterflyDraw},
+  {k:'elephant',label:'🐘 Elephant',draw:elephantDraw}
+];
+const COLORING_CATS=[
+  {k:'letters',label:'🔤 Letters',items:LETTER_PICS},
+  {k:'numbers',label:'🔢 Numbers',items:NUMBER_PICS},
+  {k:'feelings',label:'😊 Faces',items:FACE_PICS},
+  {k:'animals',label:'🐾 Animals',items:ANIMAL_PICS}
+];
+let colCat='letters',colPic=LETTER_PICS[0].k,colCtx=null,colDraw=false,colPX=0,colPY=0,colColor='#ff5a36';
+function curColCatObj(){ return COLORING_CATS.find(c=>c.k===colCat)||COLORING_CATS[0]; }
+function curColPicObj(){ const cat=curColCatObj(); return cat.items.find(p=>p.k===colPic)||cat.items[0]; }
 function colDrawOutline(){
   const c=$('#colCanvas'); colCtx=fitCanvas(c);
   const r=c.getBoundingClientRect();
-  const pic=COLORING_PICS.find(p=>p.k===colPic)||COLORING_PICS[0];
-  pic.draw(colCtx,r.width,r.height);
+  curColPicObj().draw(colCtx,r.width,r.height);
 }
-function renderColPics(){
-  $('#colPics').innerHTML=COLORING_PICS.map(p=>`<button class="wcat${p.k===colPic?' on':''}" data-colpic="${p.k}">${p.label}</button>`).join('');
+function renderColCats(){
+  $('#colPics').innerHTML=COLORING_CATS.map(c=>`<button class="wcat${c.k===colCat?' on':''}" data-colcat="${c.k}">${c.label}</button>`).join('');
 }
-function startColoring(pic){
-  colPic=COLORING_PICS.some(p=>p.k===pic)?pic:'tracing';
-  renderColPics(); colDrawOutline();
+function renderColItems(){
+  $('#colSubPics').innerHTML=curColCatObj().items.map(p=>`<button class="wcat${p.k===colPic?' on':''}" data-colpic="${p.k}">${p.label}</button>`).join('');
+}
+function setColCat(catKey){
+  colCat=COLORING_CATS.some(c=>c.k===catKey)?catKey:'letters';
+  colPic=curColCatObj().items[0].k;
+  renderColCats(); renderColItems(); colDrawOutline();
+}
+function setColPic(picKey){
+  colPic=picKey; renderColItems(); colDrawOutline();
+}
+function startColoring(arg){
+  const legacyMap={tracing:'letters',counting:'numbers',feelings:'feelings',animals:'animals'};
+  setColCat(legacyMap[arg]||arg||'letters');
 }
 $('#colPics').addEventListener('click',e=>{
+  const b=e.target.closest('[data-colcat]'); if(!b)return;
+  sfxTap(); setColCat(b.dataset.colcat);
+});
+$('#colSubPics').addEventListener('click',e=>{
   const b=e.target.closest('[data-colpic]'); if(!b)return;
-  sfxTap(); colPic=b.dataset.colpic; renderColPics(); colDrawOutline();
+  sfxTap(); setColPic(b.dataset.colpic);
 });
 $('#colSwatches').innerHTML=['#ff5a36','#ffb703','#2bd99a','#3fa1ff','#9b5cff','#ff4f93','#0dc4d6','#3b3555']
   .map((c,i)=>`<button class="sw ${i===0?'on':''}" data-c="${c}" style="background:${c}" aria-label="colour"></button>`).join('');
@@ -3721,7 +3898,7 @@ function openRhyme(k){
   $('#rhymeArt').textContent=z.e;
   $('#rhymeLyrics').innerHTML=z.lines.map((l,i)=>`<div class="lyr" data-li="${i}">${l}</div>`).join('');
   $('#rhymeHint').textContent='Music-box tune, played on this device.';
-  showScreen('s-act-rhyme'); renderRhymeList();
+  showScreen('act-rhyme'); renderRhymeList();
 }
 function stopRhyme(){
   R.timers.forEach(t=>clearTimeout(t)); R.timers=[];
@@ -3932,26 +4109,35 @@ function noiseBurst(dur,vol,freqStart,freqEnd){
   }
   _playNoiseBurst(dur,vol,freqStart,freqEnd);
 }
+/* Pure oscillator waveforms have a hard ceiling on how "animal" they can
+   sound - there is no bundled recording to fall back on, per the app's
+   offline-first "nothing downloaded, nothing streamed" design (see the
+   "About the sound" card in Rhymes & Stories). What meaningfully separates
+   a convincing cry from a flat beep is NOT the waveform type, it's pitch
+   movement: real animal sounds slide and waver rather than holding one
+   static frequency. Every call below now gives tone() a glide target (its
+   5th argument) so the pitch actually moves during the note, instead of
+   sitting still like a doorbell/knock. */
 const ASFX={
-  moo(){tone(120,.7,'sawtooth',.13); setTimeout(()=>tone(95,.6,'sawtooth',.11),220);},
-  oink(){[0,150].forEach(d=>setTimeout(()=>{tone(180,.12,'square',.09);tone(240,.1,'square',.07);},d));},
-  cluck(){[0,130,260].forEach(d=>setTimeout(()=>tone(700,.07,'square',.08),d));},
-  baa(){for(let i=0;i<9;i++)setTimeout(()=>tone(330+(i%2?40:0),.09,'sawtooth',.08),i*80);},
-  neigh(){tone(500,.5,'sawtooth',.1); setTimeout(()=>tone(330,.4,'sawtooth',.09),260);},
-  quack(){[0,180].forEach(d=>setTimeout(()=>{tone(420,.12,'square',.1);noiseBurst(.09,.06,900,500);},d));},
-  tweet(){[0,150,300,450].forEach(d=>setTimeout(()=>tone(1500+Math.random()*600,.09,'sine',.09),d));},
-  hoot(){[0,420].forEach(d=>setTimeout(()=>tone(330,.3,'sine',.11),d));},
-  screech(){tone(2200,.3,'sawtooth',.07); setTimeout(()=>tone(1500,.25,'sawtooth',.06),200);},
-  squawk(){tone(900,.25,'sawtooth',.1); setTimeout(()=>tone(600,.2,'sawtooth',.08),160);},
-  honk(){[0,200].forEach(d=>setTimeout(()=>tone(300,.16,'square',.1),d));},
-  roar(){noiseBurst(.9,.14,320,120); tone(90,.8,'sawtooth',.1);},
-  trumpet(){tone(300,.5,'sawtooth',.12); setTimeout(()=>tone(480,.5,'sawtooth',.11),240);},
-  grunt(){[0,220].forEach(d=>setTimeout(()=>tone(140,.14,'square',.1),d));},
-  ribbit(){[0,260].forEach(d=>setTimeout(()=>{tone(220,.08,'square',.1);tone(300,.09,'square',.08);},d));},
+  moo(){tone(130,.75,'sawtooth',.14,85); setTimeout(()=>tone(100,.55,'sawtooth',.11,78),260);},
+  oink(){[0,160].forEach(d=>setTimeout(()=>{tone(220,.16,'triangle',.11,140);tone(300,.12,'triangle',.08,190);},d));},
+  cluck(){[0,140,280].forEach(d=>setTimeout(()=>tone(560,.1,'triangle',.09,420),d));},
+  baa(){for(let i=0;i<8;i++)setTimeout(()=>tone(300+(i%2?60:0),.11,'sawtooth',.09,i%2?360:260),i*95);},
+  neigh(){tone(420,.5,'sawtooth',.11,620); setTimeout(()=>tone(520,.45,'sawtooth',.1,280),280);},
+  quack(){[0,190].forEach(d=>setTimeout(()=>{tone(380,.14,'square',.1,220);noiseBurst(.09,.06,900,500);},d));},
+  tweet(){[0,150,300,450].forEach(d=>setTimeout(()=>{const f=1400+Math.random()*700;tone(f,.1,'sine',.09,f*1.3);},d));},
+  hoot(){[0,420].forEach(d=>setTimeout(()=>tone(300,.32,'sine',.11,230),d));},
+  screech(){tone(2200,.32,'sawtooth',.07,1200); setTimeout(()=>tone(1700,.26,'sawtooth',.06,1000),200);},
+  squawk(){tone(950,.26,'sawtooth',.1,500); setTimeout(()=>tone(650,.2,'sawtooth',.08,350),160);},
+  honk(){[0,200].forEach(d=>setTimeout(()=>tone(320,.18,'triangle',.1,260),d));},
+  roar(){noiseBurst(.9,.14,320,120); tone(100,.85,'sawtooth',.1,60);},
+  trumpet(){tone(300,.5,'sawtooth',.12,420); setTimeout(()=>tone(480,.5,'sawtooth',.11,620),240);},
+  grunt(){[0,220].forEach(d=>setTimeout(()=>tone(150,.16,'triangle',.1,110),d));},
+  ribbit(){[0,260].forEach(d=>setTimeout(()=>{tone(240,.09,'triangle',.1,160);tone(320,.1,'triangle',.08,210);},d));},
   buzz(){for(let i=0;i<16;i++)setTimeout(()=>tone(190+(i%2?22:0),.13,'sawtooth',.07),i*110);},
-  meow(){tone(620,.2,'sine',.11); setTimeout(()=>tone(760,.3,'sine',.1),170); setTimeout(()=>tone(520,.35,'sine',.09),380);},
-  woof(){[0,230].forEach(d=>setTimeout(()=>{tone(190,.14,'square',.12);noiseBurst(.1,.07,700,300);},d));},
-  squeak(){[0,150,300].forEach(d=>setTimeout(()=>tone(1300,.08,'sine',.08),d));}
+  meow(){tone(620,.22,'triangle',.11,780); setTimeout(()=>tone(760,.3,'triangle',.1,560),170); setTimeout(()=>tone(520,.35,'triangle',.09,420),380);},
+  woof(){[0,230].forEach(d=>setTimeout(()=>{tone(220,.16,'triangle',.12,150);noiseBurst(.1,.07,700,300);},d));},
+  squeak(){[0,150,300].forEach(d=>setTimeout(()=>tone(1300,.09,'sine',.08,1700),d));}
 };
 
 function renderAnimals(){
