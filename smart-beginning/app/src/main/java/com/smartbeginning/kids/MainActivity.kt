@@ -8,6 +8,8 @@ import android.os.Build
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.text.method.ScrollingMovementMethod
+import android.view.Gravity
 import android.view.View
 import android.view.WindowInsets
 import android.view.WindowInsetsController
@@ -16,6 +18,10 @@ import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import android.widget.ScrollView
+import android.widget.TextView
+import java.io.PrintWriter
+import java.io.StringWriter
 import java.util.Locale
 
 /**
@@ -28,31 +34,75 @@ import java.util.Locale
  */
 class MainActivity : Activity() {
 
-    private lateinit var webView: WebView
+    private var webView: WebView? = null
     private var tts: TextToSpeech? = null
     private var ttsReady = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-        hideSystemBars()
+        try {
+            requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+            hideSystemBars()
+            initTts()
 
-        tts = TextToSpeech(applicationContext) { status ->
-            ttsReady = (status == TextToSpeech.SUCCESS)
-            tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                override fun onStart(utteranceId: String?) {}
-                override fun onDone(utteranceId: String?) {}
-                @Deprecated("Deprecated in API 21+, kept for older devices")
-                override fun onError(utteranceId: String?) {}
-            })
+            val wv = WebView(this)
+            webView = wv
+            setContentView(wv)
+            configureWebView(wv)
+            wv.addJavascriptInterface(TtsBridge(), "AndroidTTS")
+            wv.addJavascriptInterface(OrientationBridge(), "AndroidOrientation")
+            wv.loadUrl("file:///android_asset/www/index.html")
+        } catch (t: Throwable) {
+            // A WebView-based app has exactly one way to fail hard: the
+            // device's WebView implementation is missing, disabled, or too
+            // old to construct (seen on phones where a user or MDM policy
+            // disabled "Android System WebView"). Never let that - or any
+            // other startup error - take the whole app down silently; show
+            // what broke so it can actually be fixed, instead of the OS's
+            // bare "keeps stopping" dialog.
+            showFatalError(t)
         }
+    }
 
-        webView = WebView(this)
-        setContentView(webView)
-        configureWebView(webView)
-        webView.addJavascriptInterface(TtsBridge(), "AndroidTTS")
-        webView.addJavascriptInterface(OrientationBridge(), "AndroidOrientation")
-        webView.loadUrl("file:///android_asset/www/index.html")
+    /** Narration is a nice-to-have; a broken TTS engine must never crash the app. */
+    private fun initTts() {
+        try {
+            tts = TextToSpeech(applicationContext) { status ->
+                ttsReady = (status == TextToSpeech.SUCCESS)
+                try {
+                    tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                        override fun onStart(utteranceId: String?) {}
+                        override fun onDone(utteranceId: String?) {}
+                        @Deprecated("Deprecated in API 21+, kept for older devices")
+                        override fun onError(utteranceId: String?) {}
+                    })
+                } catch (t: Throwable) {
+                    ttsReady = false
+                }
+            }
+        } catch (t: Throwable) {
+            tts = null
+            ttsReady = false
+        }
+    }
+
+    private fun showFatalError(t: Throwable) {
+        val sw = StringWriter()
+        t.printStackTrace(PrintWriter(sw))
+        val text = TextView(this).apply {
+            text = "Smart Beginning couldn't start.\n\n" +
+                "This usually means the device's WebView component is missing, " +
+                "disabled or out of date - check Settings → Apps → " +
+                "Android System WebView is enabled and updated from the Play Store.\n\n" +
+                "If it still doesn't open, please screenshot the details below:\n\n" +
+                sw.toString()
+            setPadding(48, 96, 48, 48)
+            textSize = 13f
+            gravity = Gravity.START
+            setTextIsSelectable(true)
+            movementMethod = ScrollingMovementMethod()
+        }
+        setContentView(ScrollView(this).apply { addView(text) })
     }
 
     private fun hideSystemBars() {
@@ -115,17 +165,17 @@ class MainActivity : Activity() {
     }
 
     override fun onBackPressed() {
-        if (webView.canGoBack()) {
-            webView.goBack()
+        val wv = webView
+        if (wv != null && wv.canGoBack()) {
+            wv.goBack()
         } else {
             super.onBackPressed()
         }
     }
 
     override fun onDestroy() {
-        tts?.stop()
-        tts?.shutdown()
-        webView.destroy()
+        try { tts?.stop(); tts?.shutdown() } catch (t: Throwable) { /* already going down */ }
+        try { webView?.destroy() } catch (t: Throwable) { /* already going down */ }
         super.onDestroy()
     }
 
