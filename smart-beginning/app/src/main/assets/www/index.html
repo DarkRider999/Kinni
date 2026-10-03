@@ -676,6 +676,18 @@ body{font-size:15px}
 .lo-caption{text-align:center;font-family:var(--font-display);font-weight:800;font-size:18px;color:var(--ink);margin:0 0 14px}
 .lo-controls{display:flex;justify-content:center;gap:12px;padding:0 20px}
 @media (prefers-reduced-motion:reduce){.locard{transition:none}}
+/* ---------- Memory Match ---------- */
+.memgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:12px}
+.memcard{aspect-ratio:1;border:0;cursor:pointer;border-radius:16px;font-size:34px;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(150deg,#a9d8ff,#e0c8ff);box-shadow:0 5px 0 #8a95d9;transition:transform .15s}
+.memcard.flip{background:#fff;box-shadow:0 2px 0 #e5e1f5;transform:scale(1.03)}
+.memcard.found{background:linear-gradient(150deg,#8fdcbf,#4fae8c);box-shadow:0 2px 0 #3a8a6d;cursor:default}
+/* ---------- My Body ---------- */
+.bodywrap{display:flex;justify-content:center;margin-top:10px}
+.bodyfig{position:relative;width:200px;height:270px}
+.bpart{position:absolute}
+.bhot{position:absolute;border:2px dashed rgba(59,53,85,.25);background:rgba(255,255,255,.35);cursor:pointer;padding:0;transition:transform .12s, background .12s}
+.bhot:active,.bhot.hit{background:var(--lumi-l);border-color:var(--lumi-d);transform:scale(1.12)}
 </style>
 </head>
 <body>
@@ -895,6 +907,8 @@ body{font-size:15px}
               <span><span class="an">Xylophone maker</span><span class="ad">Tap 5 notes · play a tune</span></span><span class="go">›</span></button>
             <button class="act" data-act="builder"><span class="ico" style="background:#fff7e2">🎬</span>
               <span><span class="an">Build your own story</span><span class="ad">Pick a hero, a place, a twist</span></span><span class="go">›</span></button>
+            <button class="act" data-act="memory"><span class="ico" style="background:#f3eeff">🧠</span>
+              <span><span class="an">Memory Match</span><span class="ad">Flip cards and find the pairs</span></span><span class="go">›</span></button>
           </div>
         </section>
 
@@ -941,6 +955,8 @@ body{font-size:15px}
           <div class="stack">
             <button class="act" data-act="hygiene"><span class="ico" style="background:#e6fbfa">🪥</span>
               <span><span class="an">Wash your hands</span><span class="ad">Put the 5 steps in order</span></span><span class="go">›</span></button>
+            <button class="act" data-act="body"><span class="ico" style="background:#ffeef7">🧍</span>
+              <span><span class="an">My Body</span><span class="ad">Tap a part to hear its name</span></span><span class="go">›</span></button>
             <button class="act" data-act="quiz" data-arg="safety"><span class="ico" style="background:#fff3e0">🛟</span>
               <span><span class="an">Stay safe</span><span class="ad">Crossing, cars, strangers · 3 rounds</span></span><span class="go">›</span></button>
             <button class="act" data-act="quiz" data-arg="food"><span class="ico" style="background:#eafaf3">🥗</span>
@@ -1506,6 +1522,48 @@ body{font-size:15px}
               <button class="toy sm teal" id="bRead">🔊 Read it</button>
               <button class="toy sm ghost" id="bKeep">⭐ Keep it</button>
             </div>
+          </div>
+        </section>
+
+        <!-- ================= MEMORY MATCH ================= -->
+        <section class="screen" id="s-act-memory">
+          <div class="hdr"><button class="back" data-go="creative">←</button>
+            <div><h2>Memory Match</h2><div class="sub" id="memSub">Flip two cards and find the pair</div></div></div>
+          <div class="card">
+            <div class="spread"><span class="tiny">MOVES: <span id="memMoves">0</span></span><span class="tiny" id="memFound">0 of 6 pairs</span></div>
+          </div>
+          <div class="memgrid" id="memGrid"></div>
+          <div class="row" style="justify-content:center;margin-top:14px">
+            <button class="toy sm ghost" id="memNew">🔄 New game</button>
+          </div>
+          <div id="memEnd" style="display:none"></div>
+        </section>
+
+        <!-- ================= MY BODY ================= -->
+        <section class="screen" id="s-act-body">
+          <div class="hdr"><button class="back" data-go="life">←</button>
+            <div><h2>My Body</h2><div class="sub">Tap a part to hear its name</div></div></div>
+          <div class="band"><div class="big" data-char="lumi"></div>
+            <div class="bubble" id="bodySay">Point to something and I'll tell you what it's called.</div></div>
+          <div class="bodywrap">
+            <div class="bodyfig">
+              <div class="bpart bp-head" data-part="head" style="width:84px;height:84px;border-radius:50%;top:0;left:50%;margin-left:-42px;background:#ffd9b8"></div>
+              <button class="bhot" data-part="hair" style="top:-6px;left:50%;margin-left:-38px;width:76px;height:26px;border-radius:40px 40px 0 0" aria-label="Hair"></button>
+              <button class="bhot" data-part="eyes" style="top:28px;left:50%;margin-left:-26px;width:52px;height:14px;border-radius:10px" aria-label="Eyes"></button>
+              <button class="bhot" data-part="nose" style="top:40px;left:50%;margin-left:-7px;width:14px;height:16px;border-radius:50%" aria-label="Nose"></button>
+              <button class="bhot" data-part="mouth" style="top:58px;left:50%;margin-left:-15px;width:30px;height:10px;border-radius:0 0 14px 14px" aria-label="Mouth"></button>
+              <button class="bhot" data-part="ears" style="top:28px;left:50%;margin-left:-48px;width:14px;height:24px;border-radius:50%" aria-label="Ears"></button>
+              <div class="bpart bp-torso" style="width:118px;height:120px;border-radius:40px;top:82px;left:50%;margin-left:-59px;background:#8fdcbf"></div>
+              <button class="bhot" data-part="tummy" style="top:130px;left:50%;margin-left:-22px;width:44px;height:44px;border-radius:50%" aria-label="Tummy"></button>
+              <button class="bhot" data-part="hands" style="top:150px;left:50%;margin-left:-98px;width:30px;height:30px;border-radius:50%" aria-label="Hands"></button>
+              <button class="bhot" data-part="hands2" style="top:150px;left:50%;margin-left:68px;width:30px;height:30px;border-radius:50%;" data-part2="hands" aria-label="Hands"></button>
+              <button class="bhot" data-part="feet" style="top:244px;left:50%;margin-left:-48px;width:40px;height:22px;border-radius:0 0 20px 20px" aria-label="Feet"></button>
+              <button class="bhot" data-part="feet2" style="top:244px;left:50%;margin-left:10px;width:40px;height:22px;border-radius:0 0 20px 20px" data-part2="feet" aria-label="Feet"></button>
+            </div>
+          </div>
+          <div class="card" style="text-align:center;margin-top:10px">
+            <div class="tiny">PARTS FOUND</div>
+            <div class="starrow" id="bodyStars">☆☆☆☆☆☆☆☆</div>
           </div>
         </section>
 
@@ -2593,6 +2651,73 @@ document.addEventListener('click',e=>{
   else if(k==='hygiene')startOrder('wash');
   else if(k==='morning')startOrder('morning');
   else if(k==='trace'){showScreen('act-trace');tctx=fitCanvas(tc);}
+  else if(k==='memory'){showScreen('act-memory');startMemory();}
+  else if(k==='body'){showScreen('act-body');renderBody();}
+});
+
+/* ============================================================
+   14b. MEMORY MATCH
+   ============================================================ */
+const MEM_EMOJI=['🍎','🐸','⭐','🎈','🐳','🚗','🌙','🦋','🍉','🐝','🌈','🧸'];
+let MEM={cards:[],flipped:[],foundCount:0,moves:0,lock:false};
+function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+function startMemory(){
+  const pics=shuffle(MEM_EMOJI.slice()).slice(0,6);
+  const deck=shuffle([...pics,...pics]).map((e,i)=>({id:i,e,found:false}));
+  MEM={cards:deck,flipped:[],foundCount:0,moves:0,lock:false};
+  $('#memEnd').style.display='none';
+  renderMemory();
+}
+function renderMemory(){
+  $('#memMoves').textContent=MEM.moves;
+  $('#memFound').textContent=MEM.foundCount+' of 6 pairs';
+  $('#memGrid').innerHTML=MEM.cards.map(c=>{
+    const open=c.found||MEM.flipped.includes(c.id);
+    return `<button class="memcard${c.found?' found':''}${open&&!c.found?' flip':''}" data-mid="${c.id}">${open?c.e:'❓'}</button>`;
+  }).join('');
+}
+$('#memGrid').addEventListener('click',e=>{
+  const b=e.target.closest('[data-mid]'); if(!b||MEM.lock)return;
+  const id=+b.dataset.mid, card=MEM.cards[id];
+  if(card.found||MEM.flipped.includes(id))return;
+  sfxTap();
+  MEM.flipped.push(id); renderMemory();
+  if(MEM.flipped.length===2){
+    MEM.moves++; MEM.lock=true;
+    const [a,b2]=MEM.flipped.map(i=>MEM.cards[i]);
+    if(a.e===b2.e){
+      a.found=true; b2.found=true; MEM.foundCount++;
+      setTimeout(()=>{ sfxYes(); MEM.flipped=[]; MEM.lock=false; renderMemory();
+        if(MEM.foundCount===6){ addXP(30); unlockSticker();
+          $('#memEnd').style.display=''; $('#memEnd').innerHTML='<div class="card" style="text-align:center;margin-top:10px"><h3>All 6 pairs found! 🎉</h3><p class="muted">'+MEM.moves+' moves</p></div>';
+          toast('Memory champion!','🧠'); }
+      },350);
+    }else{
+      setTimeout(()=>{ sfxNo(); MEM.flipped=[]; MEM.lock=false; renderMemory(); },700);
+    }
+  }
+});
+$('#memNew').onclick=()=>{sfxTap();startMemory();};
+
+/* ============================================================
+   14c. MY BODY
+   ============================================================ */
+const BODY_NAMES={hair:'Hair',eyes:'Eyes',nose:'Nose',mouth:'Mouth',ears:'Ears',tummy:'Tummy',hands:'Hands',feet:'Feet'};
+let bodyFound=new Set();
+function renderBody(){
+  $('#bodyStars').textContent='★'.repeat(bodyFound.size)+'☆'.repeat(Math.max(0,8-bodyFound.size));
+}
+$$('.bhot').forEach(b=>{
+  b.onclick=()=>{
+    const part=b.dataset.part2||b.dataset.part;
+    const label=BODY_NAMES[part]||part;
+    sfxTap(); say(label); sparkle(b,5);
+    b.classList.add('hit'); setTimeout(()=>b.classList.remove('hit'),260);
+    $('#bodySay').textContent='That’s your '+label.toLowerCase()+'!';
+    if(!bodyFound.has(part)){ bodyFound.add(part); renderBody();
+      if(bodyFound.size===8){ addXP(25); unlockSticker(); toast('Found every part!','🧍'); }
+    }
+  };
 });
 
 /* ============================================================
