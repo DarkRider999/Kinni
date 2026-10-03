@@ -87,9 +87,8 @@ The debug APK lands at `android/app/build/outputs/apk/debug/app-debug.apk` — i
 (`adb install app-debug.apk`) or sending the file directly. Or skip the CLI and run `npm run android:open`
 to open the project in Android Studio and hit Run.
 
-That produces a **debug-signed** APK (fine for sideloading/testing, not for the Play Store). A Play Store
-release needs a release keystore and `./gradlew bundleRelease` (produces an `.aab`) — out of scope until
-there's an actual release to ship.
+That produces a **debug-signed** APK (fine for sideloading/testing, not for the Play Store). For a release
+build, see "Release signing" below.
 
 ### What's already set up
 
@@ -105,3 +104,41 @@ there's an actual release to ship.
   nothing else is requested.
 - `android/app/src/main/assets/public` (the copied web build) and all Gradle/IDE build output are
   gitignored — regenerate with `npm run cap:sync` after pulling, don't expect them to already be there.
+
+## Release signing
+
+`android/app/build.gradle` has a `release` signing config wired up (the standard Gradle pattern: read
+`storeFile`/`storePassword`/`keyAlias`/`keyPassword` from a `keystore.properties` file). That file — and
+the keystore it points at — **must never be committed**: `android/.gitignore` blocks `*.jks`, `*.keystore`,
+and `keystore.properties` outright, and only `android/keystore.properties.example` (a template with no real
+values) is tracked in git. Without `keystore.properties` present, `assembleRelease`/`bundleRelease` still
+run — they just produce an **unsigned** build, which Android/Play Console will refuse to install/publish.
+
+A release keystore for this app (`com.splitfireproduction.aifacestudio`, alias `aifacestudio`, RSA 2048,
+valid 2026–2054) was generated and sent to you directly as a file, outside this repo — it's not here because
+a signing key must never live in version control. If you don't have that file anymore, generate your own:
+
+```bash
+keytool -genkeypair -alias aifacestudio -keyalg RSA -keysize 2048 -validity 10000 \
+  -storetype PKCS12 -keystore /somewhere/outside/the/repo/ai-face-studio-release.jks \
+  -dname "CN=SplitFire Production, OU=AI Face Studio, O=SplitFire Production, L=Unknown, ST=Unknown, C=US"
+```
+
+Then copy `android/keystore.properties.example` to `android/keystore.properties`, point `storeFile` at
+wherever you put the `.jks`, fill in the passwords you set, and build:
+
+```bash
+cd ai-face-studio/web/android
+./gradlew bundleRelease     # .aab for the Play Store -> app/build/outputs/bundle/release/
+./gradlew assembleRelease   # signed .apk for direct distribution -> app/build/outputs/apk/release/
+```
+
+If this ever becomes a real Play Store listing, enroll in **Play App Signing**: you upload using this key
+(it becomes your "upload key") and Google re-signs with a separate key it manages — if the upload key is
+ever lost or compromised, Google can help you recover, which a self-managed-only key can't offer. Generating
+a new keystore later just means registering its new upload certificate with Play Console; it doesn't require
+republishing under a new app.
+
+**Losing this keystore is permanent**: without it, you can never publish an update to an app already live
+under this identity — back it up somewhere durable (a password manager that holds file attachments, or an
+encrypted backup), not just on one laptop.

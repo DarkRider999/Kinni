@@ -1,5 +1,19 @@
 apply plugin: 'com.android.application'
 
+import java.util.Properties
+
+// Release signing: read from keystore.properties (repo root of the android/ project), which is
+// git-ignored and never committed (see android/.gitignore and android/keystore.properties.example).
+// The actual .jks/.keystore file and its passwords live outside git entirely. If this file is
+// absent, `assembleRelease`/`bundleRelease` still work but produce an UNSIGNED build — fine for
+// local checks, not for distribution. See ../../README.md "Release signing" for setup.
+def keystorePropertiesFile = rootProject.file('keystore.properties')
+def keystoreProperties = new Properties()
+def hasKeystoreConfig = keystorePropertiesFile.exists()
+if (hasKeystoreConfig) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
 android {
     namespace = "com.splitfireproduction.aifacestudio"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,10 +30,23 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (hasKeystoreConfig) {
+                storeFile rootProject.file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (hasKeystoreConfig) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }
