@@ -169,6 +169,38 @@ introducing new UI patterns.
   setting; instead the clip itself now plays back at 0.84x speed with pitch
   allowed to drop with it, for a gentler toddler-appropriate read.
 
+## Navigation restructure + deeper polish (round 5)
+
+- **New "Sounds" tab replaces "Rewards" in the bottom nav.** It's a hub that
+  consolidates Music Studio, Animal & Bird Sounds, and Animal Peekaboo - "all
+  music instruments and animal/bird sounds in one place," per request. Those
+  three screens' back buttons now return to the Sounds hub instead of their
+  old homes (Home and Science & Discovery), and were removed from those old
+  locations so there's exactly one way to reach each - no stale duplicate
+  entry points with inconsistent back-navigation. The Science hub leaves a
+  one-line pointer to the new location for anyone used to the old spot.
+  Rewards (XP, streak, sticker book, badge shelf) didn't move - it's no
+  longer a tab, but a "View stickers & badges" link on the Home screen's XP
+  card still reaches it, now with its own back button since it can't rely on
+  tab-bar navigation anymore.
+- **Floating pill-style bottom nav** with a gradient active-tab highlight and
+  a lift/shadow, replacing the previous flat tab strip.
+- **Decorative floating rainbow shapes** in the background (CSS-only,
+  `aria-hidden`, respects `prefers-reduced-motion`) for extra visual richness
+  consistent with the new palette, without touching any screen's actual
+  layout or content.
+- **Re-verified the two things most recently in question:**
+  - *Rhymes actually playing*: checked all 77 rhymes' note data statically
+    (2,396 notes total, zero with an undefined frequency), then dynamically
+    played a sample through the real `playRhyme()` path and counted actual
+    `_playNote()` calls against expected - full matches (e.g. 42/42, 33/33).
+  - *Camera/Family Photos*: re-read the whole native implementation and
+    hardened one real gap - some camera apps (a known Android
+    fragmentation issue) report success without actually writing the output
+    file. `onActivityResult` now also checks the file exists and is
+    non-empty before treating a capture as successful, instead of leaving a
+    broken entry in the gallery.
+
 ## Playful rainbow redesign (round 4)
 
 The app's colour system is built from 7 reusable CSS custom-property tokens

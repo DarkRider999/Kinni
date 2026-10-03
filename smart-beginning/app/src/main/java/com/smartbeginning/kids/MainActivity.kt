@@ -229,9 +229,14 @@ class MainActivity : Activity() {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQ_PHOTO || requestCode == REQ_VIDEO) {
-            val ok = resultCode == Activity.RESULT_OK
             val file = pendingCaptureFile
             pendingCaptureFile = null
+            // Some camera apps (an old, documented Android fragmentation
+            // issue, not limited to ancient OS versions) report RESULT_OK
+            // without actually writing anything to the EXTRA_OUTPUT file -
+            // treat an empty/missing file as a failure too, rather than
+            // leaving a broken entry in the gallery.
+            val ok = resultCode == Activity.RESULT_OK && file != null && file.exists() && file.length() > 0
             if (!ok) { try { file?.delete() } catch (t: Throwable) {} }
             notifyVaultResult(ok, if (ok) file?.name else null)
         }
