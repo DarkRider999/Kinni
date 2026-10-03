@@ -169,6 +169,40 @@ introducing new UI patterns.
   setting; instead the clip itself now plays back at 0.84x speed with pitch
   allowed to drop with it, for a gentler toddler-appropriate read.
 
+## Playful rainbow redesign (round 4)
+
+The app's colour system is built from 7 reusable CSS custom-property tokens
+(`--lumi` blue, `--mint` green, `--blush` pink, `--butter` gold, `--lav`
+purple, `--teal` cyan, `--coral` orange) referenced throughout the stylesheet,
+plus a large number of pre-computed light tints and dark variants hardcoded
+as literal hex values in inline styles (icon chips, card gradients) -
+apparently baked in from the original design tool rather than using `var()`
+everywhere. That meant a full re-theme was a bulk, file-wide hex substitution
+(every token's base/dark/light value, consistently, everywhere it appears)
+rather than hundreds of one-off edits - safe to do globally because `#` never
+appears inside the base64-encoded image/audio data also embedded in this
+file, so there was no risk of a substitution touching binary content.
+
+What changed:
+- Every token pushed from soft pastel toward a distinct, saturated hue -
+  same 7 colour families, much bolder.
+- The 6 subject-area tile gradients (Reading/Math/Create/Science/Feel/Life)
+  went from barely-distinguishable light tints to genuinely different vivid
+  colours, so "which section is this" is readable at a glance.
+- The page background changed from a flat blue/lavender wash to a bright
+  near-white canvas with a hint of all four corner colours - the intent
+  being that the *accents* (buttons, tiles, icons, progress bars) carry the
+  rainbow identity, not the backdrop itself, which stays out of the way of
+  readability.
+- ~80 small icon-chip background tints (the circular colour behind each
+  activity's emoji, used across every hub screen) were likewise mapped from
+  old pastel to new vivid, grouped by the same 7 hue families.
+- Deliberately **not** changed: Little One Mode's high-contrast
+  black/white/red visuals (changing those would undermine the actual
+  newborn-vision research the mode is built on), and the typography
+  (Baloo 2 was already a bold, rounded, kid-friendly display font - a decent
+  choice doesn't need replacing just because other things did).
+
 ## Family Photos (round 3)
 
 Reached only from Parent Zone → Family Photos (so it sits behind the Parent

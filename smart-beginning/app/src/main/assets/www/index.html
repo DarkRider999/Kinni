@@ -17,13 +17,13 @@
 :root{
   --sky:#eaf4ff; --sky-2:#fdf5ff;
   --ink:#3b3555; --ink-soft:#6f6a8a; --ink-faint:#a49fbb;
-  --lumi:#7fc4f5; --lumi-d:#3d7cc0; --lumi-l:#dcefff;
-  --mint:#8fdcbf; --mint-d:#4fae8c;
-  --blush:#ffb3c7; --blush-d:#dd7c97;
-  --butter:#ffd98e; --butter-d:#d9a83f;
-  --lav:#c3b0f2; --lav-d:#8a72cf;
-  --teal:#6fd3c7; --teal-d:#3aa79b;
-  --coral:#ff9d8a; --coral-d:#d96a54;
+  --lumi:#3fa1ff; --lumi-d:#1569c7; --lumi-l:#cfe4ff;
+  --mint:#2bd99a; --mint-d:#0e9f6e;
+  --blush:#ff4f93; --blush-d:#d6306f;
+  --butter:#ffb703; --butter-d:#cc8a00;
+  --lav:#9b5cff; --lav-d:#7022e0;
+  --teal:#0dc4d6; --teal-d:#0a93a1;
+  --coral:#ff5a36; --coral-d:#e03e1a;
   --white:#fff;
   --r-xl:34px; --r-lg:26px; --r-md:20px; --r-sm:14px;
   --shadow-card:0 10px 22px -14px rgba(59,53,85,.45);
@@ -36,10 +36,16 @@
 html,body{margin:0;padding:0}
 body{
   font-family:var(--font-body); color:var(--ink);
+  /* Playful rainbow: a clean, bright canvas with a hint of every section's
+     colour peeking in from the corners, so the vivid per-section accents
+     (tiles, buttons, icons) are what actually reads as "rainbow" rather
+     than the backdrop itself fighting for attention. */
   background:
-    radial-gradient(900px 600px at 15% 10%, #e6f3ff 0%, rgba(230,243,255,0) 60%),
-    radial-gradient(800px 700px at 88% 85%, #ffe9f4 0%, rgba(255,233,244,0) 62%),
-    linear-gradient(160deg,#f7fbff 0%,#fdf6ff 55%,#f2fbff 100%);
+    radial-gradient(760px 520px at 8% 4%, rgba(63,161,255,.16) 0%, rgba(63,161,255,0) 60%),
+    radial-gradient(700px 520px at 95% 10%, rgba(255,183,3,.16) 0%, rgba(255,183,3,0) 60%),
+    radial-gradient(760px 620px at 90% 92%, rgba(255,79,147,.15) 0%, rgba(255,79,147,0) 62%),
+    radial-gradient(700px 560px at 6% 90%, rgba(43,217,154,.15) 0%, rgba(43,217,154,0) 62%),
+    linear-gradient(160deg,#fffdf9 0%,#fdfaff 55%,#fafdff 100%);
   min-height:100vh; -webkit-font-smoothing:antialiased;
 }
 h1,h2,h3,h4,button,.display{font-family:var(--font-display)}
@@ -110,7 +116,7 @@ h1,h2,h3,h4,button,.display{font-family:var(--font-display)}
   background:#fff;box-shadow:0 4px 0 #dfd9f2;color:var(--ink);display:grid;place-items:center;font-size:17px;
 }
 .back:active{transform:translateY(3px);box-shadow:0 1px 0 #dfd9f2}
-.card{background:#fff;border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow-card);border:1px solid #f1eefb}
+.card{background:#fff;border-radius:var(--r-lg);padding:16px;box-shadow:var(--shadow-card);border:1px solid #e4d2ff}
 .card h3{margin:0 0 6px;font-size:16px;font-weight:800}
 .muted{color:var(--ink-soft);font-size:13px;line-height:1.6;font-weight:600}
 .tiny{font-size:11.5px;color:var(--ink-faint);font-weight:700}
@@ -180,12 +186,12 @@ h1,h2,h3,h4,button,.display{font-family:var(--font-display)}
 .tile .tchar{position:absolute;right:-6px;bottom:-4px;width:72px;height:72px;opacity:.95}
 [dir="rtl"] .tile .tchar{right:auto;left:-6px}
 .tile .rule{position:relative;font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;opacity:.65}
-.t-reading{background:linear-gradient(150deg,#f0e8ff,#e3d6ff)}
-.t-math{background:linear-gradient(150deg,#fff0dd,#ffe2bd)}
-.t-create{background:linear-gradient(150deg,#e6fbf3,#cdf3e6)}
-.t-science{background:linear-gradient(150deg,#e3f6ff,#c8ecff)}
-.t-feel{background:linear-gradient(150deg,#ffe9f1,#ffd6e5)}
-.t-life{background:linear-gradient(150deg,#eefafc,#d7f2f6)}
+.t-reading{background:linear-gradient(150deg,#e4d2ff,#c08fff)}
+.t-math{background:linear-gradient(150deg,#ffe4a3,#ffb833)}
+.t-create{background:linear-gradient(150deg,#b8f5d8,#4fe0a0)}
+.t-science{background:linear-gradient(150deg,#bfe2ff,#5fb3ff)}
+.t-feel{background:linear-gradient(150deg,#ffd0e2,#ff80b0)}
+.t-life{background:linear-gradient(150deg,#bdf0f3,#4fd8df)}
 
 /* ---------- activity rows ---------- */
 .act{
@@ -219,7 +225,7 @@ canvas.trace{position:relative;display:block;width:100%;height:330px;border-radi
 
 /* ---------- storybook ---------- */
 .book{background:#fff;border-radius:var(--r-lg);box-shadow:var(--shadow-card);padding:16px;margin-top:8px;min-height:352px;display:flex;flex-direction:column;gap:12px}
-.book .art{height:150px;border-radius:20px;background:linear-gradient(135deg,#e9f4ff,#ffeef7);display:grid;place-items:center;font-size:62px}
+.book .art{height:150px;border-radius:20px;background:linear-gradient(135deg,#e9f4ff,#ffd0e2);display:grid;place-items:center;font-size:62px}
 .book .pg{font-size:15.5px;line-height:1.62;font-weight:600;flex:1}
 .book .pgn{font-size:11px;font-weight:800;color:var(--ink-faint);letter-spacing:.1em;text-transform:uppercase}
 .book .navbtns{display:flex;gap:10px;justify-content:space-between}
@@ -339,7 +345,7 @@ canvas.paint{width:100%;height:330px;border-radius:20px;background:#fffdf7;displ
   background:rgba(255,255,255,.92);box-shadow:0 2px 6px rgba(43,37,67,.3);font-size:11px;display:grid;place-items:center;cursor:pointer}
 .rep{display:flex;flex-direction:column;gap:4px;margin-top:9px}
 .rep .lab{display:flex;justify-content:space-between;font-size:12px;font-weight:800;color:var(--ink-soft)}
-.rep .tr{height:9px;background:#f1eefb;border-radius:99px;overflow:hidden}
+.rep .tr{height:9px;background:#e4d2ff;border-radius:99px;overflow:hidden}
 .rep .tr span{display:block;height:100%;border-radius:99px}
 .switch{width:48px;height:28px;border-radius:99px;background:#e6e1f5;border:0;cursor:pointer;position:relative;flex:0 0 auto;transition:background .2s}
 .switch::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 4px rgba(59,53,85,.25);transition:transform .2s}
@@ -395,13 +401,13 @@ input[type=range]::-moz-range-thumb{width:24px;height:24px;border:0;border-radiu
    ============================================================ */
 :root{
   --ink:#2b2543; --ink-soft:#5f5980; --ink-faint:#8f89ad;
-  --lumi:#6fbcf6; --lumi-d:#3576c4; --lumi-l:#d4ebff;
-  --mint:#7fdab6; --mint-d:#41a882;
-  --blush:#ffa4bd; --blush-d:#d96a89;
-  --butter:#ffd077; --butter-d:#d19f2f;
-  --lav:#b79ff2; --lav-d:#7d62cd;
-  --teal:#5ed0c2; --teal-d:#2f9d91;
-  --coral:#ff8f79; --coral-d:#d15a44;
+  --lumi:#3fa1ff; --lumi-d:#1569c7; --lumi-l:#cfe4ff;
+  --mint:#2bd99a; --mint-d:#0e9f6e;
+  --blush:#ff4f93; --blush-d:#d6306f;
+  --butter:#ffb703; --butter-d:#cc8a00;
+  --lav:#9b5cff; --lav-d:#7022e0;
+  --teal:#0dc4d6; --teal-d:#0a93a1;
+  --coral:#ff5a36; --coral-d:#e03e1a;
   /* glows */
   --g-cool:rgba(120,180,255,.55);
   --g-warm:rgba(255,190,120,.5);
@@ -442,12 +448,12 @@ body{font-size:15px}
 .field{font-size:15.5px;padding:14px 16px;border-radius:18px}
 
 /* ---- panels: brighter gradients ---- */
-.t-reading{background:linear-gradient(150deg,#f0e4ff,#ddc9ff)}
-.t-math{background:linear-gradient(150deg,#fff1d8,#ffdfb2)}
-.t-create{background:linear-gradient(150deg,#dffbee,#c3f3e0)}
-.t-science{background:linear-gradient(150deg,#ddf2ff,#bde6ff)}
-.t-feel{background:linear-gradient(150deg,#ffe3ee,#ffcada)}
-.t-life{background:linear-gradient(150deg,#e6fafd,#cbf1f6)}
+.t-reading{background:linear-gradient(150deg,#ddc2ff,#b26bff)}
+.t-math{background:linear-gradient(150deg,#ffd87a,#ffa500)}
+.t-create{background:linear-gradient(150deg,#a0f0cb,#2bd99a)}
+.t-science{background:linear-gradient(150deg,#a8d4ff,#3fa1ff)}
+.t-feel{background:linear-gradient(150deg,#ffbcd9,#ff4f93)}
+.t-life{background:linear-gradient(150deg,#a0eaee,#0dc4d6)}
 
 /* ---- glow: surfaces read as lit ---- */
 .card{box-shadow:var(--lift),0 0 26px var(--g-cool);border-color:rgba(255,255,255,.7)}
@@ -506,7 +512,7 @@ body{font-size:15px}
 .rtab:active{transform:translateY(3px);box-shadow:0 1px 0 #e6e1f5}
 .rtab.on{background:linear-gradient(135deg,#a9d8ff,#d9c2ff);color:#2b2543;box-shadow:0 4px 0 #a98fdd,0 0 22px rgba(140,160,255,.6)}
 .rhymeArt{font-size:92px;text-align:center;padding:18px;border-radius:34px;margin-top:6px;
-  background:linear-gradient(135deg,#eaf4ff,#ffeef7);box-shadow:var(--lift),0 0 34px var(--g-pink)}
+  background:linear-gradient(135deg,#eaf4ff,#ffd0e2);box-shadow:var(--lift),0 0 34px var(--g-pink)}
 .lyrics{margin-top:14px;display:flex;flex-direction:column;gap:8px}
 .lyr{font-family:var(--font-display);font-weight:800;font-size:19px;line-height:1.35;color:var(--ink-faint);
   padding:10px 14px;border-radius:20px;transition:all .25s ease}
@@ -523,7 +529,7 @@ body{font-size:15px}
 .agrid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:6px}
 .af{position:relative;border:0;cursor:pointer;aspect-ratio:1;border-radius:28px;font-size:46px;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-  background:linear-gradient(150deg,#fff,#eef6ff);
+  background:linear-gradient(150deg,#fff,#cfe4ff);
   box-shadow:var(--lift),0 0 22px var(--g-cool);transition:transform .12s ease}
 .af:active{transform:scale(.94)}
 .af .al{font-family:var(--font-display);font-weight:800;font-size:11.5px;color:var(--ink-soft);letter-spacing:.02em}
@@ -532,8 +538,8 @@ body{font-size:15px}
   border:3px solid rgba(255,200,120,.95);box-shadow:0 0 24px rgba(255,190,90,.9)}
 @keyframes abump{0%{transform:scale(1)}35%{transform:scale(1.14) rotate(-3deg)}70%{transform:scale(.97)}100%{transform:scale(1)}}
 .af.farm{background:linear-gradient(150deg,#fff8e8,#ffe6c2)}
-.af.bird{background:linear-gradient(150deg,#eaf6ff,#cfe9ff)}
-.af.wild{background:linear-gradient(150deg,#eefaf3,#cdf1e2)}
+.af.bird{background:linear-gradient(150deg,#cfe4ff,#cfe4ff)}
+.af.wild{background:linear-gradient(150deg,#b8f5d8,#cdf1e2)}
 .af.pet{background:linear-gradient(150deg,#fff0f6,#ffd9e8)}
 
 /* ---------- animal matching game ---------- */
@@ -560,13 +566,13 @@ body{font-size:15px}
 @media (prefers-reduced-motion:reduce){.bigplay{animation:none}}
 
 .bigcard{border-radius:34px;padding:20px;text-align:center;margin-top:4px;
-  background:linear-gradient(150deg,#efe7ff,#ffeef7);box-shadow:var(--lift),0 0 34px var(--g-pink)}
+  background:linear-gradient(150deg,#e4d2ff,#ffd0e2);box-shadow:var(--lift),0 0 34px var(--g-pink)}
 .alTop{font-family:var(--font-display);font-weight:800;font-size:112px;line-height:1.05;color:var(--lav-d);
   text-shadow:0 3px 0 #fff,0 0 26px rgba(170,140,255,.9)}
 .alWord{font-family:var(--font-display);font-weight:800;font-size:22px;margin-top:6px;color:var(--ink)}
 .lgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-top:14px}
 .ltile{border:0;cursor:pointer;aspect-ratio:1;border-radius:26px;font-family:var(--font-display);
-  font-weight:800;font-size:38px;color:var(--lav-d);background:linear-gradient(150deg,#fff,#f1ecff);
+  font-weight:800;font-size:38px;color:var(--lav-d);background:linear-gradient(150deg,#fff,#e4d2ff);
   box-shadow:var(--lift),0 0 20px rgba(170,150,255,.45)}
 .ltile:active{transform:scale(.94)}
 .toy,.mtab,.ltile{transition:transform .09s, box-shadow .12s}
@@ -579,19 +585,19 @@ body{font-size:15px}
 .tracewrap{position:relative;display:flex;justify-content:center;margin:12px 0 4px}
 #trCanvas{touch-action:none;display:block;border-radius:26px;cursor:crosshair;
   background:linear-gradient(150deg,#fff,#f7f4ff);
-  box-shadow:inset 0 0 0 2px #f0ebff,0 8px 18px -10px rgba(43,37,67,.4)}
+  box-shadow:inset 0 0 0 2px #e4d2ff,0 8px 18px -10px rgba(43,37,67,.4)}
 .trbar{margin-top:12px}
 .trchip{display:inline-block;font-size:11.5px;font-weight:800;border-radius:99px;padding:4px 10px;
   background:#eef1fb;color:var(--ink-faint)}
 .trchip.ok{background:linear-gradient(135deg,#b6f2d8,#8fe6c3);color:#0f5b45}
 .soundtoggle{position:absolute;top:10px;right:12px;z-index:60;width:34px;height:34px;border:0;border-radius:50%;
-  background:rgba(255,255,255,.94);box-shadow:0 8px 16px -8px rgba(43,37,67,.5),0 0 0 2px #f0ebff;
+  background:rgba(255,255,255,.94);box-shadow:0 8px 16px -8px rgba(43,37,67,.5),0 0 0 2px #e4d2ff;
   font-size:15px;line-height:1;cursor:pointer;display:grid;place-items:center;transition:transform .15s}
 .soundtoggle:active{transform:scale(.9)}
 .soundtoggle.off{opacity:.5;box-shadow:0 8px 16px -8px rgba(43,37,67,.5),0 0 0 2px #eceaf3}
 #trHand{position:absolute;width:26px;height:26px;border-radius:50%;pointer-events:none;opacity:0;
   transform:translate(-50%,-50%);transition:opacity .2s;
-  background:radial-gradient(circle at 34% 30%,#fff,#7fdab6 68%);
+  background:radial-gradient(circle at 34% 30%,#fff,#2bd99a 68%);
   box-shadow:0 0 0 6px rgba(127,218,182,.30),0 0 20px rgba(90,220,170,.95)}
 #trHand.show{opacity:1}
 .heronudge{animation:nudge .55s cubic-bezier(.3,1.4,.4,1)}
@@ -609,7 +615,7 @@ body{font-size:15px}
 .diag{font-family:ui-monospace,monospace;font-size:11px;line-height:1.5;background:#f7f6fb;border-radius:14px;padding:10px;white-space:pre-wrap;color:#3a3358;margin-top:10px;max-height:230px;overflow:auto}
 .gsopts{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
 .gsopt{border:0;cursor:pointer;border-radius:20px;padding:12px 6px;font-family:var(--font-display);font-weight:800;
-  font-size:12.5px;background:linear-gradient(150deg,#fff,#f1ecff);color:var(--ink);box-shadow:var(--lift)}
+  font-size:12.5px;background:linear-gradient(150deg,#fff,#e4d2ff);color:var(--ink);box-shadow:var(--lift)}
 .gsopt.ok{background:linear-gradient(150deg,#b6f2d8,#8fe6c3);color:#0f5b45}
 .gsopt.no{opacity:.5}
 .sboard{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-top:12px}
@@ -650,10 +656,10 @@ body{font-size:15px}
 .pkey{position:relative;flex:1 1 0;min-width:30px;height:160px;border:0;cursor:pointer;border-radius:0 0 16px 16px;
   background:linear-gradient(180deg,#fff,#f3f1fa);box-shadow:0 6px 0 #d9d3ef;font-family:var(--font-display);
   font-weight:800;font-size:13px;color:#a49dc0;display:flex;align-items:flex-end;justify-content:center;padding-bottom:10px}
-.pkey:active,.pkey.lit{transform:translateY(5px);box-shadow:0 1px 0 #d9d3ef;background:linear-gradient(180deg,#8fdcbf,#4fae8c);color:#fff}
+.pkey:active,.pkey.lit{transform:translateY(5px);box-shadow:0 1px 0 #d9d3ef;background:linear-gradient(180deg,#2bd99a,#0e9f6e);color:#fff}
 .pkey.blk{flex:0 0 24px;min-width:24px;height:100px;margin:0 -13px;z-index:2;border-radius:0 0 12px 12px;
   background:linear-gradient(180deg,#4b4468,#2b2543);box-shadow:0 6px 0 #1b1730;color:#cfc9e4}
-.pkey.blk:active,.pkey.blk.lit{background:linear-gradient(180deg,#7d62cd,#5b46a0)}
+.pkey.blk:active,.pkey.blk.lit{background:linear-gradient(180deg,#7022e0,#5b46a0)}
 .xbarhit{transform:translateY(5px) scale(.97)!important;filter:brightness(1.35) saturate(1.3)}
 .drumpads,.sfxpads{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:10px}
 .drumpad,.sfxpad{border:0;cursor:pointer;aspect-ratio:1;border-radius:26px;display:flex;flex-direction:column;
@@ -682,7 +688,7 @@ body{font-size:15px}
 .tunerow .tt{font-family:var(--font-display);font-weight:800;font-size:14px;color:var(--ink)}
 .tunerow .ts{font-size:11px;color:var(--ink-faint);font-weight:700;margin-top:3px}
 #nbDots,#ngDots{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin-top:14px;min-height:34px}
-.dotp{width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#ffa4bd 70%);
+.dotp{width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#ff4f93 70%);
   box-shadow:0 0 12px rgba(255,150,190,.85)}
 /* ---------- Little One Mode: 0-12 months, no tapping required ---------- */
 #s-littleone{padding-left:0;padding-right:0}
@@ -697,7 +703,7 @@ body{font-size:15px}
 .memcard{aspect-ratio:1;border:0;cursor:pointer;border-radius:16px;font-size:34px;display:flex;align-items:center;justify-content:center;
   background:linear-gradient(150deg,#a9d8ff,#e0c8ff);box-shadow:0 5px 0 #8a95d9;transition:transform .15s}
 .memcard.flip{background:#fff;box-shadow:0 2px 0 #e5e1f5;transform:scale(1.03)}
-.memcard.found{background:linear-gradient(150deg,#8fdcbf,#4fae8c);box-shadow:0 2px 0 #3a8a6d;cursor:default}
+.memcard.found{background:linear-gradient(150deg,#2bd99a,#0e9f6e);box-shadow:0 2px 0 #3a8a6d;cursor:default}
 /* ---------- Animal & Bird Sounds ---------- */
 .animalgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px}
 .animaltile{border:0;cursor:pointer;border-radius:22px;aspect-ratio:1;display:flex;flex-direction:column;
@@ -721,12 +727,12 @@ body{font-size:15px}
     <div class="mark">Smart<br><span>Beginning</span></div>
     <p>An AI-powered learning universe for little ones from 1 month to 5 years — soothing sounds and faces for babies, then reading, math, science, creativity, feelings and real-world skills, guided by six characters.</p>
     <ul>
-      <li><span class="dot" style="background:#c3b0f2"></span>Read with Mira</li>
-      <li><span class="dot" style="background:#ffd98e"></span>Bingo's Treasure Hunt</li>
-      <li><span class="dot" style="background:#8fdcbf"></span>Creative Studio</li>
-      <li><span class="dot" style="background:#6fd3c7"></span>RoboRex Discovery</li>
-      <li><span class="dot" style="background:#ffb3c7"></span>Zuzu's Feelings</li>
-      <li><span class="dot" style="background:#7fc4f5"></span>Real-World Skills</li>
+      <li><span class="dot" style="background:#9b5cff"></span>Read with Mira</li>
+      <li><span class="dot" style="background:#ffb703"></span>Bingo's Treasure Hunt</li>
+      <li><span class="dot" style="background:#2bd99a"></span>Creative Studio</li>
+      <li><span class="dot" style="background:#0dc4d6"></span>RoboRex Discovery</li>
+      <li><span class="dot" style="background:#ff4f93"></span>Zuzu's Feelings</li>
+      <li><span class="dot" style="background:#3fa1ff"></span>Real-World Skills</li>
     </ul>
     <div class="foot">Clickable prototype — every tile, minigame and the Parent Zone are live. Audio uses your safety-gated browser sound; the Parent Zone PIN accepts any 4 digits in this build.</div>
   </aside>
@@ -778,11 +784,11 @@ body{font-size:15px}
 
           <div class="tiny" style="margin:18px 4px 8px">KINNI'S LEARNING PATH — IN THIS ORDER</div>
           <div class="stack">
-            <button class="act" data-go="colors"><span class="ico" style="background:#ffe9f1;font-family:var(--font-display);font-weight:800;font-size:20px;color:#dd7c97">1</span>
+            <button class="act" data-go="colors"><span class="ico" style="background:#ffd0e2;font-family:var(--font-display);font-weight:800;font-size:20px;color:#d6306f">1</span>
               <span><span class="an">Colours &amp; 3D shapes</span><span class="ad">Start here · first things first</span></span><span class="go" id="st1">›</span></button>
-            <button class="act" data-go="reading"><span class="ico" style="background:#efe7ff;font-family:var(--font-display);font-weight:800;font-size:20px;color:#8a72cf">2</span>
+            <button class="act" data-go="reading"><span class="ico" style="background:#e4d2ff;font-family:var(--font-display);font-weight:800;font-size:20px;color:#7022e0">2</span>
               <span><span class="an">Letters &amp; sounds</span><span class="ad">After colours and shapes</span></span><span class="go">›</span></button>
-            <button class="act" data-go="math"><span class="ico" style="background:#fff4e2;font-family:var(--font-display);font-weight:800;font-size:20px;color:#d9a83f">3</span>
+            <button class="act" data-go="math"><span class="ico" style="background:#ffe4a3;font-family:var(--font-display);font-weight:800;font-size:20px;color:#cc8a00">3</span>
               <span><span class="an">Numbers &amp; counting</span><span class="ad">After letters</span></span><span class="go">›</span></button>
           </div>
 
@@ -828,16 +834,16 @@ body{font-size:15px}
               <div><div class="tname">Real-World Skills</div><div class="tsub">Hygiene · safety · food</div></div>
               <div class="tchar" data-char="lumi"></div>
             </button>
-            <button class="tile t-science" data-go="music" style="background:linear-gradient(135deg,#fff4e2,#ffe9f1)">
+            <button class="tile t-science" data-go="music" style="background:linear-gradient(135deg,#ffd87a,#ff9142)">
               <span class="ti">🎹</span><span class="tn">Music Studio</span><span class="td">Xylophone, piano and melody tunes</span><span class="go">›</span></button>
-            <button class="tile t-feel" data-go="watch" style="background:linear-gradient(135deg,#e9f6ff,#efe7ff)">
+            <button class="tile t-feel" data-go="watch" style="background:linear-gradient(135deg,#8ecfff,#b98bff)">
               <span class="ti">📺</span><span class="tn">Watch &amp; Learn</span><span class="td">Hand-picked videos for each subject</span><span class="go">›</span></button>
-            <button class="tile t-create" data-go="rhymes" style="grid-column:1/-1;background:linear-gradient(135deg,#fff0f6,#e9f6ff)">
+            <button class="tile t-create" data-go="rhymes" style="grid-column:1/-1;background:linear-gradient(135deg,#ff9ec7,#b98bff)">
               <div class="rule">Sing &amp; listen</div>
               <div><div class="tname">Rhymes &amp; Stories</div><div class="tsub">77 nursery rhymes &amp; songs · 32 storybooks</div></div>
               <div class="tchar" style="position:absolute;right:10px;bottom:6px;width:64px;height:64px;font-size:44px">🎵</div>
             </button>
-            <button class="tile t-feel" data-go="littleone" style="grid-column:1/-1;background:linear-gradient(135deg,#fff8ec,#ffeef0)">
+            <button class="tile t-feel" data-go="littleone" style="grid-column:1/-1;background:linear-gradient(135deg,#ffe8c2,#ffd4dc)">
               <div class="rule">Newborn &amp; infant</div>
               <div><div class="tname">Little One Mode</div><div class="tsub">High-contrast faces and a soft lullaby — nothing to tap, just look and listen</div></div>
               <div class="tchar" style="position:absolute;right:10px;bottom:6px;width:64px;height:64px;font-size:44px">🍼</div>
@@ -859,17 +865,17 @@ body{font-size:15px}
           <div class="band"><div class="big" style="overflow:hidden;border-radius:50%;background:#fff"><img src="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAAAAAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCADwAPADASIAAhEBAxEB/8QAHAABAAEFAQEAAAAAAAAAAAAAAAQBAwUGBwII/8QAPhAAAQMCBAMGAwUGBQUAAAAAAQACAwQRBRIhMQZBUQcTImFxgRQykSNCobHBCBVScoLhFlNi0fEkM0OS8P/EABoBAQADAQEBAAAAAAAAAAAAAAABAgQDBQb/xAAmEQACAgICAQUBAQADAAAAAAAAAQIDETEEIRITIjJBYVFxBbHw/9oADAMBAAIRAxEAPwD6cVVRFiO5VUREAREQBERAEREAREQBF5e5rGuc9wa0C5JOgWg8V9rPDPDpcyepfM8f5Tbj8wSmSUm9HQEXzxjHb/BJnOHGrhaRZmSkjd7kvd+ixeGdvGPS1tNT08LMRknkDI4zSiN8hOwGVxF1HkWVbPptFhcPxOqlp4ZK2GOKVzAXxMdmynnY81MocUpqySSKN+WaM2fG7RzTvqPSx8xqFIlXKOyciqiFAioiAIiIAiIEAREQBEQIAiIgCIiAIiIAiIgCIiALCcW8UYVwrhj63GapsMY+VoGZ7z0A5qZj2K02CYRVYjWvDIKdhe4k2v5L5Yf+9O1zi+rqqupNLgFIc0s58LY2DZoB0zkczsNTyBhv6Oldbmz1xn2g8TdpGLvwvhimrBQkDLSxGziP4pCNGj1NlXDew+oii+M4t4gpcMgtd7I7PcP63ENHtdZTFO0TDOF8OODdnmHxNjYbOrJG5u8dzcAdXn/U72C5HxHiOM47VGbGq+arkcdpXXa3yDRp9LBVUlk0+Cijpf8AhzsfoJiMQ4jqKzLoMlS5wuP5GgLOcKYN2ZUvFOGYpw3ir56yAvc2F1S97nHKR/23C5IB5LgX7tdI7JHmPn0/RWZMPkjkDonPbI35XhxuD1B6qyktZJjJJ5cT7uiq6Svpy+jqWl45s3afNu4WpcWUuPCelx7hU08mJUkb4poZHENqmcmjo4eLe29rr5iwbifjDD/FSY1UufGPD31pCAOV3a/iuk9nXbZUiogoOK2udM+VrPjGWDHFxsM4+7y1GlgmztmE146/06z2c9pdTjEvwHEOE1WH1jZO4z9y8RmQbtJPykbb2uuoja42Wp0LpZYo5oZRLC/xWJva/Q9PJZ7DHuJkaT4W2sOhUoyXUeHaZOVQqIhmCIiAIiIAiIgCIiAIiIAiIgCIiAIiBAECKqA4R+01jk0rMJ4Yw516utlF2g8zo0HoNiuQcV482joYeEOHSX4ZSutJJHYmrm+893le9httfYLZ+2rF2wdqeMVuYOfh1IIogPuzPbkB9QC4+wUDsq4RZiVAK2qbdlQ43B/yxy/qO/kCs11qrj5M9LjVOaUUatw7wti+NyNMbTHG75XG5z+YA39dlsVdwpQYG0w1lV8ViDgAKdhzOH8wbfKPcldzoMLpaeARCJmS1iLbqXHQU0TSIIY4QdT3bA0n3AXnO+cz0I0wh+nzzTcKYtWSGKCldDGTu9mQE+h1/BTncESQ1Lacn4itv9pGz/x+vn+QXePgGGMxxvdDGd+6Aa4/1b++6rRYTRUkeSCFjG/etu/+YnU+5U+rNkenWvo5bhXZ01tFNLNZ8stoxYab6u9OXsuXcRcKOp6iaCRtpmHK7p/9qvrBzW2sANNFoPH/AA/HUxPrGN2dG6QNHIOsT/6uP0CmF0oSzkSrjbHGDDdiXGlQ9hwiqe6WqpwA+Nx1kj271nUjZw9DzW9cOdoFNWdp9bgNPIXQQsFO51/DJMLl2X+X5T/ZfPrnPwDialrcv29FMSWbBzQbOafUXW74j3OHduWH4nh9hTYqymrGtaP4/A4+9gV6Vc/KOUYuQm14vf8A7B9QIiLseWEREAREQBERAERAgCIiAIiIAiIgCIiAISQCQLkC4HVAomKUZraN8bJZYZLHJJFIY3NPUOF/yKA+Le1yMs7Scbpy/M587DLc3u7Lc/i4rs3ArYsI4Pw4ytfd0Yysa273k6gALk/EvCr6XtRoYZz38FdUgBxkLzJ4vEXZteu/4bLvFZNSYNQS11QA2KnjOv8AC0ch0Xlcuan4pHvcODgm5EQ1+PPcDFhMEMR1+2nu76BZTD6yolAFTAI3dWuuFxjHu2HF4clVQYK52GyAvZI+7TJGCBnAINmk6Am2psLrf+zrjOl4uoHVEEb6eeO3ewSCzmg7O82mxsRpoVynxra15SWEdYciqxuMXlm8AnkqPlEbSXXXpgu1RMQqYqSnlnqJGxwxtL3vebBoG5J5BUx/C6wQ6rHo6cnPS1TmjcsZmsrtJiFDjFNM2mlElhlkjIs5t+RBXN5O2rh6PEzS0rJ6lodYzRMcW2G5Gmul1vmD12G8SUUGLYPI031ZM0WJ6td1HkplVOCzNYIjZCT9jycO7Von0mNzWDj4tL89brMcBCXiDjPgRjrvqIcOyPPRrJpLH6NWT7esPZBT0+ItHiee7PsFkv2XKKCpxHEMRkLTPTRMgaD90XcSR6lxut/FeYYMHMfjJs+kOZVE5aItp5IREQBERAEREAREQBERAEREAREQBERAAvMgcWHISHciLfqvSID52xDh2Wh4/oKmtkdNUHEiSDs0d27xD1uFumOYJQ47hktBicQlp5BYgkiy2HjjConV9DiAb4hK0Egah2wPuLj2WKbKO8NzzXiWRddjj/NH01U1fWpL+d/6cz7Uuz3E+IoadmCVbKZooY6KaMTd3HI2N5ey7eYJdcjkQCE7JOz3GOGq6Stxqv757aVtIyMSmRoYHZgBfYA2sB1cusRGM7qlTI7JlgALhuCbaLRLlWODi30ZY8SuM/KK7LkLowyxOq0vtVwfFcY4a7jBcrpmzxzPjcA4Sta4HKWu0cL6kHQ5bc1scU1e2AMNPG+XmA+zTryNrqfE8jwSi19tb6LPXY4tNfR3sqymm9nzBwlwHxZNxPI3FKL4aKpro5pZDSWay0udzmODbRjQ6N3uBay7bw1we/A+K8YrcKeKbBayTPHRSMOZh5kWNmgnW1luvdMtdrreV14D7Ote61XcmdsfGRmo4kKn5ROb9uNF+8MGwqia4tfPWZQ4C+UBhJNlsvYzw3hVHLO+kp6imfDZr2STEiQj75bsU4nopa3G8JyMOWkc6UvOwLtLDqbA/Vb/AML8PwYbEKiSJnxsgOZ5aLtBN8t+nO3VU4vlKxJaWy3M8IUty+UtGwIiL1DwwiIgCIiAIiBAEREAREQBERAEREAREQBERAWqiFs9PJE/5XtLT5Lm1dBJS1ckcjSHNNiF05Y3GcKp8QizSuEUjRpL0Hn1Cy8mh2rMdo38HlLjyalpmiwFzhYFabxpW8V4MySswOOlqoHuDXMkjJdCP4hY6jqtrxSppsJlInq4TGCB3jSS3U29lKpamnroLRvZIw9DcLy0nCXuR7qnFrK7TOVU/FXGsNK0ltBLJ83fudYEX2y3sFtHC2PcQ45kq8RwmKgpWuMYIkcXSn+INI0b6raW4HB3hkLYyTvcaqRUujhiDTYALpZJOOiXKtv2FsyuAVYXlzuqhRVkE9T3Ec0bpbXLQ65A6lbtgGDQwhtRJIyaQagMN2tP6lKap2vrRn5F8KI97K4VgZiqRVVb2vdo9seX5DbmfJZ5EXr11xrWInz9lsrXmTCIiucgiIgCIiAIiIAiIgCIiAIiIAiIgCIiAIiISWamdsEdzq46Nb1KwFbHPXMcZH3FtGnQD2U6olElS57jZjfCOllSFwey4HhceZ+t/oq/I0QXisml4rgDa2kkjfazha7OXT9Fp37orsKnGTNE8DwuYbXH6hdnZRxtD8ut9BcbBWJqCN/hkY14J0BF1mu4qsX8Zvo5nh09HLoavG3DL3zfXuxdXBhVTUuL6mR8sh5yG4+i6CcJpmPP2QDtLNzaKZS4dHE7wMaH233Kyx4E2/czTLn1pe1GrcL8MNpHvmkaRJIALHcC99ehP6La6GMNe4MaWOA3ClmFzS3uiB1V17msAudzZelXUoLxR5l17teWXKeYv8L75uRta6vrHOe8GIsacpOp6Kex2ZoPVXMklg9IiIVCIiEBERAEREARE5IAiIgCIiAIiIAiIgCsVsvdU7i35joFfWLr3d7Vta037sHTqVD0XhHLI0LGwxPMl3BztQrE0whrIGMN2m7g3yt/z9VIfOyJwDrEO0PksBiUhON08YdqIn28tQqvpGpLL7Nke10+XI/KBy91elmZDYOub9FDpJGsjYCQCRY35qY+KOTV7blWTKPC6ejwWjvXutmzZT+eykx3vsPMqI57WSuHQNyge6kx/KQDcE3urIq10eY2yNneXEmM+e6i4jUsbGbaljgB6nRSjPGX5A655eawvEUwhhYRZpfK27t+aq3hEwWX2ZeCZrtM4LiTZSaUkF7Sb63H6rE0rWuga8G1mgC/NTxL3Rjc753FEyJx+kZBECKTOEREAREQBERAEREACIiAIiIAiIgCIiAo5wa0uOwF1hKUPfPNJILC97rJ4g/JSSHXooVC8PhzNAvta6jbO1fUWyxVyNbK5vd5n218wtWoHsnxisqHPzxx5Y23Go5kfVbTiVQ2OI522dbU22Wt8NxB9G97ic0rzKTz1N/yVJbNENGxRwNkDSXEADa26mnIAA8gDkCeij01h4QbEC269zU4mdmLgLC2ysjnvbPTmsM7i9vJtiDbqr8fPKLWJBUaWIySOs7KBl357q5KZGwgRXzX5aqxGz02BjJHPaCXE31OgWJ4jj77DalsWUysbm9CNf0WYjzGNub5ra3UaoiYBK5xJDhqDsoa6EX32YjBqphpWSAmTQZemqzsVpYg5zb+R5LWeG5GtidTuIcYnuZZ3kbD8FskkrmBvdtuLW01UR0XmuyfTOzRa7g2V1R6U2L2+hUhWMr2EREKhERAEREAVVREAREQBERAEVVRAEREBDxYgUEpNtLHX1WMpnydzaMgDlYbLIY9II8IqiQDdmWxF99Fo9DTQxtuxuSw3aSNPZZbuQqppYyejxKPUrbf9MtxBJJNSzsDG5hG45gdQ0DUq1g2SGnhjtYlo2UdzslFXAve9z2MawucXZQXaj30+iyNFD9mx2VpeOfRWhNWe5Ezh4ZiTGQnvxI0tAuCdNVkG6j9FAhmaXlguCDueZXowyOqBI19mabnZdV1o4NZ2XJA90zyC7KA21jz1UqK9jm091GJ+1d08OX11VZYTI4EOy5dP7hWIfey7PG6UsDXWaDqrcrhIZGDZosSCrjpmtcGEm5XmZgcxzScpd+KEL9NWp4jSVlVMGNcx9RYa21yg6/mtigqH5AXvawW9FiK0t+ExOI5gbxOYWmxab5c30UCCCDKQQ1z2jd2pHuVkneqnjGTbXSrYtv6Nywt7ZO9c2QSbC4IP5LIBYDhEtbBURMDWgPDrAW3/wCFn1pqn6kFIwXw8LHEIiK5wCIiAIiIAiIgCIiAIiIAiIgCIiAx+PwSVOD1UcIvKW3aOpBvb8FodDLHKyRkj7NuA4g2s02ub+l10xYbEOHaOrnM7DJTzO+YxWs71BWTk8d2NSjs9Dh8qNUXCemaxVUU1KGxyA9yHBjHjUPF7g356arN4ZDI1huQAToFJxumbDQUkLASyIhrb+QsrVBM13gFyWrpXWq+iJWu1eRemhbn7wM8bd7Kz8U1jgHXNwr4pz35kDwNSQeahVro4pLSNAJ8tP7Lo+uykcPrZI3meRrfLy20KuwTZy8AG7Ta6x7J7yvJJ3bcDlursdRmcGMtc66fmiZLXRPaGmUODQZFWaDNlcXEObzsozafNIHCS4G/9lMllYywcTd22isv0prRrtdDLNV1DKdjnOIbfKLmwdfZQ6uGOhqDmd9s6LNO3NfI8k2BHI5cq2mijAxMutqWH9F4m4co56+SqmdM4PdnMWazSfPmVku47n3HZpp5SreJa/7LHBsTxSzzOJLZHANJ52Gp+pWwqjGtYwNY0Na0WAAsAFVaaoenFRMN1vqzc/6ERFc5BERAEREARFVAUREQBERAEREAREQBERAY/Gx/0eY7NdqsZRMYDmYBd25uszibBJQzA7WusHRHJ4Wnwgc1R/I01/AmsqWGTuyCNcoJ2KtV0Yddxa1zwOeuivNYzPnyAuve6sVU9pO7aLm2p6KXrsst9GJpqGonw2tqmPDe7v3TLXzWFzc+68YZ9qGOdcHfLy91teFwhmHMY4fOCXe61emAgndC64LSW/Q2VGsYLQm5NozdPJGCGB1jsAr8sbZNXgkjbVQqeFgkzkkm97clKdI0EAuGY7BXWuyj30XcOIfUyEfdFifdZFQcLYGiUt5lTlK0cZ7CIik5hERAEREAREQBERAEREAREQBERAAipdLoTgqqKl0BTILVaM1HOP8AQVrUbBM0ta4XutpdZzS08xZavAwRSScgDqPRUls0UvpkyKJ8MNpJB52VuYh8fgub+Ekq/DPFNGRY25gry9hM8DWNAYXC9uQvsn0X++9mdaA1oaNgLBanikQ/fM99yQ5vuP8AdbZdaxjrXMxhrmi7XsBJ9NEno5U/I90z7uLM5DxuLKS2maJDI5zid7EK1TRwkh5uDvY9VfjnZLmawWA3N9wi/Tq/wnYWQ6nLmiwLtFMUegYGUrABYb2UhXRllthERCoREQBERAEREAREQBERAEREAVCqqiElFQqpVCoJPBcvJeFVwJUWYOA0VSUSO9C1/GpBTVzJWythbIN3EAEjfdX6iq7kEuNgFrdbUfH1AfLbK3RgPIH/AHWe+5Vr9NvEodkvwz9PVMLLtqoLnpl9FIwp7ZKpzu9ErYxuCCAT6c7LWu6idERlYbDawWR4dJjhnEYs3Py9FSrkucvHB35HHVdbkjbRIFh+JhejZM2wLHWc7o09fK6o+eRmtisRj+JZsKqYXaZm219QtE5Yi2YaY+9EqjrMsYBq4gANblql08rJ6tkQqWPJOrGEXsN9lp2FQRCO4YwdTYLKU8gppmSwua17TcLJHm52j1LOGu/F9m9jQWC9AqFQ1jKuBssZ0O46HopTSt8ZJrKPFlFp4ZcQLyFUKxUqiIEICIiAIiIAiIgCIiAIiIAiIhJSyWVUQHgheHMB3V6yWUYJyYbF8J+Op3sil7p5GjrXF/Ra07AsUp3eGBkwBJBjkFibWGhtZb7ZAFxs48LO2aKeXOlYjo0TC8GrnRsilppYHHWR8jgRc6m2upW10dBHTxNjY0ABZCyWSrjxr0LuVO75EY07SNQsfiOCwVkTmOaBcdFmbJZdfE4KTRoDcAr6GUxNgdPTfdMZF7dCCvVHgmJuiYw0xhDA5n2kjTdvLa/kt9sEssz4cG8mxf8AIWqOOjF4NhzqCnc18md73ZjbYeQWSAXuyLTGCisIyTm5tylsoAqoisUCIiEBERAEREAREQH/2Q==" alt="" style="width:100%;height:100%;object-fit:cover"></div>
             <div class="bubble">Red like my blanket heart. Yellow like Duck. Shall we find them all?</div></div>
           <div class="stack">
-            <button class="act" data-act="find" data-arg="colors"><span class="ico" style="background:#ffeef1">🎨</span>
+            <button class="act" data-act="find" data-arg="colors"><span class="ico" style="background:#ffd0e2">🎨</span>
               <span><span class="an">Colour hunt</span><span class="ad">Find the colour Kinni names · 4 rounds</span></span><span class="go">›</span></button>
-            <button class="act" data-go="act-numb"><span class="ico" style="background:#fff4e2">🔢</span>
+            <button class="act" data-go="act-numb"><span class="ico" style="background:#ffe4a3">🔢</span>
               <span><span class="an">Number Time with Bingo</span><span class="ad">Count aloud · say it 3× · find it</span></span><span class="go">›</span></button>
-            <button class="act" data-act="quiz" data-arg="colors"><span class="ico" style="background:#fff3e0">🔴</span>
+            <button class="act" data-act="quiz" data-arg="colors"><span class="ico" style="background:#ffe4a3">🔴</span>
               <span><span class="an">Name that colour</span><span class="ad">Red, blue, yellow, green, pink, purple</span></span><span class="go">›</span></button>
-            <button class="act" data-act="find" data-arg="shapes"><span class="ico" style="background:#e6fbf6">🧊</span>
+            <button class="act" data-act="find" data-arg="shapes"><span class="ico" style="background:#a8f0f3">🧊</span>
               <span><span class="an">3D shape hunt</span><span class="ad">Cube, sphere, cylinder, cone, pyramid</span></span><span class="go">›</span></button>
-            <button class="act" data-act="quiz" data-arg="shapes3d"><span class="ico" style="background:#e9f2ff">⚽</span>
+            <button class="act" data-act="quiz" data-arg="shapes3d"><span class="ico" style="background:#cfe4ff">⚽</span>
               <span><span class="an">Name that 3D shape</span><span class="ad">Faces, points and rolls</span></span><span class="go">›</span></button>
-            <button class="act" data-act="sorter"><span class="ico" style="background:#eef2ff">🧩</span>
+            <button class="act" data-act="sorter"><span class="ico" style="background:#cfe4ff">🧩</span>
               <span><span class="an">Shape Sorter</span><span class="ad">Tap the matching outline · 8 rounds</span></span><span class="go">›</span></button>
           </div>
           <div class="card" style="margin-top:14px">
@@ -885,17 +891,17 @@ body{font-size:15px}
           <div class="band"><div class="big" data-char="mira"></div>
             <div class="bubble">Letters are just shapes with a sound hiding inside. Shall we find some?</div></div>
           <div class="stack">
-            <button class="act" data-go="act-alpha"><span class="ico" style="background:#efe7ff">🔤</span>
+            <button class="act" data-go="act-alpha"><span class="ico" style="background:#e4d2ff">🔤</span>
               <span><span class="an">Alphabet Time with Mira</span><span class="ad">Hear it · say it 3× · find the letter</span></span><span class="go">›</span></button>
-            <button class="act" data-act="quiz" data-arg="phonics"><span class="ico" style="background:#fff3e0">🔊</span>
+            <button class="act" data-act="quiz" data-arg="phonics"><span class="ico" style="background:#ffe4a3">🔊</span>
               <span><span class="an">Sound it out</span><span class="ad">Find the picture that starts with the sound</span></span><span class="go">›</span></button>
-            <button class="act" data-act="quiz" data-arg="words"><span class="ico" style="background:#e9f2ff">🔎</span>
+            <button class="act" data-act="quiz" data-arg="words"><span class="ico" style="background:#cfe4ff">🔎</span>
               <span><span class="an">Word match</span><span class="ad">Tap the picture that matches the word</span></span><span class="go">›</span></button>
-            <button class="act" data-act="trace"><span class="ico" style="background:#eafaf3">✏️</span>
+            <button class="act" data-act="trace"><span class="ico" style="background:#b8f5d8">✏️</span>
               <span><span class="an">Trace a letter</span><span class="ad">Follow the dotted line with your finger</span></span><span class="go">›</span></button>
-            <button class="act" data-act="wordbuild"><span class="ico" style="background:#fff0e6">🧩</span>
+            <button class="act" data-act="wordbuild"><span class="ico" style="background:#ffcbb0">🧩</span>
               <span><span class="an">Build a Word</span><span class="ad">Tap the letters in order to spell 16 picture words</span></span><span class="go">›</span></button>
-            <button class="act" data-act="story" data-arg="moon"><span class="ico" style="background:#fff0e6">📖</span>
+            <button class="act" data-act="story" data-arg="moon"><span class="ico" style="background:#ffcbb0">📖</span>
               <span><span class="an">Mira and the Moon Lantern</span><span class="ad">A reading story · 4 pages</span></span><span class="go">›</span></button>
           </div>
           <div class="card" style="margin-top:14px">
@@ -911,17 +917,17 @@ body{font-size:15px}
           <div class="band"><div class="big" data-char="bingo"></div>
             <div class="bubble">My map says the treasure is <b>3 steps</b> from the palm tree. Count with me!</div></div>
           <div class="stack">
-            <button class="act" data-act="count"><span class="ico" style="background:#fff4e2">🍎</span>
+            <button class="act" data-act="count"><span class="ico" style="background:#ffe4a3">🍎</span>
               <span><span class="an">How many apples?</span><span class="ad">Counting 1–8 · live</span></span><span class="go">›</span></button>
-            <button class="act" data-act="quiz" data-arg="shapes"><span class="ico" style="background:#eafaf3">🔺</span>
+            <button class="act" data-act="quiz" data-arg="shapes"><span class="ico" style="background:#b8f5d8">🔺</span>
               <span><span class="an">Shape hunt</span><span class="ad">Circle, square, triangle, star</span></span><span class="go">›</span></button>
-            <button class="act" data-act="quiz" data-arg="patterns"><span class="ico" style="background:#eef2ff">🧩</span>
+            <button class="act" data-act="quiz" data-arg="patterns"><span class="ico" style="background:#cfe4ff">🧩</span>
               <span><span class="an">What comes next?</span><span class="ad">Patterns and sequences</span></span><span class="go">›</span></button>
-            <button class="act" data-act="quiz" data-arg="treasure"><span class="ico" style="background:#fff0e6">🗺️</span>
+            <button class="act" data-act="quiz" data-arg="treasure"><span class="ico" style="background:#ffcbb0">🗺️</span>
               <span><span class="an">Bingo's Treasure Hunt</span><span class="ad">Add &amp; subtract to open the chest</span></span><span class="go">›</span></button>
-            <button class="act" data-act="bubbles"><span class="ico" style="background:#e8f4ff">🫧</span>
+            <button class="act" data-act="bubbles"><span class="ico" style="background:#cfe4ff">🫧</span>
               <span><span class="an">Bubble Pop Counting</span><span class="ad">Pop and count up to 8 bubbles</span></span><span class="go">›</span></button>
-            <button class="act" data-act="oddone"><span class="ico" style="background:#f5f1ff">🔍</span>
+            <button class="act" data-act="oddone"><span class="ico" style="background:#e4d2ff">🔍</span>
               <span><span class="an">Odd One Out</span><span class="ad">Tap the picture that doesn't belong · 8 rounds</span></span><span class="go">›</span></button>
           </div>
         </section>
@@ -933,15 +939,15 @@ body{font-size:15px}
           <div class="band"><div class="big" data-char="zuzu"></div>
             <div class="bubble">Make something that never existed before. I'll hold your colours.</div></div>
           <div class="stack">
-            <button class="act" data-act="draw"><span class="ico" style="background:#ffeef7">🖌️</span>
+            <button class="act" data-act="draw"><span class="ico" style="background:#ffd0e2">🖌️</span>
               <span><span class="an">Drawing pad</span><span class="ad">8 colours · thick and thin brushes</span></span><span class="go">›</span></button>
-            <button class="act" data-act="coloring"><span class="ico" style="background:#fff4e2">🖍️</span>
+            <button class="act" data-act="coloring"><span class="ico" style="background:#ffe4a3">🖍️</span>
               <span><span class="an">Colouring Book</span><span class="ad">Pick a picture, then colour it in</span></span><span class="go">›</span></button>
-            <button class="act" data-act="music"><span class="ico" style="background:#eafaf3">🎵</span>
+            <button class="act" data-act="music"><span class="ico" style="background:#b8f5d8">🎵</span>
               <span><span class="an">Xylophone maker</span><span class="ad">Tap 5 notes · play a tune</span></span><span class="go">›</span></button>
-            <button class="act" data-act="builder"><span class="ico" style="background:#fff7e2">🎬</span>
+            <button class="act" data-act="builder"><span class="ico" style="background:#ffe4a3">🎬</span>
               <span><span class="an">Build your own story</span><span class="ad">Pick a hero, a place, a twist</span></span><span class="go">›</span></button>
-            <button class="act" data-act="memory"><span class="ico" style="background:#f3eeff">🧠</span>
+            <button class="act" data-act="memory"><span class="ico" style="background:#e4d2ff">🧠</span>
               <span><span class="an">Memory Match</span><span class="ad">Flip cards and find the pairs</span></span><span class="go">›</span></button>
           </div>
         </section>
@@ -953,15 +959,15 @@ body{font-size:15px}
           <div class="band"><div class="big" data-char="roborex"></div>
             <div class="bubble">Scanning… I found three animals that live nowhere else. Want to meet them?</div></div>
           <div class="stack">
-            <button class="act" data-act="quiz" data-arg="habitat"><span class="ico" style="background:#e6fbf6">🐪</span>
+            <button class="act" data-act="quiz" data-arg="habitat"><span class="ico" style="background:#a8f0f3">🐪</span>
               <span><span class="an">Who lives here?</span><span class="ad">Falcon · camel · oryx · 3 rounds</span></span><span class="go">›</span></button>
-            <button class="act" data-act="space"><span class="ico" style="background:#e9f2ff">🚀</span>
+            <button class="act" data-act="space"><span class="ico" style="background:#cfe4ff">🚀</span>
               <span><span class="an">Space explorer</span><span class="ad">Slide through 4 planets</span></span><span class="go">›</span></button>
-            <button class="act" data-act="quiz" data-arg="float"><span class="ico" style="background:#f0f6ff">🧪</span>
+            <button class="act" data-act="quiz" data-arg="float"><span class="ico" style="background:#cfe4ff">🧪</span>
               <span><span class="an">Float or sink?</span><span class="ad">Kitchen experiment · predict first</span></span><span class="go">›</span></button>
-            <button class="act" data-act="peekaboo"><span class="ico" style="background:#fff4e2">🚪</span>
+            <button class="act" data-act="peekaboo"><span class="ico" style="background:#ffe4a3">🚪</span>
               <span><span class="an">Animal Peekaboo</span><span class="ad">Tap a door to meet 10 animals</span></span><span class="go">›</span></button>
-            <button class="act" data-act="animalsounds"><span class="ico" style="background:#eafaf3">🐦</span>
+            <button class="act" data-act="animalsounds"><span class="ico" style="background:#b8f5d8">🐦</span>
               <span><span class="an">Animal &amp; Bird Sounds</span><span class="ad">Farm, wild animals and birds · 24 sounds</span></span><span class="go">›</span></button>
           </div>
         </section>
@@ -973,13 +979,13 @@ body{font-size:15px}
           <div class="band"><div class="big" data-char="zuzu"></div>
             <div class="bubble">Point at a feeling and I'll change my face with you. No feeling is a bad feeling.</div></div>
           <div class="stack">
-            <button class="act" data-act="wheel"><span class="ico" style="background:#ffeef1">🎡</span>
+            <button class="act" data-act="wheel"><span class="ico" style="background:#ffd0e2">🎡</span>
               <span><span class="an">Feelings wheel</span><span class="ad">8 feelings · Zuzu answers</span></span><span class="go">›</span></button>
-            <button class="act" data-act="breathe"><span class="ico" style="background:#e8f4ff">🫧</span>
+            <button class="act" data-act="breathe"><span class="ico" style="background:#cfe4ff">🫧</span>
               <span><span class="an">Balloon breathing</span><span class="ad">4 in · 4 hold · 6 out</span></span><span class="go">›</span></button>
-            <button class="act" data-go="act-alpha"><span class="ico" style="background:#efe7ff">🔤</span>
+            <button class="act" data-go="act-alpha"><span class="ico" style="background:#e4d2ff">🔤</span>
               <span><span class="an">Alphabet Time with Mira</span><span class="ad">Hear it · say it 3× · find the letter</span></span><span class="go">›</span></button>
-            <button class="act" data-act="story" data-arg="brave"><span class="ico" style="background:#f3eeff">💛</span>
+            <button class="act" data-act="story" data-arg="brave"><span class="ico" style="background:#e4d2ff">💛</span>
               <span><span class="an">Mindfulness story</span><span class="ad">"The Lion Who Was Scared"</span></span><span class="go">›</span></button>
           </div>
         </section>
@@ -991,17 +997,17 @@ body{font-size:15px}
           <div class="band"><div class="big" data-char="lumi"></div>
             <div class="bubble">A lantern lights the path — and so does knowing what to do next.</div></div>
           <div class="stack">
-            <button class="act" data-act="hygiene"><span class="ico" style="background:#e6fbfa">🪥</span>
+            <button class="act" data-act="hygiene"><span class="ico" style="background:#a8f0f3">🪥</span>
               <span><span class="an">Wash your hands</span><span class="ad">Put the 5 steps in order</span></span><span class="go">›</span></button>
-            <button class="act" data-act="body"><span class="ico" style="background:#ffeef7">🧍</span>
+            <button class="act" data-act="body"><span class="ico" style="background:#ffd0e2">🧍</span>
               <span><span class="an">My Body</span><span class="ad">Tap a part to hear its name</span></span><span class="go">›</span></button>
-            <button class="act" data-act="quiz" data-arg="safety"><span class="ico" style="background:#fff3e0">🛟</span>
+            <button class="act" data-act="quiz" data-arg="safety"><span class="ico" style="background:#ffe4a3">🛟</span>
               <span><span class="an">Stay safe</span><span class="ad">Crossing, cars, strangers · 3 rounds</span></span><span class="go">›</span></button>
-            <button class="act" data-act="quiz" data-arg="food"><span class="ico" style="background:#eafaf3">🥗</span>
+            <button class="act" data-act="quiz" data-arg="food"><span class="ico" style="background:#b8f5d8">🥗</span>
               <span><span class="an">Every day or sometimes?</span><span class="ad">Sort 6 foods</span></span><span class="go">›</span></button>
-            <button class="act" data-act="story" data-arg="ramadan"><span class="ico" style="background:#fff6e9">🌙</span>
+            <button class="act" data-act="story" data-arg="ramadan"><span class="ico" style="background:#ffdfa0">🌙</span>
               <span><span class="an">Ramadan &amp; Eid</span><span class="ad">Why we share the dates</span></span><span class="go">›</span></button>
-            <button class="act" data-act="story" data-arg="kinni"><span class="ico" style="background:#ffe9f1">🌙</span>
+            <button class="act" data-act="story" data-arg="kinni"><span class="ico" style="background:#ffd0e2">🌙</span>
               <span><span class="an">Kinni and the Sleepy Moon</span><span class="ad">Bath · bunny · blanket · sleep</span></span><span class="go">›</span></button>
           </div>
         </section>
@@ -1019,21 +1025,21 @@ body{font-size:15px}
             </div>
           </div>
           <div class="stack" style="margin-top:14px">
-            <button class="act" data-act="morning"><span class="ico" style="background:#fff3e0">🌅</span>
+            <button class="act" data-act="morning"><span class="ico" style="background:#ffe4a3">🌅</span>
               <span><span class="an">Kinni's morning</span><span class="ad">Put 5 routine steps in order</span></span><span class="go">›</span></button>
-            <button class="act" data-act="hunt"><span class="ico" style="background:#ffeef1">🧸</span>
+            <button class="act" data-act="hunt"><span class="ico" style="background:#ffd0e2">🧸</span>
               <span><span class="an">Toy hunt</span><span class="ad">Find the toy Kinni names · 4 rounds</span></span><span class="go">›</span></button>
-            <button class="act" data-act="count" data-arg="toys"><span class="ico" style="background:#fff4e2">🦆</span>
+            <button class="act" data-act="count" data-arg="toys"><span class="ico" style="background:#ffe4a3">🦆</span>
               <span><span class="an">Count her toys</span><span class="ad">Counting 1–8 with Kinni's things</span></span><span class="go">›</span></button>
-            <button class="act" data-act="quiz" data-arg="kinniColors"><span class="ico" style="background:#f3eeff">🩷</span>
+            <button class="act" data-act="quiz" data-arg="kinniColors"><span class="ico" style="background:#e4d2ff">🩷</span>
               <span><span class="an">Blanket hearts</span><span class="ad">Colours and sizes</span></span><span class="go">›</span></button>
-            <button class="act" data-act="quiz" data-arg="kinniSounds"><span class="ico" style="background:#e8f7ff">🔊</span>
+            <button class="act" data-act="quiz" data-arg="kinniSounds"><span class="ico" style="background:#cfe4ff">🔊</span>
               <span><span class="an">First sounds</span><span class="ad">b for bunny, d for duck…</span></span><span class="go">›</span></button>
-            <button class="act" data-act="story" data-arg="kinniMorning"><span class="ico" style="background:#e9fbf4">☀️</span>
+            <button class="act" data-act="story" data-arg="kinniMorning"><span class="ico" style="background:#b8f5d8">☀️</span>
               <span><span class="an">Kinni's Busy Morning</span><span class="ad">Storybook · 4 pages</span></span><span class="go">›</span></button>
-            <button class="act" data-act="story" data-arg="kinni"><span class="ico" style="background:#ffe9f1">🌙</span>
+            <button class="act" data-act="story" data-arg="kinni"><span class="ico" style="background:#ffd0e2">🌙</span>
               <span><span class="an">Kinni and the Sleepy Moon</span><span class="ad">Bedtime storybook · 5 pages</span></span><span class="go">›</span></button>
-            <button class="act" data-act="music" data-arg="sing"><span class="ico" style="background:#eafaf3">🎵</span>
+            <button class="act" data-act="music" data-arg="sing"><span class="ico" style="background:#b8f5d8">🎵</span>
               <span><span class="an">Sing with Kinni</span><span class="ad">Her goodnight tune · tap along</span></span><span class="go">›</span></button>
           </div>
           <p class="tiny" style="text-align:center;margin:16px 0 4px">Kinni is a story friend — the five animal friends still own their own subjects.</p>
@@ -1625,7 +1631,7 @@ body{font-size:15px}
             <div class="tiny" style="margin-top:14px">WHAT GOES WRONG?</div>
             <div class="row" style="gap:7px;flex-wrap:wrap;margin-top:8px" id="bTwist"></div>
           </div>
-          <div class="card" style="margin-top:12px;background:linear-gradient(135deg,#f5f1ff,#fff)">
+          <div class="card" style="margin-top:12px;background:linear-gradient(135deg,#e4d2ff,#fff)">
             <div class="tiny">YOUR STORY</div>
             <p id="bOut" style="font-size:15px;font-weight:700;line-height:1.6;margin:8px 0 0">Choose a hero to begin…</p>
             <div class="row" style="gap:9px;margin-top:12px">
@@ -1663,7 +1669,7 @@ body{font-size:15px}
               <button class="bhot" data-part="nose" style="top:40px;left:50%;margin-left:-7px;width:14px;height:16px;border-radius:50%" aria-label="Nose"></button>
               <button class="bhot" data-part="mouth" style="top:58px;left:50%;margin-left:-15px;width:30px;height:10px;border-radius:0 0 14px 14px" aria-label="Mouth"></button>
               <button class="bhot" data-part="ears" style="top:28px;left:50%;margin-left:-48px;width:14px;height:24px;border-radius:50%" aria-label="Ears"></button>
-              <div class="bpart bp-torso" style="width:118px;height:120px;border-radius:40px;top:82px;left:50%;margin-left:-59px;background:#8fdcbf"></div>
+              <div class="bpart bp-torso" style="width:118px;height:120px;border-radius:40px;top:82px;left:50%;margin-left:-59px;background:#2bd99a"></div>
               <button class="bhot" data-part="tummy" style="top:130px;left:50%;margin-left:-22px;width:44px;height:44px;border-radius:50%" aria-label="Tummy"></button>
               <button class="bhot" data-part="hands" style="top:150px;left:50%;margin-left:-98px;width:30px;height:30px;border-radius:50%" aria-label="Hands"></button>
               <button class="bhot" data-part="hands2" style="top:150px;left:50%;margin-left:68px;width:30px;height:30px;border-radius:50%;" data-part2="hands" aria-label="Hands"></button>
@@ -1995,27 +2001,27 @@ const MODULES={reading:'reading',math:'math',creative:'creative',science:'scienc
 const star=(x,y,s,c)=>`<path d="M${x} ${y-s} l${s*.28} ${s*.72} ${s*.72} ${s*.28} -${s*.72} ${s*.28} -${s*.28} ${s*.72} -${s*.28} -${s*.72} -${s*.72} -${s*.28} ${s*.72} -${s*.28}z" fill="${c}"/>`;
 
 const CHARS={
-  lumi:{name:'Lumi the Light Owl',role:'Night guide · stories & calm',line:'I glow when you try, not only when you get it right.',hue:'#7fc4f5',
+  lumi:{name:'Lumi the Light Owl',role:'Night guide · stories & calm',line:'I glow when you try, not only when you get it right.',hue:'#3fa1ff',
     voices:['Good evening, explorer.','Every try makes my lantern brighter.','Slow is still forward.'],
     poses:['Waving','Floating','Holding a glowing book'],
     svg:`
     <svg viewBox="0 0 120 120" role="img" aria-label="Lumi the light owl">
       <ellipse cx="60" cy="70" rx="33" ry="35" fill="#9ad2f7"/>
-      <ellipse cx="60" cy="78" rx="21" ry="22" fill="#eaf6ff"/>
+      <ellipse cx="60" cy="78" rx="21" ry="22" fill="#cfe4ff"/>
       <path d="M34 40 L30 22 L48 32 Z" fill="#7fbdf0"/><path d="M86 40 L90 22 L72 32 Z" fill="#7fbdf0"/>
-      <ellipse cx="60" cy="52" rx="27" ry="25" fill="#cfe9ff"/>
+      <ellipse cx="60" cy="52" rx="27" ry="25" fill="#cfe4ff"/>
       <circle cx="49" cy="50" r="9.5" fill="#fff"/><circle cx="71" cy="50" r="9.5" fill="#fff"/>
       <circle cx="50" cy="51" r="4.6" fill="#3b3555"/><circle cx="72" cy="51" r="4.6" fill="#3b3555"/>
       <circle cx="51.6" cy="49.4" r="1.5" fill="#fff"/><circle cx="73.6" cy="49.4" r="1.5" fill="#fff"/>
       <path d="M60 58 l-5.5 7 h11 Z" fill="#ffce6b"/>
       <ellipse cx="27" cy="72" rx="7" ry="16" fill="#8ecbf5" transform="rotate(12 27 72)"/>
       <ellipse cx="93" cy="72" rx="7" ry="16" fill="#8ecbf5" transform="rotate(-12 93 72)"/>
-      <path d="M44 92 q16 12 32 0" stroke="#ffd98e" stroke-width="2.4" fill="none"/>
-      <circle cx="60" cy="95" r="6" fill="#ffd98e" opacity=".45"/>
+      <path d="M44 92 q16 12 32 0" stroke="#ffb703" stroke-width="2.4" fill="none"/>
+      <circle cx="60" cy="95" r="6" fill="#ffb703" opacity=".45"/>
       <circle cx="60" cy="95" r="3.4" fill="#fff7dd"/>
-      ${star(20,34,4.4,'#ffe9a8')}${star(103,52,3.6,'#ffe9a8')}${star(96,88,3,'#dfefff')}
+      ${star(20,34,4.4,'#ffe4a3')}${star(103,52,3.6,'#ffe4a3')}${star(96,88,3,'#dfefff')}
     </svg>`},
-  bingo:{name:'Bingo the Bear',role:'Math',line:'A wrong answer is just a step on the treasure map.',hue:'#ffd98e',
+  bingo:{name:'Bingo the Bear',role:'Math',line:'A wrong answer is just a step on the treasure map.',hue:'#ffb703',
     voices:['Ooh, a number puzzle! Let us go.','Almost! Count once more with me.','Treasure found — five gold stars!'],
     poses:['Magnifying glass','Jumping','Treasure chest'],
     svg:`
@@ -2030,15 +2036,15 @@ const CHARS={
       <ellipse cx="60" cy="24" rx="24" ry="9" fill="#8fbf9a"/>
       <path d="M40 24 q20 -22 40 0 Z" fill="#a6d1b1"/>
       <text x="60" y="99" font-size="11" font-weight="800" text-anchor="middle" fill="#8a5a2b">3+2</text>
-      ${star(24,88,3.6,'#ffd98e')}
+      ${star(24,88,3.6,'#ffb703')}
     </svg>`},
-  mira:{name:'Mira the Cat',role:'Reading',line:'Stories are doors. I keep the keys in my book bag.',hue:'#c3b0f2',
+  mira:{name:'Mira the Cat',role:'Reading',line:'Stories are doors. I keep the keys in my book bag.',hue:'#9b5cff',
     voices:['Turn the page with me.','One more word and the lantern lights up.','Listen to the first sound: mmm.'],
     poses:['Reading','Under the tree','Glowing story orb'],
     svg:`
     <svg viewBox="0 0 120 120" role="img" aria-label="Mira the cat">
-      <path d="M30 40 L28 18 L50 32 Z" fill="#c3b0f2"/><path d="M90 40 L92 18 L70 32 Z" fill="#c3b0f2"/>
-      <path d="M34 37 L33 25 L44 32 Z" fill="#ffb3c7"/><path d="M86 37 L87 25 L76 32 Z" fill="#ffb3c7"/>
+      <path d="M30 40 L28 18 L50 32 Z" fill="#9b5cff"/><path d="M90 40 L92 18 L70 32 Z" fill="#9b5cff"/>
+      <path d="M34 37 L33 25 L44 32 Z" fill="#ff4f93"/><path d="M86 37 L87 25 L76 32 Z" fill="#ff4f93"/>
       <circle cx="60" cy="64" r="31" fill="#d5c6f7"/>
       <ellipse cx="60" cy="76" rx="14" ry="11" fill="#f4eeff"/>
       <circle cx="48" cy="60" r="4.2" fill="#3b3555"/><circle cx="72" cy="60" r="4.2" fill="#3b3555"/>
@@ -2046,32 +2052,32 @@ const CHARS={
       <path d="M60 70 l-4 3.6 h8 Z" fill="#ff9db4"/>
       <path d="M60 73.6 q-6 7 -11 1 M60 73.6 q6 7 11 1" stroke="#7d719a" stroke-width="2" fill="none" stroke-linecap="round"/>
       <path d="M26 70 h-12 M26 76 h-12 M94 70 h12 M94 76 h12" stroke="#b9a9e8" stroke-width="2" stroke-linecap="round"/>
-      <path d="M86 100 q10 -2 10 -10 q0 -7 -7 -7 q-3 0 -4 2 q-1 -2 -4 -2 q-7 0 -7 7 q0 8 12 10 z" fill="#ffb3c7"/>
-      ${star(20,30,3.6,'#ffe9a8')}
+      <path d="M86 100 q10 -2 10 -10 q0 -7 -7 -7 q-3 0 -4 2 q-1 -2 -4 -2 q-7 0 -7 7 q0 8 12 10 z" fill="#ff4f93"/>
+      ${star(20,30,3.6,'#ffe4a3')}
     </svg>`},
-  roborex:{name:'RoboRex',role:'Science',line:'Question first, answer second. That is how science works.',hue:'#6fd3c7',
+  roborex:{name:'RoboRex',role:'Science',line:'Question first, answer second. That is how science works.',hue:'#0dc4d6',
     voices:['Scanning the desert… three species found.','Prediction logged. Now let us test it.','Boosters on. Holding altitude.'],
     poses:['Holograms','Test tube','Flying'],
     svg:`
     <svg viewBox="0 0 120 120" role="img" aria-label="RoboRex the robot dinosaur">
-      <path d="M84 42 q16 -12 22 -2 q-8 4 -10 12 Z" fill="#3aa79b"/>
-      <rect x="30" y="30" width="58" height="44" rx="15" fill="#6fd3c7"/>
+      <path d="M84 42 q16 -12 22 -2 q-8 4 -10 12 Z" fill="#0a93a1"/>
+      <rect x="30" y="30" width="58" height="44" rx="15" fill="#0dc4d6"/>
       <rect x="40" y="44" width="16" height="9" rx="4.5" fill="#b6ff5e"/>
       <rect x="62" y="44" width="16" height="9" rx="4.5" fill="#b6ff5e"/>
       <rect x="34" y="60" width="50" height="8" rx="4" fill="#4fbfb2"/>
-      <path d="M40 68 h38 M44 76 h30" stroke="#3aa79b" stroke-width="2.6" stroke-linecap="round"/>
+      <path d="M40 68 h38 M44 76 h30" stroke="#0a93a1" stroke-width="2.6" stroke-linecap="round"/>
       <rect x="36" y="80" width="46" height="22" rx="11" fill="#5cc8bb"/>
-      <circle cx="48" cy="91" r="4" fill="#b6ff5e"/><circle cx="72" cy="91" r="4" fill="#ff9d8a"/>
-      <path d="M30 96 l-9 12 h18 Z" fill="#8fdcbf"/><path d="M88 96 l9 12 h-18 Z" fill="#8fdcbf"/>
+      <circle cx="48" cy="91" r="4" fill="#b6ff5e"/><circle cx="72" cy="91" r="4" fill="#ff5a36"/>
+      <path d="M30 96 l-9 12 h18 Z" fill="#2bd99a"/><path d="M88 96 l9 12 h-18 Z" fill="#2bd99a"/>
       <circle cx="30" cy="86" r="6" fill="#b6ff5e" opacity=".4"/><circle cx="90" cy="86" r="6" fill="#b6ff5e" opacity=".4"/>
       ${star(104,44,3.6,'#b6ff5e')}
     </svg>`},
-  zuzu:{name:'Zuzu the Cloud',role:'Emotions',line:'Feelings move like weather. Nothing stays forever.',hue:'#ffb3c7',
+  zuzu:{name:'Zuzu the Cloud',role:'Emotions',line:'Feelings move like weather. Nothing stays forever.',hue:'#ff4f93',
     voices:['What is the weather inside you today?','Breathe in… and let it out slowly.','That was a big feeling. You handled it.'],
     poses:['Breathing','Hugging a star','Floating'],
     svg:`
     <svg viewBox="0 0 120 120" role="img" aria-label="Zuzu the cloud">
-      <ellipse cx="60" cy="70" rx="44" ry="26" fill="#ffe9f1" opacity=".7"/>
+      <ellipse cx="60" cy="70" rx="44" ry="26" fill="#ffd0e2" opacity=".7"/>
       <circle cx="42" cy="70" r="20" fill="#fdfdff"/><circle cx="66" cy="60" r="25" fill="#fdfdff"/>
       <circle cx="88" cy="72" r="18" fill="#fdfdff"/>
       <rect x="26" y="66" width="70" height="24" rx="12" fill="#fdfdff"/>
@@ -2079,9 +2085,9 @@ const CHARS={
       <circle cx="51.6" cy="64.4" r="1.4" fill="#fff"/><circle cx="77.6" cy="64.4" r="1.4" fill="#fff"/>
       <path d="M56 78 q8 7 15 0" stroke="#7d719a" stroke-width="2.4" fill="none" stroke-linecap="round"/>
       <ellipse cx="34" cy="80" rx="6" ry="3.4" fill="#ffc9da" opacity=".8"/><ellipse cx="92" cy="80" rx="6" ry="3.4" fill="#ffc9da" opacity=".8"/>
-      ${star(18,34,4,'#ffe9a8')}${star(98,30,3.4,'#cfe9ff')}${star(104,64,3,'#ffc9da')}
+      ${star(18,34,4,'#ffe4a3')}${star(98,30,3.4,'#cfe4ff')}${star(104,64,3,'#ffc9da')}
     </svg>`},
-  kinni:{name:'Kinni',role:'Main guide · your everyday host',line:'Sleepy moon, warm bath, soft bunny — then I am ready for bed.',hue:'#ffb3c7',story:'kinni',
+  kinni:{name:'Kinni',role:'Main guide · your everyday host',line:'Sleepy moon, warm bath, soft bunny — then I am ready for bed.',hue:'#ff4f93',story:'kinni',
     img:'data:image/jpeg;base64,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',
     voices:['The moon stays awake all night, so I do not have to.','Duck first, then Bunny, then Blanket. That is the order.','Every heart on my blanket knows my name.'],
     poseimgs:[{l:'Neutral',s:'data:image/jpeg;base64,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'},
@@ -2146,7 +2152,7 @@ function toast(msg,icon='⭐'){
 }
 function sparkle(el,n=10){
   const r=el.getBoundingClientRect(),z=$('#viewport').getBoundingClientRect();
-  const cols=['#ffd98e','#ffb3c7','#8fdcbf','#c3b0f2','#7fc4f5'];
+  const cols=['#ffb703','#ff4f93','#2bd99a','#9b5cff','#3fa1ff'];
   for(let i=0;i<n;i++){
     const s=document.createElement('i');s.className='spark';
     s.style.left=(r.left-z.left+r.width/2)+'px';s.style.top=(r.top-z.top+r.height/2)+'px';
@@ -2162,13 +2168,13 @@ function sparkle(el,n=10){
 const STICKERS=['🦉','🐻','🐱','🦖','☁️','🌙',null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null];
 const BADGES=[
   {i:'🌙',n:'Moon Reader',d:'Finished your first full story',got:true,c:'#e8f2ff'},
-  {i:'🔢',n:'Counting Star',d:'Counted to 20 without help',got:true,c:'#fff4e2'},
+  {i:'🔢',n:'Counting Star',d:'Counted to 20 without help',got:true,c:'#ffe4a3'},
   {i:'🫧',n:'Calm Keeper',d:'Completed 3 breathing exercises',got:true,c:'#e9f4ff'},
-  {i:'🌱',n:'Curious Mind',d:'Asked RoboRex 5 questions',got:true,c:'#eafaf3'},
-  {i:'🌅',n:'Morning Helper',d:'Finished Kinni’s whole morning routine',got:false,c:'#fff3e0'},
-  {i:'🐮',n:'Animal Friend',d:'Heard every animal and bird in the app',got:false,c:'#eefaf3'},
-  {i:'🏅',n:'10-Day Streak',d:'Keeps coming back. 4 of 10 days.',got:false,c:'#f5f1ff'},
-  {i:'📚',n:'Story Keeper',d:'Reach Level 4 to unlock',got:false,c:'#f5f1ff'}
+  {i:'🌱',n:'Curious Mind',d:'Asked RoboRex 5 questions',got:true,c:'#b8f5d8'},
+  {i:'🌅',n:'Morning Helper',d:'Finished Kinni’s whole morning routine',got:false,c:'#ffe4a3'},
+  {i:'🐮',n:'Animal Friend',d:'Heard every animal and bird in the app',got:false,c:'#b8f5d8'},
+  {i:'🏅',n:'10-Day Streak',d:'Keeps coming back. 4 of 10 days.',got:false,c:'#e4d2ff'},
+  {i:'📚',n:'Story Keeper',d:'Reach Level 4 to unlock',got:false,c:'#e4d2ff'}
 ];
 function syncXP(){
   $$('#xpFill,#xpFill2').forEach(b=>b.style.width=Math.min(100,state.xp/state.xpMax*100)+'%');
@@ -2556,7 +2562,7 @@ function tPos(e){const r=tc.getBoundingClientRect();const t=e.touches?e.touches[
 tc.addEventListener('pointerdown',e=>{tdraw=true;[tpx,tpy]=tPos(e);tc.setPointerCapture(e.pointerId);tone(520+Math.random()*80,.06,'sine',.07)});
 tc.addEventListener('pointermove',e=>{
   if(!tdraw)return;const [x,y]=tPos(e);
-  tctx.strokeStyle='#7fc4f5';tctx.lineWidth=16;tctx.lineCap='round';tctx.lineJoin='round';
+  tctx.strokeStyle='#3fa1ff';tctx.lineWidth=16;tctx.lineCap='round';tctx.lineJoin='round';
   tctx.beginPath();tctx.moveTo(tpx,tpy);tctx.lineTo(x,y);tctx.stroke();tpx=x;tpy=y;
 });
 ['pointerup','pointercancel','pointerleave'].forEach(ev=>tc.addEventListener(ev,()=>tdraw=false));
@@ -2602,8 +2608,8 @@ $('#countNums').addEventListener('click',e=>{
 /* ============================================================
    7. DRAWING PAD
    ============================================================ */
-const pc=$('#paintCanvas');let pctx=fitCanvas(pc),pdraw=false,px=0,py=0,pcolor='#ff9d8a';
-$('#swatches').innerHTML=['#ff9d8a','#ffd98e','#8fdcbf','#7fc4f5','#c3b0f2','#ffb3c7','#6fd3c7','#3b3555']
+const pc=$('#paintCanvas');let pctx=fitCanvas(pc),pdraw=false,px=0,py=0,pcolor='#ff5a36';
+$('#swatches').innerHTML=['#ff5a36','#ffb703','#2bd99a','#3fa1ff','#9b5cff','#ff4f93','#0dc4d6','#3b3555']
   .map((c,i)=>`<button class="sw ${i===0?'on':''}" data-c="${c}" style="background:${c}" aria-label="colour"></button>`).join('');
 $('#swatches').addEventListener('click',e=>{const s=e.target.closest('.sw');if(!s)return;
   pcolor=s.dataset.c;$$('.sw').forEach(x=>x.classList.toggle('on',x===s));sfxTap();});
@@ -2658,7 +2664,7 @@ const COLORING_PICS=[
     ctx.stroke();
   }}
 ];
-let colPic='tracing',colCtx=null,colDraw=false,colPX=0,colPY=0,colColor='#ff9d8a';
+let colPic='tracing',colCtx=null,colDraw=false,colPX=0,colPY=0,colColor='#ff5a36';
 function colDrawOutline(){
   const c=$('#colCanvas'); colCtx=fitCanvas(c);
   const r=c.getBoundingClientRect();
@@ -2676,7 +2682,7 @@ $('#colPics').addEventListener('click',e=>{
   const b=e.target.closest('[data-colpic]'); if(!b)return;
   sfxTap(); colPic=b.dataset.colpic; renderColPics(); colDrawOutline();
 });
-$('#colSwatches').innerHTML=['#ff9d8a','#ffd98e','#8fdcbf','#7fc4f5','#c3b0f2','#ffb3c7','#6fd3c7','#3b3555']
+$('#colSwatches').innerHTML=['#ff5a36','#ffb703','#2bd99a','#3fa1ff','#9b5cff','#ff4f93','#0dc4d6','#3b3555']
   .map((c,i)=>`<button class="sw ${i===0?'on':''}" data-c="${c}" style="background:${c}" aria-label="colour"></button>`).join('');
 $('#colSwatches').addEventListener('click',e=>{const s=e.target.closest('.sw');if(!s)return;
   colColor=s.dataset.c;$$('#colSwatches .sw').forEach(x=>x.classList.toggle('on',x===s));sfxTap();});
@@ -2792,7 +2798,7 @@ window.onVaultCaptureResult=function(success,name){
 /* ============================================================
    8. MUSIC MAKER
    ============================================================ */
-const NOTES=[{n:'Do',f:523,c:'#ff9d8a'},{n:'Re',f:587,c:'#ffd98e'},{n:'Mi',f:659,c:'#8fdcbf'},{n:'Fa',f:698,c:'#7fc4f5'},{n:'Sol',f:784,c:'#c3b0f2'}];
+const NOTES=[{n:'Do',f:523,c:'#ff5a36'},{n:'Re',f:587,c:'#ffb703'},{n:'Mi',f:659,c:'#2bd99a'},{n:'Fa',f:698,c:'#3fa1ff'},{n:'Sol',f:784,c:'#9b5cff'}];
 let tune=[];
 $('#xylo').innerHTML=NOTES.map((n,i)=>`<button class="bar" data-i="${i}" style="background:${n.c};height:${210-i*22}px">${n.n}</button>`).join('');
 $('#xylo').addEventListener('click',e=>{
@@ -2956,7 +2962,7 @@ $('#hygienePool').addEventListener('click',e=>{
   const c=e.target.closest('.ordchip');if(!c)return;
   if(c.dataset.step===curSteps()[hIdx]){
     c.classList.add('done');c.disabled=true;hIdx++;sfxYes();sparkle(c);
-    $('#hygieneSlots').innerHTML=[0,1,2,3,4].map(i=>`<div class="slot" ${hIdx>i?'style="background:#eafaf3;border-color:#bde9d7;color:#0f5b45"':''}>${i+1} · ${hIdx>i?curSteps()[i]:''}</div>`).join('');
+    $('#hygieneSlots').innerHTML=[0,1,2,3,4].map(i=>`<div class="slot" ${hIdx>i?'style="background:#b8f5d8;border-color:#bde9d7;color:#0f5b45"':''}>${i+1} · ${hIdx>i?curSteps()[i]:''}</div>`).join('');
     if(hIdx===curSteps().length){
       $('#hygieneMsg').innerHTML=ORDER_MSG[orderSet];
       sfxYes();addXP(35,orderSet==='wash'?'Hands washed properly!':'Morning routine complete!');
@@ -3031,7 +3037,7 @@ $('#huntGrid').addEventListener('click',e=>{
   const z=FIND[HUNT.set];
   if(b.dataset.toy===HUNT.target.n){
     sfxYes();sparkle(b);addXP(15);
-    b.style.background='#8fdcbf';b.style.boxShadow='0 4px 0 #4fae8c';
+    b.style.background='#2bd99a';b.style.boxShadow='0 4px 0 #0e9f6e';
     const fact=(z.facts&&z.facts[HUNT.target.n])?' '+z.facts[HUNT.target.n]:'';
     if(fact)$('#huntSay').textContent='Yes! '+fact;
     setTimeout(renderHunt,fact?1500:760);
@@ -3625,7 +3631,7 @@ let renderRhymeList=function(){
          <span><span class="rt">${x.t}</span><span class="rs">${x.d}</span></span>
          <span class="rplay">▶</span></button>`
     : `<button class="rcard" data-rhyme="${x.k}">
-         <span class="rimg" style="background:#ffeef7">${x.e}</span>
+         <span class="rimg" style="background:#ffd0e2">${x.e}</span>
          <span><span class="rt">${x.t}</span><span class="rs">${x.lines.length} lines · tap to play</span></span>
          <span class="rplay">▶</span></button>`).join('');
 };
@@ -3916,7 +3922,7 @@ const _oldRenderRhymeList=renderRhymeList;
 renderRhymeList=function(){
   if(R.cat!=='animals'){ _oldRenderRhymeList(); return; }
   $('#rhymeList').innerHTML=
-    '<button class="act" data-go="animals" style="background:linear-gradient(135deg,#eef6ff,#ffeef7)">'+
+    '<button class="act" data-go="animals" style="background:linear-gradient(135deg,#cfe4ff,#ffd0e2)">'+
     '<span class="ico" style="background:#fff;font-size:30px">🐮</span>'+
     '<span><span class="an">Who says that?</span><span class="ad">'+ANIMALS.length+
     ' animal and bird faces · tap to hear them</span></span><span class="go">›</span></button>'+
@@ -4137,7 +4143,7 @@ function trBoardFor(size,L,F,y,start){
   g.save();g.setLineDash([5,8]);g.strokeStyle='rgba(125,98,205,.50)';
   g.lineWidth=Math.max(2,size*0.009);g.strokeText(L,size/2,y);g.restore();
   if(start){g.beginPath();g.arc(start.x,start.y,Math.max(6,size*0.028),0,Math.PI*2);
-    g.fillStyle='#7fdab6';g.fill();g.lineWidth=2.5;g.strokeStyle='#fff';g.stroke();}
+    g.fillStyle='#2bd99a';g.fill();g.lineWidth=2.5;g.strokeStyle='#fff';g.stroke();}
   return b;
 }
 function trHUD(cov){$('#trBar').style.width=Math.round(cov*100)+'%';$('#trChip').textContent=Math.round(cov*100)+'% traced';}
@@ -4182,7 +4188,7 @@ function trMark(x0,y0,x1,y1){
 }
 function trStroke(a,b){
   if(!TRA.ctx)return;
-  const g=TRA.ctx;g.strokeStyle='#7d62cd';g.lineWidth=Math.max(6,TRA.w*0.068);
+  const g=TRA.ctx;g.strokeStyle='#7022e0';g.lineWidth=Math.max(6,TRA.w*0.068);
   g.beginPath();g.moveTo(a.x,a.y);g.lineTo(b.x,b.y);g.stroke();
   trMark(a.x,a.y,b.x,b.y);
 }
@@ -4212,7 +4218,7 @@ function trCheck(){
     buzz(12); tone(600,.05,'sine',.07);
     TRA.down=true;const p=pt(e);TRA.prev=p;
     if(TRA.ctx){TRA.ctx.beginPath();TRA.ctx.arc(p.x,p.y,Math.max(4,TRA.w*0.03),0,Math.PI*2);
-      TRA.ctx.fillStyle='#7d62cd';TRA.ctx.fill();}
+      TRA.ctx.fillStyle='#7022e0';TRA.ctx.fill();}
     trMark(p.x,p.y,p.x,p.y);});
   cv.addEventListener('pointermove',e=>{if(!TRA.down)return;try{e.preventDefault();}catch(err){}
     const p=pt(e);if(TRA.prev)trStroke(TRA.prev,p);TRA.prev=p;
@@ -4351,7 +4357,7 @@ function trDemoTick(){
     $('#trHint').textContent='Now you try \u2014 start at the green dot.';
     if(TRA.ctx&&TRA.start){var g2=TRA.ctx;g2.beginPath();
       g2.arc(TRA.start.x,TRA.start.y,Math.max(6,TRA.w*0.028),0,Math.PI*2);
-      g2.fillStyle='#7fdab6';g2.fill();g2.lineWidth=2.5;g2.strokeStyle='#fff';g2.stroke();}
+      g2.fillStyle='#2bd99a';g2.fill();g2.lineWidth=2.5;g2.strokeStyle='#fff';g2.stroke();}
     setTimeout(function(){ if(!TRDEMO.running)trClear(); },TRCFG.tailMs);
     sfxYes();
     return false;
@@ -4681,21 +4687,21 @@ function noteFreq(note){
   return 440*Math.pow(2,semis/12);
 }
 var DRUMS=[
-  {n:'kick', e:'\ud83e\udd41', lbl:'Kick', c:'linear-gradient(160deg,#ff9d8a,#d9512f)', f:function(){tone(85,.26,'sine',.32);}},
-  {n:'snare',e:'\ud83e\udd41', lbl:'Snare', c:'linear-gradient(160deg,#7fc4f5,#2466a8)', f:function(){tone(210,.12,'square',.2);setTimeout(function(){tone(520,.08,'triangle',.12);},10);}},
-  {n:'hat',  e:'\u2728', lbl:'Hi-hat', c:'linear-gradient(160deg,#ffd98e,#c98a16)', f:function(){tone(2400,.05,'square',.09);}},
-  {n:'tom',  e:'\ud83d\udd34', lbl:'Tom', c:'linear-gradient(160deg,#c3b0f2,#6b4cc4)', f:function(){tone(150,.22,'sine',.24);}},
-  {n:'clap', e:'\ud83d\udc4f', lbl:'Clap', c:'linear-gradient(160deg,#8fdcbf,#2e8e6c)', f:function(){tone(1300,.07,'square',.16);setTimeout(function(){tone(1500,.06,'square',.12);},40);}}
+  {n:'kick', e:'\ud83e\udd41', lbl:'Kick', c:'linear-gradient(160deg,#ff5a36,#d9512f)', f:function(){tone(85,.26,'sine',.32);}},
+  {n:'snare',e:'\ud83e\udd41', lbl:'Snare', c:'linear-gradient(160deg,#3fa1ff,#2466a8)', f:function(){tone(210,.12,'square',.2);setTimeout(function(){tone(520,.08,'triangle',.12);},10);}},
+  {n:'hat',  e:'\u2728', lbl:'Hi-hat', c:'linear-gradient(160deg,#ffb703,#c98a16)', f:function(){tone(2400,.05,'square',.09);}},
+  {n:'tom',  e:'\ud83d\udd34', lbl:'Tom', c:'linear-gradient(160deg,#9b5cff,#6b4cc4)', f:function(){tone(150,.22,'sine',.24);}},
+  {n:'clap', e:'\ud83d\udc4f', lbl:'Clap', c:'linear-gradient(160deg,#2bd99a,#2e8e6c)', f:function(){tone(1300,.07,'square',.16);setTimeout(function(){tone(1500,.06,'square',.12);},40);}}
 ];
 var SBOARD=[
-  {n:'bell', e:'\ud83d\udd14', lbl:'Bell', c:'linear-gradient(160deg,#ffd98e,#d9a83f)', f:function(){tone(1046,.32,'sine',.22);setTimeout(function(){tone(1568,.26,'sine',.15);},90);}},
+  {n:'bell', e:'\ud83d\udd14', lbl:'Bell', c:'linear-gradient(160deg,#ffb703,#cc8a00)', f:function(){tone(1046,.32,'sine',.22);setTimeout(function(){tone(1568,.26,'sine',.15);},90);}},
   {n:'door', e:'\ud83d\udeaa', lbl:'Door', c:'linear-gradient(160deg,#c9b38a,#8a6a3f)', f:function(){tone(170,.3,'sawtooth',.13);}},
-  {n:'rain', e:'\ud83c\udf27\ufe0f', lbl:'Rain', c:'linear-gradient(160deg,#7fc4f5,#3d7cc0)', f:function(){for(var i=0;i<10;i++){(function(i){setTimeout(function(){tone(1700+Math.random()*900,.05,'sine',.05);},i*35);})(i);}}},
-  {n:'horn', e:'\ud83d\udce3', lbl:'Horn', c:'linear-gradient(160deg,#ff9d8a,#d96a54)', f:function(){tone(220,.4,'sawtooth',.18);}},
-  {n:'phone',e:'\ud83d\udcde', lbl:'Phone', c:'linear-gradient(160deg,#8fdcbf,#4fae8c)', f:function(){tone(1000,.14,'square',.13);setTimeout(function(){tone(1000,.14,'square',.13);},230);}},
-  {n:'drop', e:'\ud83d\udca7', lbl:'Drip', c:'linear-gradient(160deg,#6fd3c7,#2e9689)', f:function(){tone(900,.12,'sine',.13);}},
-  {n:'whoosh',e:'\ud83d\udca8', lbl:'Whoosh', c:'linear-gradient(160deg,#c3b0f2,#8a72cf)', f:function(){tone(320,.3,'sawtooth',.09);}},
-  {n:'pop',  e:'\ud83c\udf88', lbl:'Pop', c:'linear-gradient(160deg,#ffb3c7,#dd7c97)', f:function(){tone(720,.08,'square',.16);}}
+  {n:'rain', e:'\ud83c\udf27\ufe0f', lbl:'Rain', c:'linear-gradient(160deg,#3fa1ff,#1569c7)', f:function(){for(var i=0;i<10;i++){(function(i){setTimeout(function(){tone(1700+Math.random()*900,.05,'sine',.05);},i*35);})(i);}}},
+  {n:'horn', e:'\ud83d\udce3', lbl:'Horn', c:'linear-gradient(160deg,#ff5a36,#e03e1a)', f:function(){tone(220,.4,'sawtooth',.18);}},
+  {n:'phone',e:'\ud83d\udcde', lbl:'Phone', c:'linear-gradient(160deg,#2bd99a,#0e9f6e)', f:function(){tone(1000,.14,'square',.13);setTimeout(function(){tone(1000,.14,'square',.13);},230);}},
+  {n:'drop', e:'\ud83d\udca7', lbl:'Drip', c:'linear-gradient(160deg,#0dc4d6,#2e9689)', f:function(){tone(900,.12,'sine',.13);}},
+  {n:'whoosh',e:'\ud83d\udca8', lbl:'Whoosh', c:'linear-gradient(160deg,#9b5cff,#7022e0)', f:function(){tone(320,.3,'sawtooth',.09);}},
+  {n:'pop',  e:'\ud83c\udf88', lbl:'Pop', c:'linear-gradient(160deg,#ff4f93,#d6306f)', f:function(){tone(720,.08,'square',.16);}}
 ];
 
 function nCID(n){ return n; }
