@@ -42,7 +42,6 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         try {
             requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
-            hideSystemBars()
             initTts()
 
             val wv = WebView(this)
@@ -107,24 +106,31 @@ class MainActivity : Activity() {
 
     private fun hideSystemBars() {
         // A kids' app should feel like a toy, not like a browser - no status
-        // bar / nav bar chrome stealing attention or screen space.
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            window.setDecorFitsSystemWindows(false)
-            window.insetsController?.let { controller ->
-                controller.hide(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
-                controller.systemBarsBehavior =
-                    WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        // bar / nav bar chrome stealing attention or screen space. This is
+        // cosmetic only, so a failure here (seen on at least one real
+        // device: window.insetsController threw a NullPointerException
+        // internally rather than returning null) must never crash the app.
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                window.setDecorFitsSystemWindows(false)
+                window.insetsController?.let { controller ->
+                    controller.hide(WindowInsets.Type.statusBars() or WindowInsets.Type.navigationBars())
+                    controller.systemBarsBehavior =
+                        WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                }
+            } else {
+                @Suppress("DEPRECATION")
+                window.decorView.systemUiVisibility = (
+                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                        or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                        or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                        or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                        or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                        or View.SYSTEM_UI_FLAG_FULLSCREEN
+                    )
             }
-        } else {
-            @Suppress("DEPRECATION")
-            window.decorView.systemUiVisibility = (
-                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                    or View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                    or View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                    or View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                    or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                    or View.SYSTEM_UI_FLAG_FULLSCREEN
-                )
+        } catch (t: Throwable) {
+            // Keep the chrome visible rather than crash; not worth losing the app over.
         }
     }
 
@@ -162,6 +168,17 @@ class MainActivity : Activity() {
                 }
             }
         }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        // The window's decor view isn't reliably attached yet during
+        // onCreate() - on this exact device (Samsung, reported crash),
+        // window.insetsController throws a NullPointerException internally
+        // instead of returning null when called too early. Focus-gained is
+        // the standard, race-free point to apply immersive system-UI flags;
+        // it also re-hides the bars if the user swipes them back in.
+        if (hasFocus) hideSystemBars()
     }
 
     override fun onBackPressed() {
