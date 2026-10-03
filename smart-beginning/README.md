@@ -201,6 +201,41 @@ introducing new UI patterns.
     non-empty before treating a capture as successful, instead of leaving a
     broken entry in the gallery.
 
+## Honest progress reporting (round 6)
+
+A sharp catch from testing: the Parent Zone progress dashboard showed
+numbers on a completely fresh, never-used install. Traced it to four
+separate places quietly faking "already in progress" data:
+
+- **8 badges, 4 pre-unlocked.** `BADGES` had `got:true` hardcoded on half
+  the shelf regardless of whether the child had done anything. All 8 now
+  start `got:false`; a few unlock from a real signal (finishing a story,
+  hearing every animal/bird) and the rest stay honestly locked until there's
+  real tracking behind them, rather than faking a condition we can't check.
+- **6 stickers, pre-filled.** The `STICKERS` array shipped with 6 of its 24
+  slots already filled in. All 24 now start `null` (locked) on a fresh
+  install.
+- **The Home screen's sticker count never moved.** `unlockSticker()` updated
+  a separate array for the Rewards screen but never touched `state.stickers`
+  — the "⭐ 0 stickers" chip on Home was permanently stuck at 0 no matter how
+  many stickers got earned. It now updates `state.stickers` and the Home
+  chip live, in the same place a sticker is actually unlocked.
+- **The whole Parent Zone report card was sample data** — fake 82%/74%/66%/
+  90% category bars, a fake "4 sessions · 96 min," fabricated strengths/
+  weaknesses text, and a fake "AI weekly plan," all shown regardless of
+  actual use (with only a small "(sample data)" caption admitting it). It's
+  replaced with an honest two-state card: "No activities completed yet"
+  until the child does something real, then a plain summary built from
+  actual state — current level and XP, stickers really earned, and a
+  "still practicing" list pulled from the same weak-letter/weak-number
+  tracking the alphabet and counting games already use internally. No
+  invented percentages, no fake session counts, no fabricated AI plan.
+
+Verified with a Playwright test that checks a fresh install shows zero
+badges/stickers and the honest empty-state dashboard, then simulates real
+XP and a real sticker unlock and confirms the dashboard, Rewards screen,
+and Home chip all switch to consistent, true numbers.
+
 ## Playful rainbow redesign (round 4)
 
 The app's colour system is built from 7 reusable CSS custom-property tokens
@@ -306,3 +341,8 @@ folder directly in Android Studio and it should sync normally.
   outline rather than a flood-fill that respects the lines — the same
   forgiving approach most toddler colouring apps use, since "stay inside the
   lines" isn't a realistic expectation at this age anyway.
+- XP, level, and stickers live only in memory for the current app session —
+  there's no save/load to the device yet, so progress resets on every app
+  restart. Round 6 made the *displayed* numbers honest (zero on a fresh
+  install, real numbers once you play), but didn't add persistence across
+  restarts. Worth doing next if real day-to-day progress tracking matters.

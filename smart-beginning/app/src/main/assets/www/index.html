@@ -1398,17 +1398,13 @@ body{font-size:15px}
           </div>
           <div id="dashView" style="display:none">
             <div class="card">
-              <div class="spread"><div><h3><span data-kidname>No child added yet</span><span data-kidage-wrap>, <span data-kidage>—</span> years</span></h3><div class="tiny">This week · 4 sessions · 96 min (sample data)</div></div><span class="chip">🟢 on track</span></div>
-              <div class="rep" style="margin-top:16px">
-                <div class="lab"><span>Reading &amp; phonics</span><span>82%</span></div><div class="tr"><span style="width:82%;background:var(--lav)"></span></div>
-                <div class="lab"><span>Number sense</span><span>74%</span></div><div class="tr"><span style="width:74%;background:var(--butter)"></span></div>
-                <div class="lab"><span>Science curiosity</span><span>66%</span></div><div class="tr"><span style="width:66%;background:var(--teal)"></span></div>
-                <div class="lab"><span>Emotional regulation</span><span>90%</span></div><div class="tr"><span style="width:90%;background:var(--blush)"></span></div>
+              <div class="spread"><div><h3><span data-kidname>No child added yet</span><span data-kidage-wrap>, <span data-kidage>—</span> years</span></h3><div class="tiny" id="dashActivitySummary">No activities completed yet</div></div><span class="chip" id="dashStatusChip">🌱 just getting started</span></div>
+              <div id="dashEmptyReport" style="margin-top:14px">
+                <p class="muted">Nothing to show yet — this report fills in with real progress (level, stickers earned, and anything worth practicing more) once your child starts playing. No sample or placeholder numbers.</p>
               </div>
-              <p class="muted" style="margin-top:14px"><b>Strengths:</b> recognises 22/26 letters without help; calm-down routine after big feelings.<br>
-              <b>Needs work:</b> letter <b>M</b> and <b>N</b> sounds; counting past 15 out of order.</p>
-              <p class="tiny" style="margin-top:6px">Figures above are sample data, shown so the report layout is visible before any real sessions run.</p>
-              <p class="muted" style="margin-top:10px"><b>AI weekly plan:</b> 4 min phonics drills on M/N, then a story reward. Math kept at level 2 to avoid frustration.</p>
+              <div id="dashRealReport" style="display:none;margin-top:14px">
+                <p class="muted" id="dashStrengths"></p>
+              </div>
             </div>
 
             <div class="card" style="margin-top:12px">
@@ -2010,7 +2006,7 @@ function applyChild(){
     $('#lumiSay').innerHTML=greetWord()+', '+c.name+'! Today we start with <em>colours</em> — then shapes, then letters and numbers.';
     $('#guideName').textContent='Kinni · guide for '+c.name;
     $('#adaptsTxt').textContent='for '+c.name+(hasAge?', '+ageLabel(c.age):'');
-    $('#chipLine').innerHTML='<span class="chip">🌱 '+c.name+'\u2019s first steps</span><span class="chip">⭐ '+state.stickers+' stickers</span>';
+    $('#chipLine').innerHTML='<span class="chip">🌱 '+c.name+'\u2019s first steps</span><span class="chip" id="stickerCountChip">⭐ '+state.stickers+' stickers</span>';
   }else{
     $('#adaptsTxt').textContent='for you';
   }
@@ -2206,12 +2202,17 @@ function sparkle(el,n=10){
 }
 
 /* ---------- XP + rewards ---------- */
-const STICKERS=['🦉','🐻','🐱','🦖','☁️','🌙',null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null];
+const STICKERS=[null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null];
+/* Every badge starts locked (got:false) on a fresh install - no
+   pre-populated "already earned" demo badges. A few have a real signal to
+   unlock from (set directly where that activity completes, or computed live
+   in renderBadges()); the rest stay honestly locked until that tracking
+   exists, rather than faking an unlock condition we can't actually check. */
 const BADGES=[
-  {i:'🌙',n:'Moon Reader',d:'Finished your first full story',got:true,c:'#e8f2ff'},
-  {i:'🔢',n:'Counting Star',d:'Counted to 20 without help',got:true,c:'#ffe4a3'},
-  {i:'🫧',n:'Calm Keeper',d:'Completed 3 breathing exercises',got:true,c:'#e9f4ff'},
-  {i:'🌱',n:'Curious Mind',d:'Asked RoboRex 5 questions',got:true,c:'#b8f5d8'},
+  {i:'🌙',n:'Moon Reader',d:'Finished your first full story',got:false,c:'#e8f2ff'},
+  {i:'🔢',n:'Counting Star',d:'Counted to 20 without help',got:false,c:'#ffe4a3'},
+  {i:'🫧',n:'Calm Keeper',d:'Completed 3 breathing exercises',got:false,c:'#e9f4ff'},
+  {i:'🌱',n:'Curious Mind',d:'Asked RoboRex 5 questions',got:false,c:'#b8f5d8'},
   {i:'🌅',n:'Morning Helper',d:'Finished Kinni’s whole morning routine',got:false,c:'#ffe4a3'},
   {i:'🐮',n:'Animal Friend',d:'Heard every animal and bird in the app',got:false,c:'#b8f5d8'},
   {i:'🏅',n:'10-Day Streak',d:'Keeps coming back. 4 of 10 days.',got:false,c:'#e4d2ff'},
@@ -2229,11 +2230,13 @@ function addXP(n,msg,srcEl){
   if(msg)toast(msg,'⭐');
   if(srcEl)sparkle(srcEl);
 }
-let stickerCur=6;
+let stickerCur=0;
 function unlockSticker(){
   const i=STICKERS.indexOf(null);
   if(i>-1){STICKERS[i]=['🌞','🐠','🏰','🦋','⭐','🍉'][stickerCur%6];stickerCur++;}
-  renderStickers();$('#stickCount').textContent=`${STICKERS.filter(Boolean).length}`;
+  state.stickers=STICKERS.filter(Boolean).length;
+  renderStickers();$('#stickCount').textContent=`${state.stickers}`;
+  const chip=$('#stickerCountChip');if(chip)chip.textContent='⭐ '+state.stickers+' stickers';
 }
 function renderStickers(){
   $('#stickerGrid').innerHTML=STICKERS.map(s=>s?`<div class="sticker">${s}</div>`:`<div class="sticker locked">?</div>`).join('');
@@ -2243,6 +2246,30 @@ function renderBadges(){
     <div><div style="font-family:var(--font-display);font-weight:800;font-size:14px">${b.n}</div><div class="tiny">${b.d}</div></div></div>`).join('');
 }
 renderStickers();renderBadges();syncXP();
+
+function renderDashReport(){
+  const hasActivity=state.xp>0||state.stickers>0;
+  const emptyEl=$('#dashEmptyReport'),realEl=$('#dashRealReport');
+  if(!hasActivity){
+    if(emptyEl)emptyEl.style.display='';
+    if(realEl)realEl.style.display='none';
+    $('#dashActivitySummary').textContent='No activities completed yet';
+    $('#dashStatusChip').textContent='🌱 just getting started';
+    return;
+  }
+  if(emptyEl)emptyEl.style.display='none';
+  if(realEl)realEl.style.display='';
+  $('#dashActivitySummary').textContent=`Level ${state.level} · ${state.stickers} sticker${state.stickers===1?'':'s'} earned`;
+  $('#dashStatusChip').textContent='🟢 on track';
+  const weakL=typeof REP!=='undefined'?Object.keys(REP.weak.letter):[];
+  const weakN=typeof REP!=='undefined'?Object.keys(REP.weak.number):[];
+  let practicing='Nothing flagged right now — great progress!';
+  const bits=[];
+  if(weakL.length)bits.push('letter'+(weakL.length>1?'s':'')+' '+weakL.join(', '));
+  if(weakN.length)bits.push('number'+(weakN.length>1?'s':'')+' '+weakN.join(', '));
+  if(bits.length)practicing='Still practicing: '+bits.join(' and ')+'.';
+  $('#dashStrengths').innerHTML='<b>Level:</b> '+state.level+' ('+state.xp+'/'+state.xpMax+' XP) · <b>Stickers:</b> '+state.stickers+'<br>'+practicing;
+}
 
 /* ---------- characters hub ---------- */
 const HUB_ORDER=['kinni','lumi','bingo','mira','roborex','zuzu'];
@@ -3442,7 +3469,7 @@ function renderPinDots(){$$('#pinDots i').forEach((d,i)=>d.classList.toggle('f',
 $$('.pinkey').forEach(k=>k.onclick=()=>{
   const v=k.dataset.k;sfxTap();
   if(v==='c')pinBuf=pinBuf.slice(0,-1);
-  else if(v==='ok'){if(pinBuf.length===4){state.isParent=true;$('#pinView').style.display='none';$('#dashView').style.display='';toast('Welcome, parent.','👋');}else{toast('Enter 4 digits.','🔒');}}
+  else if(v==='ok'){if(pinBuf.length===4){state.isParent=true;$('#pinView').style.display='none';$('#dashView').style.display='';renderDashReport();toast('Welcome, parent.','👋');}else{toast('Enter 4 digits.','🔒');}}
   else if(pinBuf.length<4)pinBuf+=v;
   renderPinDots();
 });
