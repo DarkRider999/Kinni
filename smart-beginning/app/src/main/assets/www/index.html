@@ -682,6 +682,14 @@ body{font-size:15px}
   background:linear-gradient(150deg,#a9d8ff,#e0c8ff);box-shadow:0 5px 0 #8a95d9;transition:transform .15s}
 .memcard.flip{background:#fff;box-shadow:0 2px 0 #e5e1f5;transform:scale(1.03)}
 .memcard.found{background:linear-gradient(150deg,#8fdcbf,#4fae8c);box-shadow:0 2px 0 #3a8a6d;cursor:default}
+/* ---------- Animal & Bird Sounds ---------- */
+.animalgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px}
+.animaltile{border:0;cursor:pointer;border-radius:22px;aspect-ratio:1;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:5px;background:linear-gradient(150deg,#fff,#eef4ff);
+  box-shadow:var(--lift);transition:transform .1s}
+.animaltile:active{transform:scale(.93)}
+.animaltile .ae{font-size:42px;line-height:1}
+.animaltile .atlabel{font-family:var(--font-display);font-weight:800;font-size:11.5px;color:var(--ink-soft)}
 /* ---------- My Body ---------- */
 .bodywrap{display:flex;justify-content:center;margin-top:10px}
 .bodyfig{position:relative;width:200px;height:270px}
@@ -810,7 +818,7 @@ body{font-size:15px}
               <span class="ti">📺</span><span class="tn">Watch &amp; Learn</span><span class="td">Hand-picked videos for each subject</span><span class="go">›</span></button>
             <button class="tile t-create" data-go="rhymes" style="grid-column:1/-1;background:linear-gradient(135deg,#fff0f6,#e9f6ff)">
               <div class="rule">Sing &amp; listen</div>
-              <div><div class="tname">Rhymes &amp; Stories</div><div class="tsub">77 nursery rhymes &amp; songs · 24 storybooks</div></div>
+              <div><div class="tname">Rhymes &amp; Stories</div><div class="tsub">77 nursery rhymes &amp; songs · 32 storybooks</div></div>
               <div class="tchar" style="position:absolute;right:10px;bottom:6px;width:64px;height:64px;font-size:44px">🎵</div>
             </button>
             <button class="tile t-feel" data-go="littleone" style="grid-column:1/-1;background:linear-gradient(135deg,#fff8ec,#ffeef0)">
@@ -897,6 +905,8 @@ body{font-size:15px}
               <span><span class="an">Bingo's Treasure Hunt</span><span class="ad">Add &amp; subtract to open the chest</span></span><span class="go">›</span></button>
             <button class="act" data-act="bubbles"><span class="ico" style="background:#e8f4ff">🫧</span>
               <span><span class="an">Bubble Pop Counting</span><span class="ad">Pop and count up to 8 bubbles</span></span><span class="go">›</span></button>
+            <button class="act" data-act="oddone"><span class="ico" style="background:#f5f1ff">🔍</span>
+              <span><span class="an">Odd One Out</span><span class="ad">Tap the picture that doesn't belong · 8 rounds</span></span><span class="go">›</span></button>
           </div>
         </section>
 
@@ -909,6 +919,8 @@ body{font-size:15px}
           <div class="stack">
             <button class="act" data-act="draw"><span class="ico" style="background:#ffeef7">🖌️</span>
               <span><span class="an">Drawing pad</span><span class="ad">8 colours · thick and thin brushes</span></span><span class="go">›</span></button>
+            <button class="act" data-act="coloring"><span class="ico" style="background:#fff4e2">🖍️</span>
+              <span><span class="an">Colouring Book</span><span class="ad">Pick a picture, then colour it in</span></span><span class="go">›</span></button>
             <button class="act" data-act="music"><span class="ico" style="background:#eafaf3">🎵</span>
               <span><span class="an">Xylophone maker</span><span class="ad">Tap 5 notes · play a tune</span></span><span class="go">›</span></button>
             <button class="act" data-act="builder"><span class="ico" style="background:#fff7e2">🎬</span>
@@ -933,6 +945,8 @@ body{font-size:15px}
               <span><span class="an">Float or sink?</span><span class="ad">Kitchen experiment · predict first</span></span><span class="go">›</span></button>
             <button class="act" data-act="peekaboo"><span class="ico" style="background:#fff4e2">🚪</span>
               <span><span class="an">Animal Peekaboo</span><span class="ad">Tap a door to meet 10 animals</span></span><span class="go">›</span></button>
+            <button class="act" data-act="animalsounds"><span class="ico" style="background:#eafaf3">🐦</span>
+              <span><span class="an">Animal &amp; Bird Sounds</span><span class="ad">Farm, wild animals and birds · 24 sounds</span></span><span class="go">›</span></button>
           </div>
         </section>
 
@@ -1223,6 +1237,10 @@ body{font-size:15px}
             <button class="mtab" data-mmode="sfx">🔔 Sound FX</button>
             <button class="mtab" data-mmode="tunes">🎵 Melody tunes</button>
           </div>
+          <div class="card" style="margin-top:10px;padding:10px 16px">
+            <div class="spread"><span class="tiny">🔈 KEY VOLUME</span><span class="tiny" id="mxVolTxt">55%</span></div>
+            <input type="range" min="10" max="100" step="5" value="55" id="mxVol" aria-label="Key tone volume" style="margin-top:4px">
+          </div>
           <div class="rotateHint" id="mxRotateHint">📱➡️🖥️ Turn your device sideways for big rainbow keys!</div>
 
           <div id="mxXylo">
@@ -1393,13 +1411,13 @@ body{font-size:15px}
             </div>
 
             <div class="card" style="margin-top:12px">
-              <h3>Printables</h3>
-              <p class="muted" style="margin:6px 0 0">Age-matched worksheets, regenerated weekly from your child's weak spots.</p>
+              <h3>Printables → Colouring Book</h3>
+              <p class="muted" style="margin:6px 0 0">There's no printer here, so these open as an in-app colouring page instead — pick a colour pencil and colour right on the screen.</p>
               <div class="grid2" style="margin-top:11px">
-                <button class="toy sm lav" data-print="Letter M & N tracing">Tracing sheet</button>
-                <button class="toy sm butter" data-print="Counting to 15">Counting to 15</button>
-                <button class="toy sm teal" data-print="Feelings faces">Feelings faces</button>
-                <button class="toy sm mint" data-print="UAE animals">UAE animals</button>
+                <button class="toy sm lav" data-act="coloring" data-arg="tracing">Tracing sheet</button>
+                <button class="toy sm butter" data-act="coloring" data-arg="counting">Counting to 15</button>
+                <button class="toy sm teal" data-act="coloring" data-arg="feelings">Feelings faces</button>
+                <button class="toy sm mint" data-act="coloring" data-arg="animals">UAE animals</button>
               </div>
             </div>
 
@@ -1494,6 +1512,20 @@ body{font-size:15px}
               <button class="toy sm ghost" id="paintClear">Start over</button>
               <button class="toy sm lav" id="paintStamp">🦋 Stamp</button>
               <button class="toy sm mint" id="paintSave">Save to gallery</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="screen" id="s-act-coloring">
+          <div class="hdr"><button class="back" data-go="creative">←</button>
+            <div><h2>Colouring Book</h2><div class="sub">Pick a picture, then colour it in</div></div></div>
+          <div class="watchcats" id="colPics"></div>
+          <div class="pad">
+            <canvas class="paint" id="colCanvas"></canvas>
+            <div class="swatches" id="colSwatches"></div>
+            <div class="row" style="margin-top:10px;gap:9px">
+              <button class="toy sm ghost" id="colClear">Start over</button>
+              <button class="toy sm mint" id="colSave">Save to gallery</button>
             </div>
           </div>
         </section>
@@ -1598,6 +1630,15 @@ body{font-size:15px}
           <div id="pkEnd" style="display:none"></div>
         </section>
 
+        <!-- ================= ANIMAL & BIRD SOUNDS ================= -->
+        <section class="screen" id="s-act-animalsounds">
+          <div class="hdr"><button class="back" data-go="science">←</button>
+            <div><h2>Animal &amp; Bird Sounds</h2><div class="sub">Tap any picture to hear its sound</div></div></div>
+          <div class="watchcats" id="asCats"></div>
+          <div class="animalgrid" id="asGrid"></div>
+          <div id="asEnd" style="display:none"></div>
+        </section>
+
         <!-- ================= SHAPE SORTER ================= -->
         <section class="screen" id="s-act-sorter">
           <div class="hdr"><button class="back" data-go="colors">←</button>
@@ -1619,6 +1660,15 @@ body{font-size:15px}
             <div class="bubble" id="bpSay">Pop the bubbles one by one — count with me!</div></div>
           <p class="tiny" style="text-align:center;margin-top:6px" id="bpCount">Popped: 0 of 5</p>
           <div class="sboard" id="bpGrid"></div>
+        </section>
+
+        <!-- ================= ODD ONE OUT ================= -->
+        <section class="screen" id="s-act-oddone">
+          <div class="hdr"><button class="back" data-go="math">←</button>
+            <div><h2>Odd One Out</h2><div class="sub">Tap the picture that doesn't belong</div></div></div>
+          <div class="card" style="text-align:center"><div class="tiny">ROUND <span id="ooRound">1</span> OF 8</div></div>
+          <div class="lgrid" id="ooGrid" style="grid-template-columns:repeat(2,1fr)"></div>
+          <div id="ooEnd" style="display:none"></div>
         </section>
 
         <section class="screen" id="s-act-space">
@@ -1715,6 +1765,16 @@ function playClip(name){
   if(src.indexOf('data:')!==0&&src.indexOf('blob:')!==0&&src.indexOf('http')!==0&&src.indexOf('audio/')!==0) src='data:audio/mpeg;base64,'+src;
   try{
     var a=new Audio(src); a.volume=0.9;
+    /* The 26 letters ("LA".."LZ") and 10 number words ("N1".."N10") are real
+       recorded narration (ElevenLabs), not device TTS, so they can't be
+       slowed via a speech-rate setting. Slow the clip itself a touch and
+       let the pitch drop along with it for a softer, gentler read while
+       learning the alphabet - everything else (taps, chimes, music notes)
+       plays at its normal speed. */
+    if(/^L[A-Z]$/.test(name)||/^N\d+$/.test(name)){
+      a.playbackRate=0.84;
+      try{ a.preservesPitch=false; a.mozPreservesPitch=false; a.webkitPreservesPitch=false; }catch(e){}
+    }
     try{ a.setAttribute('playsinline',''); }catch(e){}
     var pr=a.play();
     if(pr&&pr.catch)pr.catch(function(){});
@@ -1753,6 +1813,7 @@ function _playNote(freq,dur,type,vol){
 function tone(freq,dur=.18,type='sine',vol=.16){
   if(!audioOn())return;
   if(typeof freq!=='number'||!isFinite(freq))return;
+  vol=vol*(typeof state!=='undefined'&&state.keyVol!=null?state.keyVol:1);
   try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return; }
   if(AC.state!=='running'){
     try{ AC.resume(); }catch(e){}
@@ -1768,7 +1829,7 @@ const sfxNo =()=>{ if(!playClip('no')){tone(300,.2,'sine',.12);setTimeout(()=>to
    narration always uses the device's own TTS engine (native bridge, or Web
    Speech as a fallback). "soft" aims for a slower, lower, cuddlier read;
    "bright" is closer to a normal, energetic storytelling voice. */
-const VOICE_STYLES={soft:{pitch:.9,rate:.86},bright:{pitch:1.12,rate:1.0}};
+const VOICE_STYLES={soft:{pitch:.85,rate:.76},bright:{pitch:1.12,rate:1.0}};
 function voiceStyle(){ return VOICE_STYLES[state.voiceStyle]||VOICE_STYLES.soft; }
 function say(text,lang,depth){
   if(!audioOn())return;
@@ -1804,7 +1865,7 @@ function speechStop(){
 }
 
 /* ---------- state ---------- */
-const state={xp:0,xpMax:400,level:1,stickers:0,sound:true,lang:'en',voiceStyle:'soft',screen:'home',isParent:false,child:null};
+const state={xp:0,xpMax:400,level:1,stickers:0,sound:true,keyVol:0.55,lang:'en',voiceStyle:'soft',screen:'home',isParent:false,child:null};
 
 /* ---------- child profile, kept on this device only ---------- */
 const PROFILE_KEY='sb_child_v1';
@@ -2327,7 +2388,47 @@ threePigs:{title:'The Three Little Pigs',back:'rhymes',tab:'rhymes',
     pages:[{art:'🌧️',t:'Rain tapped on the window all morning, so Mira the cat could not go outside to play.'},
       {art:'📚',t:'“A rainy day is a reading day,” she said, and pulled her favourite book down from the shelf.'},
       {art:'🔤',t:'She read slowly, sound by sound: “R… ai… n. Rain!” Each word she figured out felt like a tiny puzzle solved.'},
-      {art:'🌈',t:'By the time she finished her book, the rain had stopped and a rainbow stretched over the garden. “Good things come after a little patience,” Mira purred.'}]}
+      {art:'🌈',t:'By the time she finished her book, the rain had stopped and a rainbow stretched over the garden. “Good things come after a little patience,” Mira purred.'}]},
+  billyGoats:{title:'The Three Billy Goats Gruff',back:'rhymes',tab:'rhymes',
+    pages:[{art:'🐐',t:'Three Billy Goats Gruff wanted to cross the bridge to eat the sweet green grass on the hill.'},
+      {art:'🌉',t:'Under the bridge lived a grumpy troll. “Who is trip-trapping on my bridge?” he growled at the smallest goat.'},
+      {art:'🐐',t:'“Wait for my brother, he is bigger,” said the small goat, and the troll let him pass. The middle goat said the very same thing.'},
+      {art:'💪',t:'Then the biggest billy goat came — with the biggest horns of all. He tipped the troll right off the bridge, and the three goats ate grass together all day.'}]},
+  townMouse:{title:'Town Mouse and Country Mouse',back:'rhymes',tab:'rhymes',
+    pages:[{art:'🐭',t:'Country Mouse lived in a quiet burrow and ate simple seeds. One day his cousin, Town Mouse, came to visit.'},
+      {art:'🧀',t:'“This food is so plain!” said Town Mouse. “Come to the city, I will show you a real feast.” So off they went together.'},
+      {art:'🏙️',t:'In the city there was cheese and cake on every table — but also a big loud dog, and they had to run and hide!'},
+      {art:'🌾',t:'“I would rather eat seeds in peace than cake in fear,” said Country Mouse, and he went happily home to his quiet little burrow.'}]},
+  foxGrapes:{title:'The Fox and the Grapes',back:'rhymes',tab:'rhymes',
+    pages:[{art:'🦊',t:'A hungry fox saw plump purple grapes hanging high on a vine. “Those look delicious,” he said, licking his lips.'},
+      {art:'🍇',t:'He jumped and jumped, reaching as high as he could — but the grapes were just too high up to reach.'},
+      {art:'😤',t:'He tried one more big jump, but still could not reach them. Now he was tired, and a little bit grumpy too.'},
+      {art:'🙄',t:'“Those grapes were probably sour anyway,” he said, walking off with his nose in the air. It is okay to feel disappointed — it is just kinder to be honest about it.'}]},
+  northWindSun:{title:'The North Wind and the Sun',back:'rhymes',tab:'rhymes',
+    pages:[{art:'🌬️',t:'The North Wind and the Sun argued about who was stronger. “Whoever makes that traveller take off his coat wins,” said the Sun.'},
+      {art:'🧥',t:'The wind blew as hard as he could. But the colder it got, the tighter the traveller held his coat closed.'},
+      {art:'☀️',t:'Then the Sun took a turn, and simply shone warm and bright. Slowly, slowly, the traveller grew warm.'},
+      {art:'😊',t:'He smiled, unbuttoned his coat, and took it right off. “Gentle warmth,” said the Sun, “works better than force.”'}]},
+  stoneSoup:{title:'Stone Soup',back:'rhymes',tab:'rhymes',
+    pages:[{art:'🥘',t:'A hungry traveller came to a village with nothing but an empty pot and one smooth stone. “I will make stone soup,” he announced.'},
+      {art:'🪨',t:'He filled the pot with water and dropped in the stone. “It just needs a little carrot to taste perfect,” he said aloud. A villager brought one.'},
+      {art:'🥕',t:'“Some potatoes would make it even better,” he said next. One by one, villagers added onions, beans and herbs.'},
+      {art:'🍲',t:'Soon the pot was full of a rich, delicious soup for the whole village to share. “Funny,” said the traveller, smiling, “what a little sharing can cook up.”'}]},
+  littleRedHen:{title:'The Little Red Hen',back:'rhymes',tab:'rhymes',
+    pages:[{art:'🐓',t:'“Who will help me plant this wheat?” asked the Little Red Hen. “Not I,” said the dog, the cat and the duck. So she planted it all by herself.'},
+      {art:'🌾',t:'“Who will help me cut the wheat?” she asked when it grew tall. “Not I,” said all three again. So she cut it alone.'},
+      {art:'🍞',t:'“Who will help me bake this bread?” she asked, carrying the flour. “Not I,” they said once more. So she baked it herself, and the kitchen smelled wonderful.'},
+      {art:'😋',t:'“Who will help me eat this bread?” she asked. “I will!” they all said quickly. “No,” said the Little Red Hen, “I will eat it with my chicks” — the ones who had helped all along.'}]},
+  princessPea:{title:'The Princess and the Pea',back:'rhymes',tab:'rhymes',
+    pages:[{art:'👸',t:'A prince wanted to marry a real princess, but how could he be sure? One stormy night, a girl knocked on the castle door, soaked from the rain.'},
+      {art:'🛏️',t:'“I am a princess,” she said. The queen was not sure, so she placed one tiny pea under twenty mattresses, and the girl slept there that night.'},
+      {art:'😴',t:'In the morning, the girl looked tired. “I barely slept,” she said. “Something hard was under my mattress, all night long!”'},
+      {art:'👑',t:'Only a real princess could feel a tiny pea through twenty mattresses! The prince married her, and they checked their mattresses carefully ever after.'}]},
+  kinniRain:{title:'Kinni and the Rainy Window',back:'kinni',
+    pages:[{art:'🌧️',t:'Rain tapped on the window — tip, tip, tip. Kinni pressed her little hand against the cool glass to feel it.'},
+      {art:'🌈',t:'“Where does rain come from?” Kinni wondered. Duck said, “From clouds, up in the sky, like a big soft sponge.”'},
+      {art:'🫧',t:'Kinni watched one raindrop race another raindrop down the window, giggling every single time one won.'},
+      {art:'☀️',t:'When the rain stopped, a rainbow peeked out from behind the clouds. “Hello, rainbow,” Kinni said softly, and Bunny waved at it too.'}]}
 };
 let story={key:null,i:0};
 function startStory(key){
@@ -2432,6 +2533,82 @@ pc.addEventListener('pointermove',e=>{
 $('#paintClear').onclick=()=>{pctx.clearRect(0,0,pc.width,pc.height);sfxTap();};
 $('#paintStamp').onclick=(e)=>{pctx.font='54px serif';pctx.fillText('🦋',60+Math.random()*140,70+Math.random()*160);sfxTap();sparkle(e.target);};
 $('#paintSave').onclick=(e)=>{sfxYes();sparkle(e.target);addXP(20,'Saved to the gallery');};
+
+/* ============================================================
+   7b. COLOURING BOOK — real, working printables: pick a simple
+   line-art picture (drawn procedurally, no external image files)
+   and colour over it with a pencil, instead of the old Parent Zone
+   "Printables" buttons that only showed a fake "queued for PDF" toast.
+   ============================================================ */
+const COLORING_PICS=[
+  {k:'tracing',label:'🔤 Letter A',draw:function(ctx,w,h){
+    ctx.lineWidth=10;ctx.strokeStyle='#2b2543';ctx.font='bold '+Math.round(h*0.62)+'px sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.strokeText('A',w/2,h/2+h*0.04);
+  }},
+  {k:'counting',label:'🔢 Number 5',draw:function(ctx,w,h){
+    ctx.lineWidth=10;ctx.strokeStyle='#2b2543';ctx.font='bold '+Math.round(h*0.62)+'px sans-serif';
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.strokeText('5',w/2,h/2+h*0.04);
+  }},
+  {k:'feelings',label:'😊 Happy Face',draw:function(ctx,w,h){
+    const cx=w/2,cy=h/2,r=Math.min(w,h)*0.34;
+    ctx.lineWidth=8;ctx.strokeStyle='#2b2543';ctx.lineCap='round';
+    ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.stroke();
+    ctx.beginPath();ctx.arc(cx-r*0.38,cy-r*0.25,r*0.09,0,Math.PI*2);ctx.stroke();
+    ctx.beginPath();ctx.arc(cx+r*0.38,cy-r*0.25,r*0.09,0,Math.PI*2);ctx.stroke();
+    ctx.beginPath();ctx.arc(cx,cy+r*0.05,r*0.55,0.15*Math.PI,0.85*Math.PI);ctx.stroke();
+  }},
+  {k:'animals',label:'🐪 Camel',draw:function(ctx,w,h){
+    const cx=w/2,cy=h/2+h*0.08;
+    ctx.lineWidth=8;ctx.strokeStyle='#2b2543';ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.beginPath();
+    ctx.moveTo(cx-w*0.30,cy+h*0.12);
+    ctx.quadraticCurveTo(cx-w*0.30,cy-h*0.10,cx-w*0.17,cy-h*0.05);
+    ctx.quadraticCurveTo(cx-w*0.12,cy-h*0.22,cx-w*0.04,cy-h*0.06);
+    ctx.quadraticCurveTo(cx+w*0.02,cy-h*0.20,cx+w*0.10,cy-h*0.04);
+    ctx.quadraticCurveTo(cx+w*0.22,cy-h*0.02,cx+w*0.28,cy+h*0.12);
+    ctx.lineTo(cx+w*0.24,cy+h*0.30);
+    ctx.moveTo(cx+w*0.16,cy+h*0.12);ctx.lineTo(cx+w*0.16,cy+h*0.30);
+    ctx.moveTo(cx-w*0.08,cy+h*0.12);ctx.lineTo(cx-w*0.08,cy+h*0.30);
+    ctx.moveTo(cx-w*0.22,cy+h*0.12);ctx.lineTo(cx-w*0.24,cy+h*0.30);
+    ctx.moveTo(cx-w*0.17,cy-h*0.05);ctx.quadraticCurveTo(cx-w*0.26,cy-h*0.08,cx-w*0.30,cy+h*0.02);
+    ctx.stroke();
+  }}
+];
+let colPic='tracing',colCtx=null,colDraw=false,colPX=0,colPY=0,colColor='#ff9d8a';
+function colDrawOutline(){
+  const c=$('#colCanvas'); colCtx=fitCanvas(c);
+  const r=c.getBoundingClientRect();
+  const pic=COLORING_PICS.find(p=>p.k===colPic)||COLORING_PICS[0];
+  pic.draw(colCtx,r.width,r.height);
+}
+function renderColPics(){
+  $('#colPics').innerHTML=COLORING_PICS.map(p=>`<button class="wcat${p.k===colPic?' on':''}" data-colpic="${p.k}">${p.label}</button>`).join('');
+}
+function startColoring(pic){
+  colPic=COLORING_PICS.some(p=>p.k===pic)?pic:'tracing';
+  renderColPics(); colDrawOutline();
+}
+$('#colPics').addEventListener('click',e=>{
+  const b=e.target.closest('[data-colpic]'); if(!b)return;
+  sfxTap(); colPic=b.dataset.colpic; renderColPics(); colDrawOutline();
+});
+$('#colSwatches').innerHTML=['#ff9d8a','#ffd98e','#8fdcbf','#7fc4f5','#c3b0f2','#ffb3c7','#6fd3c7','#3b3555']
+  .map((c,i)=>`<button class="sw ${i===0?'on':''}" data-c="${c}" style="background:${c}" aria-label="colour"></button>`).join('');
+$('#colSwatches').addEventListener('click',e=>{const s=e.target.closest('.sw');if(!s)return;
+  colColor=s.dataset.c;$$('#colSwatches .sw').forEach(x=>x.classList.toggle('on',x===s));sfxTap();});
+function colPos(e){const c=$('#colCanvas');const r=c.getBoundingClientRect();const t=e.touches?e.touches[0]:e;return [t.clientX-r.left,t.clientY-r.top];}
+(function(){
+  const c=$('#colCanvas');
+  c.addEventListener('pointerdown',e=>{colDraw=true;[colPX,colPY]=colPos(e);tone(700,.05,'sine',.05);});
+  c.addEventListener('pointermove',e=>{
+    if(!colDraw)return;const [x,y]=colPos(e);
+    colCtx.strokeStyle=colColor;colCtx.lineWidth=14;colCtx.lineCap='round';colCtx.lineJoin='round';
+    colCtx.beginPath();colCtx.moveTo(colPX,colPY);colCtx.lineTo(x,y);colCtx.stroke();colPX=x;colPY=y;
+  });
+  ['pointerup','pointercancel','pointerleave'].forEach(ev=>c.addEventListener(ev,()=>colDraw=false));
+})();
+$('#colClear').onclick=()=>{sfxTap();colDrawOutline();};
+$('#colSave').onclick=(e)=>{sfxYes();sparkle(e.target);addXP(20,'Saved to the gallery');};
 
 /* ============================================================
    8. MUSIC MAKER
@@ -2686,6 +2863,40 @@ $('#huntGrid').addEventListener('click',e=>{
 });
 
 /* ============================================================
+   14i. ODD ONE OUT — classic toddler cognitive-sorting game: 3 items
+   share a category, 1 doesn't; tap the one that doesn't belong.
+   ============================================================ */
+const ODD_ROUNDS=[
+  ['🍎','🍌','🍇','🐶'],['🐱','🐭','🐹','🚗'],['⚽','🏀','🎾','📖'],['🌞','🌙','⭐','🚲'],
+  ['🐟','🐬','🐳','🦋'],['🚗','🚌','🚲','🍕'],['⚪','⬛','🔺','🍌'],['🐦','🦅','🦉','🐠']
+];
+let OO={round:0,cur:[]};
+function ooStart(){ OO.round=0; $('#ooEnd').style.display='none'; ooLoad(); }
+function ooLoad(){
+  const items=ODD_ROUNDS[OO.round];
+  OO.cur=shuffle(items.map((e,i)=>({e,odd:i===items.length-1})));
+  $('#ooRound').textContent=OO.round+1;
+  $('#ooGrid').innerHTML=OO.cur.map((it,i)=>`<button class="ltile" data-ooi="${i}">${it.e}</button>`).join('');
+}
+$('#ooGrid').addEventListener('click',e=>{
+  const b=e.target.closest('[data-ooi]'); if(!b)return;
+  const it=OO.cur[+b.dataset.ooi];
+  if(it.odd){
+    b.classList.add('right'); sfxYes(); buzz(16); sparkle(b,8); addXP(10);
+    setTimeout(()=>{
+      OO.round++;
+      if(OO.round>=ODD_ROUNDS.length){
+        addXP(20); unlockSticker(); toast('Odd One Out champion!','🔍');
+        $('#ooEnd').style.display=''; $('#ooEnd').innerHTML='<div class="card" style="text-align:center;margin-top:10px"><h3>All 8 rounds solved! 🎉</h3></div>';
+      }else ooLoad();
+    },550);
+  }else{
+    sfxTap();
+    b.animate([{transform:'translateX(0)'},{transform:'translateX(-6px)'},{transform:'translateX(6px)'},{transform:'translateX(0)'}],{duration:260});
+  }
+});
+
+/* ============================================================
    14. ACTIVITY ROUTER (module buttons → games)
    ============================================================ */
 document.addEventListener('click',e=>{
@@ -2695,6 +2906,7 @@ document.addEventListener('click',e=>{
   else if(k==='story')startStory(arg);
   else if(k==='count'){startCount(arg);showScreen('act-count');}
   else if(k==='draw'){showScreen('act-draw');pctx=fitCanvas(pc);}
+  else if(k==='coloring'){showScreen('act-coloring');startColoring(arg);}
   else if(k==='music'){showScreen('act-music');if(arg==='sing')setTimeout(()=>{playTune(SING_TUNE);toast('Sing along — tap the bars with me!','🎵');},500);}
   else if(k==='hunt')startFind('toys');
   else if(k==='find')startFind(arg);
@@ -2709,8 +2921,10 @@ document.addEventListener('click',e=>{
   else if(k==='body'){showScreen('act-body');renderBody();}
   else if(k==='wordbuild'){showScreen('act-wordbuild');wbStart();}
   else if(k==='peekaboo'){showScreen('act-peekaboo');pkStart();}
+  else if(k==='animalsounds'){showScreen('act-animalsounds');asStart();}
   else if(k==='sorter'){showScreen('act-sorter');ssStart();}
   else if(k==='bubbles'){showScreen('act-bubbles');bpStart();}
+  else if(k==='oddone'){showScreen('act-oddone');ooStart();}
 });
 
 /* ============================================================
@@ -2870,6 +3084,61 @@ $('#pkGrid').addEventListener('click',e=>{
 });
 
 /* ============================================================
+   14h. ANIMAL & BIRD SOUNDS — a plain reference soundboard (no game,
+   no reveal mechanic): tap any picture, any time, to hear its sound.
+   Grouped into categories so a 24-animal set doesn't feel like one
+   giant scroll.
+   ============================================================ */
+const ANIMAL_SOUNDS={
+  farm:[
+    {e:'🐄',n:'Cow',s:'Moo! I am a cow.'},{e:'🐖',n:'Pig',s:'Oink oink! I am a pig.'},
+    {e:'🐑',n:'Sheep',s:'Baa! I am a sheep.'},{e:'🐴',n:'Horse',s:'Neigh! I am a horse.'},
+    {e:'🐐',n:'Goat',s:'Maa! I am a goat.'},{e:'🐶',n:'Dog',s:'Woof woof! I am a dog.'},
+    {e:'🐱',n:'Cat',s:'Meow! I am a cat.'},{e:'🦆',n:'Duck',s:'Quack quack! I am a duck.'}
+  ],
+  birds:[
+    {e:'🦉',n:'Owl',s:'Hoot hoot! I am an owl.'},{e:'🐓',n:'Rooster',s:'Cock-a-doodle-doo! I am a rooster.'},
+    {e:'🐔',n:'Hen',s:'Cluck cluck! I am a hen.'},{e:'🦜',n:'Parrot',s:'Hello! Hello! I am a parrot.'},
+    {e:'🦚',n:'Peacock',s:'I spread my colourful tail! I am a peacock.'},{e:'🦅',n:'Eagle',s:'Screech! I am an eagle.'},
+    {e:'🐧',n:'Penguin',s:'I waddle and swim! I am a penguin.'},{e:'🦩',n:'Flamingo',s:'I stand on one leg! I am a flamingo.'}
+  ],
+  wild:[
+    {e:'🦁',n:'Lion',s:'Roar! I am a lion.'},{e:'🐘',n:'Elephant',s:'Toot! I am an elephant.'},
+    {e:'🐯',n:'Tiger',s:'Growl! I am a tiger.'},{e:'🐵',n:'Monkey',s:'Ooh ooh ah ah! I am a monkey.'},
+    {e:'🐻',n:'Bear',s:'Grr! I am a bear.'},{e:'🦊',n:'Fox',s:'Ring-ding-ding! I am a fox.'},
+    {e:'🐺',n:'Wolf',s:'Howl! I am a wolf.'},{e:'🐸',n:'Frog',s:'Ribbit ribbit! I am a frog.'}
+  ]
+};
+const AS_CATS=[{k:'farm',label:'🐄 Farm & Pets'},{k:'birds',label:'🦜 Birds'},{k:'wild',label:'🦁 Wild'}];
+let asCat='farm', asHeard=new Set();
+function renderAsCats(){
+  $('#asCats').innerHTML=AS_CATS.map(c=>`<button class="wcat${c.k===asCat?' on':''}" data-ascat="${c.k}">${c.label}</button>`).join('');
+}
+function renderAsGrid(){
+  $('#asGrid').innerHTML=ANIMAL_SOUNDS[asCat].map((a,i)=>
+    `<button class="animaltile" data-ascat2="${asCat}" data-asi="${i}"><span class="ae">${a.e}</span><span class="atlabel">${a.n}</span></button>`).join('');
+}
+function asStart(){
+  asHeard=new Set(); asCat='farm'; $('#asEnd').style.display='none';
+  renderAsCats(); renderAsGrid();
+}
+$('#asCats').addEventListener('click',e=>{
+  const b=e.target.closest('[data-ascat]'); if(!b)return;
+  sfxTap(); asCat=b.dataset.ascat; renderAsCats(); renderAsGrid();
+});
+$('#asGrid').addEventListener('click',e=>{
+  const b=e.target.closest('[data-asi]'); if(!b)return;
+  const cat=b.dataset.ascat2, a=ANIMAL_SOUNDS[cat][+b.dataset.asi];
+  sfxTap(); buzz(14); sparkle(b,6); say(a.s);
+  asHeard.add(cat+':'+a.n);
+  const total=Object.values(ANIMAL_SOUNDS).reduce((n,arr)=>n+arr.length,0);
+  if(asHeard.size===total){
+    addXP(30); unlockSticker(); toast('Every animal and bird heard!','🐦');
+    $('#asEnd').style.display=''; $('#asEnd').innerHTML='<div class="card" style="text-align:center;margin-top:10px"><h3>All 24 sounds heard! 🎉</h3></div>';
+  }
+});
+
+/* ============================================================
    14f. SHAPE SORTER — tap the outline that matches the shape shown.
    ============================================================ */
 const SHAPES_SS=[{e:'⚪',n:'Circle'},{e:'⬛',n:'Square'},{e:'🔺',n:'Triangle'},{e:'⭐',n:'Star'},{e:'❤️',n:'Heart'},{e:'🔷',n:'Diamond'}];
@@ -2966,7 +3235,6 @@ $('#planBtn').onclick=()=>openModal(`<h3>Plans</h3>
   <b>Premium</b> — full curriculum all six modules, unlimited stories, AI-personalised weekly path, parent insights, offline mode, up to 4 child profiles, no ads.</p>
   <p class="tiny" style="margin-top:10px">Pricing is set by the app store region at launch; this prototype shows no prices.</p>
   <button class="toy sm" style="margin-top:14px;width:100%" data-close="1">Got it</button>`);
-$$('[data-print]').forEach(b=>b.onclick=()=>{sfxYes();toast('“'+b.dataset.print+'” queued for the weekly PDF','🖨️');});
 $$('[data-switch-child]').forEach(b=>b.onclick=()=>toast('Switched to '+b.dataset.switchChild+'’s path','👧'));
 
 /* ---------- adaptive suggestion (Lumi's smart pick) ---------- */
@@ -3153,7 +3421,15 @@ const STORY_TAB=[
  {k:'zuzuShare',t:'Zuzu Learns to Share',e:'💙',d:'Feelings · 4 pages',c:'story'},
  {k:'bingoStars',t:'Bingo Counts the Stars',e:'⭐',d:'Math · 4 pages',c:'story'},
  {k:'roborexStar',t:'RoboRex and the Lost Star',e:'🚀',d:'Science · 4 pages',c:'story'},
- {k:'miraRainy',t:"Mira's Rainy Day",e:'🌧️',d:'Reading · 4 pages',c:'story'}
+ {k:'miraRainy',t:"Mira's Rainy Day",e:'🌧️',d:'Reading · 4 pages',c:'story'},
+ {k:'billyGoats',t:'The Three Billy Goats Gruff',e:'🐐',d:'Classic tale · 4 pages',c:'story'},
+ {k:'townMouse',t:'Town Mouse and Country Mouse',e:'🐭',d:'Fable · 4 pages',c:'story'},
+ {k:'foxGrapes',t:'The Fox and the Grapes',e:'🦊',d:'Fable · 4 pages',c:'story'},
+ {k:'northWindSun',t:'The North Wind and the Sun',e:'🌬️',d:'Fable · 4 pages',c:'story'},
+ {k:'stoneSoup',t:'Stone Soup',e:'🥘',d:'Classic tale · 4 pages',c:'story'},
+ {k:'littleRedHen',t:'The Little Red Hen',e:'🐓',d:'Classic tale · 4 pages',c:'story'},
+ {k:'princessPea',t:'The Princess and the Pea',e:'👸',d:'Classic tale · 4 pages',c:'story'},
+ {k:'kinniRain',t:'Kinni and the Rainy Window',e:'🌧️',d:'Rainy day · 4 pages',c:'story'}
 ];
 
 const R={cat:'rhymes',cur:null,playing:false,timers:[],line:0};
@@ -3781,6 +4057,24 @@ function applySound(){
     applySound(); if(state.sound){ sfxYes(); say('Sound on'); } };
   applySound();
   document.addEventListener('click',function(e){ if(e.target.closest('[data-sw]')) setTimeout(applySound,0); });
+})();
+
+/* ---------- Music Studio key volume ---------- */
+(function(){
+  try{
+    const saved=localStorage.getItem('sb_keyvol');
+    if(saved!=null){ const n=parseInt(saved,10); if(n>=10&&n<=100) state.keyVol=n/100; }
+  }catch(e){}
+  const slider=$('#mxVol'), txt=$('#mxVolTxt');
+  if(!slider)return;
+  slider.value=Math.round(state.keyVol*100);
+  if(txt)txt.textContent=slider.value+'%';
+  slider.addEventListener('input',function(){
+    state.keyVol=(+slider.value)/100;
+    if(txt)txt.textContent=slider.value+'%';
+    try{localStorage.setItem('sb_keyvol',slider.value);}catch(e){}
+  });
+  slider.addEventListener('change',function(){ tone(660,.09,'triangle',.5); });
 })();
 
 /* --- tap Kinni to hear a line --- */

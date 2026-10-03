@@ -2,7 +2,7 @@
 
 An offline-first learning app for children from infancy (Little One Mode) through
 age 10 — reading, math, science, creativity, feelings, real-world skills, music,
-and a library of 77 nursery rhymes/songs and 24 illustrated stories, guided by six
+and a library of 77 nursery rhymes/songs and 32 illustrated stories, guided by six
 original characters.
 
 This app did not previously exist in this repository. It was extracted from a
@@ -138,16 +138,44 @@ existing visual language (`.ltile`, `.memgrid`/`.memcard`, `.gsopts`,
 `.sboard`) and reward system (`addXP`, `unlockSticker`) rather than
 introducing new UI patterns.
 
+## More interactive activities (round 2)
+
+- **Animal & Bird Sounds** (Science & Discovery) — unlike Peekaboo, this is a
+  plain reference soundboard, no reveal mechanic: 24 animals and birds across
+  three category tabs (Farm & Pets, Birds, Wild), tap any picture any time to
+  hear it, sorted into real **Birds** as its own category per request.
+- **Colouring Book** (Creative Studio, and from Parent Zone → Printables) —
+  the old "Printables" buttons only ever showed a fake "queued for the weekly
+  PDF" toast; there is no printer in a sandboxed WebView, so they now open a
+  real in-app colouring page instead. Four simple line-art pictures (a letter,
+  a number, a happy face, a camel) are drawn procedurally on a canvas — no
+  image files needed — and a child picks a colour pencil from an 8-colour
+  palette and draws right over the outline, same free-draw mechanic as the
+  Drawing Pad.
+- **Odd One Out** (Math Adventures) — a classic toddler cognitive-sorting
+  game: 4 pictures, 3 share a category, tap the one that doesn't belong.
+- **Music Studio key volume** — a slider now controls how loud the
+  xylophone/piano/drum/sound-FX taps are (separate from the master sound
+  on/off toggle), saved across sessions.
+- **8 more stories** (24 → 32): The Three Billy Goats Gruff, Town Mouse and
+  Country Mouse, The Fox and the Grapes, The North Wind and the Sun, Stone
+  Soup, The Little Red Hen, The Princess and the Pea, and a fifth original
+  Kinni story, "Kinni and the Rainy Window".
+- **Softer, slower alphabet voice** — the "soft" voice style (the default) is
+  now noticeably slower and lower-pitched. The 26 letters and 10 numbers are
+  real recorded clips, not device TTS, so they can't follow a speech-rate
+  setting; instead the clip itself now plays back at 0.84x speed with pitch
+  allowed to drop with it, for a gentler toddler-appropriate read.
+
 ## Building this project
 
-**This has not been compiled** — there is no Android SDK available in the
-environment this was built in, only a plain JDK. The web app itself was
-verified headlessly with Playwright (all 34 screens and all 87 interactive
-elements click through with zero console/page errors); the native shell
-(`MainActivity.kt`) is standard, well-established WebView + TextToSpeech
-boilerplate but has not been test-compiled.
+CI builds a debug APK automatically on every push via
+`.github/workflows/smart-beginning.yml` (GitHub Actions → the
+"Smart Beginning" workflow → the run's Artifacts) — that's the easiest way to
+get an installable APK without a local Android SDK. The app has been built
+this way, installed, and run on a real device.
 
-To build:
+To build locally:
 ```
 cd smart-beginning
 ./gradlew assembleDebug
@@ -165,3 +193,8 @@ folder directly in Android Studio and it should sync normally.
   same as the original build intended.
 - `autoTune()`-generated melodies are pleasant placeholders, not transcriptions
   of the real traditional tunes, for the rhymes added in this pass.
+- The Colouring Book's four pictures are simple procedural line art (drawn
+  with canvas paths, not illustrated), and colouring is free-draw over the
+  outline rather than a flood-fill that respects the lines — the same
+  forgiving approach most toddler colouring apps use, since "stay inside the
+  lines" isn't a realistic expectation at this age anyway.
