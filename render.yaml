@@ -1,0 +1,13 @@
+# SubZero relay — Render Blueprint (repo root, so Render finds it by default).
+# New + → Blueprint → this repo → branch claude/subzero-stealth-messenger-vtl0cj → Apply.
+# After deploy, the relay URL is  wss://<service-name>.onrender.com
+services:
+  - type: web
+    name: subzero-relay
+    runtime: node
+    rootDir: subzero/server
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: false

@@ -1,0 +1,16 @@
+{
+  "name": "subzero-relay",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Zero-knowledge relay + signaling server for the SubZero messenger",
+  "type": "commonjs",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node test/relay.test.js"
+  },
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

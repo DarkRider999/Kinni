@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Converter: two opposing arrows (swap / convert). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <group>
+        <!-- top arrow → -->
+        <path android:strokeColor="#FFFFFF" android:strokeWidth="5" android:strokeLineCap="round"
+            android:pathData="M38,46 L64,46" />
+        <path android:fillColor="#FFFFFF" android:pathData="M62,39 L74,46 L62,53 z" />
+        <!-- bottom arrow ← -->
+        <path android:strokeColor="#FFFFFF" android:strokeWidth="5" android:strokeLineCap="round"
+            android:pathData="M70,62 L44,62" />
+        <path android:fillColor="#FFFFFF" android:pathData="M46,55 L34,62 L46,69 z" />
+    </group>
+</vector>
