@@ -668,6 +668,14 @@ body{font-size:15px}
 #nbDots,#ngDots{display:flex;flex-wrap:wrap;gap:9px;justify-content:center;margin-top:14px;min-height:34px}
 .dotp{width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#ffa4bd 70%);
   box-shadow:0 0 12px rgba(255,150,190,.85)}
+/* ---------- Little One Mode: 0-12 months, no tapping required ---------- */
+#s-littleone{padding-left:0;padding-right:0}
+.locard{position:relative;aspect-ratio:1/1;border-radius:0;margin:0 0 14px;display:flex;align-items:center;justify-content:center;
+  font-size:120px;transition:background .5s ease;overflow:hidden}
+.locard .loface{width:62%;max-width:230px}
+.lo-caption{text-align:center;font-family:var(--font-display);font-weight:800;font-size:18px;color:var(--ink);margin:0 0 14px}
+.lo-controls{display:flex;justify-content:center;gap:12px;padding:0 20px}
+@media (prefers-reduced-motion:reduce){.locard{transition:none}}
 </style>
 </head>
 <body>
@@ -675,7 +683,7 @@ body{font-size:15px}
 
   <aside class="rail">
     <div class="mark">Smart<br><span>Beginning</span></div>
-    <p>An AI-powered learning universe for ages 3–8 — reading, math, science, creativity, feelings and real-world skills, guided by six characters.</p>
+    <p>An AI-powered learning universe for little ones from 1 month to 5 years — soothing sounds and faces for babies, then reading, math, science, creativity, feelings and real-world skills, guided by six characters.</p>
     <ul>
       <li><span class="dot" style="background:#c3b0f2"></span>Read with Mira</li>
       <li><span class="dot" style="background:#ffd98e"></span>Bingo's Treasure Hunt</li>
@@ -703,7 +711,7 @@ body{font-size:15px}
             <p class="muted" style="margin:0 0 10px">Kinni uses this to say hello and to keep your progress. Nothing else is asked for.</p>
             <div class="fieldrow">
               <input id="kidName" class="field" type="text" inputmode="text" maxlength="14" placeholder="First name" aria-label="First name">
-              <input id="kidAge" class="field" type="number" inputmode="numeric" min="2" max="10" placeholder="Age" aria-label="Age" style="max-width:96px">
+              <input id="kidAge" class="field" type="number" inputmode="numeric" min="0" max="10" placeholder="Age" aria-label="Age" style="max-width:96px">
             </div>
             <div class="row" style="gap:10px;margin-top:10px">
               <button class="toy mint sm" id="saveChild">Save</button>
@@ -790,8 +798,13 @@ body{font-size:15px}
               <span class="ti">📺</span><span class="tn">Watch &amp; Learn</span><span class="td">Hand-picked videos for each subject</span><span class="go">›</span></button>
             <button class="tile t-create" data-go="rhymes" style="grid-column:1/-1;background:linear-gradient(135deg,#fff0f6,#e9f6ff)">
               <div class="rule">Sing &amp; listen</div>
-              <div><div class="tname">Rhymes &amp; Stories</div><div class="tsub">13 nursery rhymes with sound · 10 storybooks</div></div>
+              <div><div class="tname">Rhymes &amp; Stories</div><div class="tsub">77 nursery rhymes &amp; songs · 24 storybooks</div></div>
               <div class="tchar" style="position:absolute;right:10px;bottom:6px;width:64px;height:64px;font-size:44px">🎵</div>
+            </button>
+            <button class="tile t-feel" data-go="littleone" style="grid-column:1/-1;background:linear-gradient(135deg,#fff8ec,#ffeef0)">
+              <div class="rule">Newborn &amp; infant</div>
+              <div><div class="tname">Little One Mode</div><div class="tsub">High-contrast faces and a soft lullaby — nothing to tap, just look and listen</div></div>
+              <div class="tchar" style="position:absolute;right:10px;bottom:6px;width:64px;height:64px;font-size:44px">🍼</div>
             </button>
           </div>
 
@@ -800,7 +813,7 @@ body{font-size:15px}
             <p class="muted" style="margin:6px 0 0">Finish two colour activities to unlock the <b>Colour Star Sticker</b>.</p>
             <div class="xpbar" style="margin-top:10px"><span style="width:6%;background:linear-gradient(90deg,var(--butter),var(--coral))"></span></div>
           </div>
-          <p class="tiny" style="text-align:center;margin:16px 0 4px">Smart Beginning · ages 3–8 · ad-free</p>
+          <p class="tiny" style="text-align:center;margin:16px 0 4px">Smart Beginning · newborn to age 5 · ad-free</p>
         </section>
 
         <!-- ================= COLOURS & 3D SHAPES ================= -->
@@ -1247,6 +1260,19 @@ body{font-size:15px}
           </div>
         </section>
 
+        <!-- ================= LITTLE ONE MODE (0-12 months) ================= -->
+        <section class="screen" id="s-littleone">
+          <div class="hdr"><button class="back" data-go="home">←</button>
+            <div><h2>Little One Mode</h2><div class="sub">Just look and listen — nothing to tap</div></div></div>
+          <div class="locard" id="loCard"><span class="loface" id="loFace">👁️</span></div>
+          <p class="lo-caption" id="loCaption">High-contrast faces, one at a time</p>
+          <div class="lo-controls">
+            <button class="toy sm ghost" id="loLullaby">🎵 Play a lullaby</button>
+            <button class="toy sm" id="loNext">Next face →</button>
+          </div>
+          <p class="tiny" style="text-align:center;margin:14px 20px 0">Hold the device about 20-30cm from your baby's face. High-contrast black, white and red patterns are easiest for very young eyes to focus on.</p>
+        </section>
+
         <!-- ================= CHARACTERS ================= -->
         <section class="screen" id="s-characters">
           <div class="hdr"><div><h2 data-i18n="charH">Characters</h2><div class="sub">Tap to hear their voice and see their poses</div></div></div>
@@ -1359,7 +1385,7 @@ body{font-size:15px}
               <div class="stack" style="margin-top:12px">
                 <div class="fieldrow">
                   <input id="pName" class="field" type="text" inputmode="text" maxlength="14" placeholder="First name" aria-label="First name">
-                  <input id="pAge" class="field" type="number" inputmode="numeric" min="2" max="10" placeholder="Age" aria-label="Age" style="max-width:96px">
+                  <input id="pAge" class="field" type="number" inputmode="numeric" min="0" max="10" placeholder="Age" aria-label="Age" style="max-width:96px">
                 </div>
                 <div class="row" style="gap:10px">
                   <button class="toy sm mint" id="pSave">Save child</button>
@@ -1673,21 +1699,22 @@ const PROFILE_KEY='sb_child_v1';
 function loadProfile(){try{const r=localStorage.getItem(PROFILE_KEY);return r?JSON.parse(r):null;}catch(e){return null;}}
 function saveProfile(o){try{localStorage.setItem(PROFILE_KEY,JSON.stringify(o));return true;}catch(e){return false;}}
 function cleanName(v){const t=(v||'').trim().replace(/\s+/g,' ');return /^[A-Za-z\u0600-\u06FF][A-Za-z\u0600-\u06FF '\-]{0,13}$/.test(t)?t:'';}
-function cleanAge(v){const n=parseInt(v,10);return (n>=2&&n<=10)?n:0;}
+function cleanAge(v){const n=parseInt(v,10);return (n>=0&&n<=10)?n:-1;}
 function greetWord(){const hh=new Date().getHours();return hh<12?'Good morning':hh<18?'Good afternoon':'Good evening';}
+function ageLabel(age){ return age===0?'under 1':String(age); }
 function applyChild(){
-  const c=state.child, has=!!(c&&c.name);
+  const c=state.child, has=!!(c&&c.name), hasAge=!!(c&&c.age>=0);
   $$('[data-kidname]').forEach(el=>el.textContent=has?c.name:'No child added yet');
-  $$('[data-kidage]').forEach(el=>el.textContent=(c&&c.age)?c.age:'—');
-  $$('[data-kidage-wrap]').forEach(el=>el.style.display=(c&&c.age)?'':'none');
+  $$('[data-kidage]').forEach(el=>el.textContent=hasAge?ageLabel(c.age):'—');
+  $$('[data-kidage-wrap]').forEach(el=>el.style.display=hasAge?'':'none');
   const bar=$('#childBar'); if(bar)bar.style.display=has?'none':'';
   const cur=$('#pCurrent'); if(cur)cur.style.display=has?'':'none';
   if($('#pName'))$('#pName').value=(c&&c.name)||'';
-  if($('#pAge'))$('#pAge').value=(c&&c.age)||'';
+  if($('#pAge'))$('#pAge').value=hasAge?c.age:'';
   if(has){
     $('#lumiSay').innerHTML=greetWord()+', '+c.name+'! Today we start with <em>colours</em> — then shapes, then letters and numbers.';
     $('#guideName').textContent='Kinni · guide for '+c.name;
-    $('#adaptsTxt').textContent='for '+c.name+(c.age?', '+c.age:'');
+    $('#adaptsTxt').textContent='for '+c.name+(hasAge?', '+ageLabel(c.age):'');
     $('#chipLine').innerHTML='<span class="chip">🌱 '+c.name+'\u2019s first steps</span><span class="chip">⭐ '+state.stickers+' stickers</span>';
   }else{
     $('#adaptsTxt').textContent='for you';
@@ -1696,7 +1723,7 @@ function applyChild(){
 function commitChild(name,age,msgEl){
   const n=cleanName(name), a=cleanAge(age);
   if(!n){ if(msgEl)msgEl.textContent='Please use a first name (letters only).'; sfxNo(); return false; }
-  if(!a){ if(msgEl)msgEl.textContent='Please enter an age from 2 to 10.'; sfxNo(); return false; }
+  if(a<0){ if(msgEl)msgEl.textContent='Please enter an age from 0 (under 1) to 10.'; sfxNo(); return false; }
   state.child={name:n,age:a};
   const ok=saveProfile(state.child);
   applyChild(); sfxYes(); toast('Hello '+n+'!','👋');
@@ -1827,6 +1854,13 @@ function showScreen(id){
   state.screen=id;
   $$('.tab').forEach(t=>t.classList.toggle('on',t.dataset.tab===id||(t.dataset.tab==='home'&&!['rewards','characters','parent'].includes(id))));
   if(id==='parent'&&!state.isParent){$('#pinView').style.display='';$('#dashView').style.display='none';pinBuf='';renderPinDots();}
+  try{
+    if(id==='littleone'){ if(typeof loStartCycle==='function')loStartCycle(); }
+    else{
+      if(typeof loStopCycle==='function')loStopCycle();
+      if(typeof loLullabyOn!=='undefined'&&loLullabyOn){ stopRhyme(); loLullabyOn=false; if($('#loLullaby'))$('#loLullaby').textContent='🎵 Play a lullaby'; }
+    }
+  }catch(e){}
   /* the Music Studio's xylophone/piano/drums are nicer held sideways like a
      real toy instrument - ask the native shell to allow landscape only here */
   try{
@@ -3661,6 +3695,102 @@ document.addEventListener('click',e=>{
   if(e.target.closest('[data-go="numb"]')){nShow();}
 });
 aShow(); nShow();
+
+/* ============================================================
+   16a. WATCH & LEARN
+   No YouTube API key: each card opens a YouTube search for a safe,
+   specific query in the device's own YouTube app/browser (handled by
+   the native shell's external-link handling), rather than embedding
+   unverified video IDs or needing an API key to browse a catalogue.
+   ============================================================ */
+const WATCH_CATS=[
+  {k:'abc',label:'🔤 ABC & Phonics',items:[
+    {t:'ABC Phonics Song',s:'Letter sounds, sung slowly',q:'ABC phonics song for toddlers'},
+    {t:'Alphabet Train',s:'A letter a stop',q:'alphabet train song for preschoolers'}]},
+  {k:'numbers',label:'🔢 Counting',items:[
+    {t:'Counting to 10',s:'Numbers with objects on screen',q:'counting to 10 song for toddlers'},
+    {t:'Shapes & Numbers',s:'Simple shape and number match',q:'shapes and numbers for toddlers'}]},
+  {k:'rhymes',label:'🎵 Nursery Rhymes',items:[
+    {t:'Classic Nursery Rhymes',s:'Twinkle, Baa Baa and more, sung',q:'classic nursery rhymes for babies sing along'},
+    {t:'Bedtime Lullabies',s:'Soft, slow lullaby songs',q:'gentle lullabies for babies to sleep'}]},
+  {k:'animals',label:'🐾 Animals',items:[
+    {t:'Animal Sounds',s:'Farm and zoo animals, named and sounded out',q:'animal sounds for toddlers learning'},
+    {t:'Under the Sea',s:'Ocean animals for little explorers',q:'sea animals for kids educational'}]},
+  {k:'colors',label:'🎨 Colours & Shapes',items:[
+    {t:'Learning Colours',s:'Colour names with real objects',q:'learning colours for toddlers'},
+    {t:'Shape Hunt',s:'Circles, squares, triangles in the world',q:'learning shapes for preschoolers'}]},
+  {k:'science',label:'🔬 Science',items:[
+    {t:'Simple Science for Kids',s:'Short, gentle how-things-work clips',q:'simple science experiments for kids explained'},
+    {t:'Space for Little Explorers',s:'The sun, moon and planets',q:'space for kids planets explained'}]}
+];
+let watchCat='abc';
+function renderWatch(){
+  const cats=$('#watchCats'); if(cats)cats.innerHTML=WATCH_CATS.map(c=>
+    `<button class="wcat${c.k===watchCat?' on':''}" data-wcat="${c.k}">${c.label}</button>`).join('');
+  const list=$('#watchList'); if(!list)return;
+  const cat=WATCH_CATS.find(c=>c.k===watchCat)||WATCH_CATS[0];
+  list.innerHTML=cat.items.map(v=>
+    `<button class="vcard" data-wq="${encodeURIComponent(v.q)}">
+       <span class="vthumb"></span>
+       <span class="vmeta"><span class="vtitle">${v.t}</span><span class="vsub">${v.s}</span></span>
+     </button>`).join('');
+}
+if($('#watchCats'))$('#watchCats').addEventListener('click',e=>{
+  const b=e.target.closest('[data-wcat]'); if(!b)return;
+  sfxTap(); watchCat=b.dataset.wcat; renderWatch();
+});
+if($('#watchList'))$('#watchList').addEventListener('click',e=>{
+  const b=e.target.closest('[data-wq]'); if(!b)return;
+  sfxTap();
+  window.location.href='https://www.youtube.com/results?search_query='+b.dataset.wq;
+});
+renderWatch();
+
+/* ============================================================
+   16b. LITTLE ONE MODE - passive, high-contrast, 0-12 months
+   No tapping required: a parent holds the device up and lets it run.
+   Patterns are plain CSS (true black/white/red), not emoji, since that
+   is what gives very young eyes something sharp enough to focus on.
+   ============================================================ */
+const LITTLEONE=[
+  {bg:'repeating-radial-gradient(circle,#000 0,#000 10%,#fff 10%,#fff 20%,#000 20%,#000 30%,#fff 30%,#fff 40%,#000 40%,#000 50%)',caption:'Bullseye'},
+  {bg:'repeating-linear-gradient(90deg,#000,#000 24px,#fff 24px,#fff 48px)',caption:'Stripes'},
+  {bg:'conic-gradient(#000 0 45deg,#fff 45deg 90deg,#000 90deg 135deg,#fff 135deg 180deg,#000 180deg 225deg,#fff 225deg 270deg,#000 270deg 315deg,#fff 315deg 360deg)',caption:'Pinwheel'},
+  {bg:'radial-gradient(circle,#e8293a 0 28%,#fff 28% 32%,#e8293a 32% 60%,#fff 60%)',caption:'Big red dot'},
+  {bg:'radial-gradient(circle 14px at 38% 42%,#000 98%,transparent 100%),radial-gradient(circle 14px at 62% 42%,#000 98%,transparent 100%),radial-gradient(circle 60px at 50% 70%,transparent 60%,#000 62%,#000 66%,transparent 68%),#fff',caption:'A friendly face'},
+  {bg:'repeating-linear-gradient(0deg,#000,#000 24px,#fff 24px,#fff 48px),repeating-linear-gradient(90deg,#000,#000 24px,#fff 24px,#fff 48px)',caption:'Checkerboard'},
+  {bg:'repeating-conic-gradient(#000 0 10deg,#fff 10deg 20deg)',caption:'Sunburst'}
+];
+let loIdx=0, loTimer=null;
+function loShow(){
+  const c=LITTLEONE[loIdx%LITTLEONE.length];
+  const el=$('#loCard'); if(el)el.style.background=c.bg;
+  const face=$('#loFace'); if(face)face.textContent='';
+  const cap=$('#loCaption'); if(cap)cap.textContent=c.caption;
+  loIdx++;
+}
+function loStartCycle(){
+  loShow();
+  if(loTimer)clearInterval(loTimer);
+  loTimer=setInterval(loShow,6000);
+}
+function loStopCycle(){ if(loTimer){clearInterval(loTimer); loTimer=null;} }
+let loLullabyOn=false;
+function loPlayLullaby(){
+  const options=RHYMES.filter(r=>r.c==='lullaby');
+  if(!options.length)return;
+  const pick=options[Math.floor(Math.random()*options.length)];
+  openRhyme(pick.k);
+  playRhyme(false);
+  loLullabyOn=true;
+  const b=$('#loLullaby'); if(b)b.textContent='⏸ Stop lullaby';
+}
+if($('#loNext'))$('#loNext').onclick=()=>{sfxTap();loShow();};
+if($('#loLullaby'))$('#loLullaby').onclick=()=>{
+  sfxTap();
+  if(loLullabyOn){ stopRhyme(); loLullabyOn=false; $('#loLullaby').textContent='🎵 Play a lullaby'; }
+  else loPlayLullaby();
+};
 
 /* ============================================================
    17. BOOT
