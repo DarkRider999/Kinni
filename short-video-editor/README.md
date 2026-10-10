@@ -11,8 +11,8 @@ copy from the original. The final name and brand come from `/replica-brand`.
 | step | skill | output | state |
 | --- | --- | --- | --- |
 | 1 | `/replica-recon` | `replica/recon.md`, `replica/features.csv` | done |
-| 2 | `/replica-architect` | `replica/architecture.md` | next |
-| 3 | `/replica-design` | `replica/design/` | |
+| 2 | `/replica-architect` | `replica/architecture.md`, `replica/schema.sql` | done |
+| 3 | `/replica-design` | `replica/design/` | next |
 | 4 | `/replica-build` | app source | |
 | 5 | `/replica-backend` | auth, storage, billing | |
 | 6 | `/replica-test` | e2e specs, bug log | |
