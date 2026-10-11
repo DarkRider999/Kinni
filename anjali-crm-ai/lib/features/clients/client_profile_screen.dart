@@ -10,6 +10,7 @@ import '../../core/services/launcher_service.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/formatters.dart';
 import '../../core/utils/validators.dart';
+import '../../core/widgets/celebration.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/glass_card.dart';
 import '../../data/export/pdf_exporter.dart';
@@ -344,7 +345,11 @@ class _StatusStepper extends ConsumerWidget {
       return;
     }
     await ref.read(crmActionsProvider).changeStatus(c, s, amount: amount);
-    if (context.mounted) showSnack(context, 'Status → ${s.label}');
+    if (!context.mounted) return;
+    showSnack(context, 'Status → ${s.label}');
+    if (s.isConverted) {
+      await showCelebration(context, message: s == LeadStatus.disbursed ? 'Loan disbursed! 🎉' : 'Approved! 🎉');
+    }
   }
 
   /// Returns the entered text ('' to skip), or null when cancelled.
