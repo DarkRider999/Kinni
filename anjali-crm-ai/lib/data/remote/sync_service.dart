@@ -168,27 +168,4 @@ class SyncService {
     }
     return uploaded;
   }
-
-  /// Downloads any attachment whose local file is missing (new device).
-  Future<int> downloadMissingFiles(Future<String> Function(String clientId, String name) localPathFor) async {
-    if (!await FirebaseConfig.ensureInitialised()) return 0;
-    final storage = FirebaseStorage.instance;
-    var n = 0;
-    for (final name in [HiveService.documents, HiveService.voiceNotes]) {
-      final repo = repos[name]!;
-      for (final key in repo.box.keys.toList()) {
-        final m = repo.box.get(key);
-        if (m is! Map || m['deleted'] == true) continue;
-        final remote = m['remotePath'];
-        if (remote is! String || remote.isEmpty) continue;
-        final local = m['filePath'];
-        if (local is String && File(local).existsSync()) continue;
-        final dest = await localPathFor('${m['clientId']}', p.basename(remote));
-        await storage.ref(remote).writeToFile(File(dest));
-        await repo.box.put(key, {...Map<String, dynamic>.from(m), 'filePath': dest});
-        n++;
-      }
-    }
-    return n;
-  }
 }
