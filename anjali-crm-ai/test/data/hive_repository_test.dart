@@ -61,6 +61,11 @@ void main() {
     expect(events.last, 1);
   });
 
+  test('writes to a closed box fail with RepositoryWriteException', () async {
+    await repo.box.close();
+    await expectLater(repo.upsert(client(id: 'late')), throwsA(isA<RepositoryWriteException>()));
+  });
+
   test('search ranks phone and name-prefix matches first', () async {
     await repo.upsertAll([
       client(id: '1', name: 'Priya Nair', phone: '0501111111'),

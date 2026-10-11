@@ -5,6 +5,17 @@ import 'package:hive_ce/hive_ce.dart';
 import '../../domain/entities/sync_entity.dart';
 import '../../domain/repositories/repository.dart';
 
+/// A local database write failed (e.g. storage full). Carries the box and
+/// record so the failure is traceable; shown to the user by ErrorReporter.
+class RepositoryWriteException implements Exception {
+  const RepositoryWriteException(this.box, this.recordId, this.cause);
+  final String box;
+  final String? recordId;
+  final Object cause;
+  @override
+  String toString() => 'Could not save to $box${recordId == null ? '' : ' ($recordId)'}: $cause';
+}
+
 /// Hive implementation of [Repository]. Values are JSON-like maps keyed by id.
 class HiveRepository<T extends SyncEntity> implements Repository<T> {
   HiveRepository(this.box, this.fromMap, {DateTime Function()? clock}) : _clock = clock ?? DateTime.now;
@@ -12,6 +23,16 @@ class HiveRepository<T extends SyncEntity> implements Repository<T> {
   final Box box;
   final T Function(Map map) fromMap;
   final DateTime Function() _clock;
+
+  /// Runs a box write, converting low-level failures into
+  /// [RepositoryWriteException].
+  Future<void> _write(String? id, Future<void> Function() op) async {
+    try {
+      await op();
+    } catch (e) {
+      throw RepositoryWriteException(box.name, id, e);
+    }
+  }
 
   T _decode(dynamic v) => fromMap(Map<String, dynamic>.from(v as Map));
 
@@ -65,28 +86,28 @@ class HiveRepository<T extends SyncEntity> implements Repository<T> {
       };
 
   @override
-  Future<void> upsert(T entity) => box.put(entity.id, _stamp(entity));
+  Future<void> upsert(T entity) => _write(entity.id, () => box.put(entity.id, _stamp(entity)));
 
   @override
-  Future<void> upsertAll(Iterable<T> entities) => box.putAll({for (final e in entities) e.id: _stamp(e)});
+  Future<void> upsertAll(Iterable<T> entities) => _write(null, () => box.putAll({for (final e in entities) e.id: _stamp(e)}));
 
   @override
   Future<void> softDelete(String id) async {
     final v = box.get(id);
     if (v is! Map) return;
-    await box.put(id, {
+    await _write(id, () => box.put(id, {
       ...Map<String, dynamic>.from(v),
       'deleted': true,
       'updatedAt': _clock().toUtc().toIso8601String(),
       'dirty': true,
-    });
+    }));
   }
 
   @override
   Future<void> putRaw(Map<String, dynamic> map) {
     final id = map['id']?.toString();
     if (id == null || id.isEmpty) return Future.value();
-    return box.put(id, {...map, 'dirty': false});
+    return _write(id, () => box.put(id, {...map, 'dirty': false}));
   }
 
   @override
@@ -102,7 +123,7 @@ class HiveRepository<T extends SyncEntity> implements Repository<T> {
       final v = box.get(id);
       if (v is Map) updates[id] = {...Map<String, dynamic>.from(v), 'dirty': false};
     }
-    if (updates.isNotEmpty) await box.putAll(updates);
+    if (updates.isNotEmpty) await _write(null, () => box.putAll(updates));
   }
 
   @override
@@ -116,10 +137,10 @@ class HiveRepository<T extends SyncEntity> implements Repository<T> {
         if (u != null && u.isBefore(cutoff)) keys.add(k);
       }
     }
-    await box.deleteAll(keys);
+    await _write(null, () => box.deleteAll(keys));
     return keys.length;
   }
 
   @override
-  Future<void> clear() => box.clear();
+  Future<void> clear() => _write(null, () => box.clear().then((_) {}));
 }

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:hive_ce/hive_ce.dart';
 
+import '../../data/local/hive_repository.dart';
 import '../theme/app_colors.dart';
 import 'analytics_service.dart';
 
@@ -14,7 +15,7 @@ abstract final class ErrorReporter {
   static final messengerKey = GlobalKey<ScaffoldMessengerState>();
 
   static String userMessage(Object error) {
-    if (error is HiveError || error is FileSystemException) {
+    if (error is HiveError || error is FileSystemException || error is RepositoryWriteException) {
       return "Couldn't save your change. Please check free storage and try again.";
     }
     return 'Something went wrong. Please try again.';
