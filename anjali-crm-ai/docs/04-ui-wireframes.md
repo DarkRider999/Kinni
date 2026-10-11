@@ -148,7 +148,7 @@ Lead source performance table (leads, converted, rate)
 Appearance: Theme ▾ (System / Light / Dark)
 Security: Fingerprint ◉ · Change PIN · Pattern lock ◉ · Auto-lock 5 min ▾ · Security log
 Notifications: Reminder offsets · Daily motivation ◉
-Data: Products · WhatsApp templates · Export data · Backup & restore · Cloud sync
+Data: Products · Export data · Backup & restore · Cloud sync
 Sample data: Load / Clear
 About: version, licences
 ```

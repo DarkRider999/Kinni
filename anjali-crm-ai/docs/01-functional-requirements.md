@@ -29,7 +29,7 @@ Priority: **M** = must (v1.0), **S** = should (v1.0 if time), **C** = could (v1.
 |---|---|---|
 | SEC-01 | Splash shows logo, "Anjali CRM AI", tagline | M |
 | SEC-02 | Unlock by fingerprint / face (when the device supports it) | M |
-| SEC-03 | Unlock by 4–6 digit PIN (PBKDF2-SHA256, 120k iterations, random salt) | M |
+| SEC-03 | Unlock by 6-digit PIN (PBKDF2-SHA256, 120k iterations, random salt) | M |
 | SEC-04 | Unlock by 3×3 pattern (min 4 dots, hashed like the PIN) | M |
 | SEC-05 | Auto-lock after inactivity (1/2/5/10/30 min, default 5) and when backgrounded past the timeout | M |
 | SEC-06 | Change PIN, change pattern, toggle biometrics | M |
@@ -87,13 +87,11 @@ Header (photo, name, status chip, score) · actions **Call, WhatsApp, Map, Edit*
 tabs **Timeline · Notes (voice) · Documents · Calls · Followups · Files & Reports**.
 Generating a one-client PDF profile report adds it to "Generated Reports".
 
-### FR-WA: WhatsApp hub
+### FR-WA: WhatsApp direct message
 | ID | Requirement | Pri |
 |---|---|---|
-| WA-01 | One-tap open chat (`wa.me/<E.164 digits>`) | M |
-| WA-02 | Default templates: Document Request, Followup, Approval, Rejection, Custom | M |
-| WA-03 | Template editor: unlimited templates, placeholders `{name} {product} {agent} {date} {documents}` | M |
-| WA-04 | Every message sent is logged as an activity on the client | M |
+| WA-01 | A WhatsApp icon in front of every phone number (lists, profile, followups, search) opens a direct chat (`wa.me/<E.164 digits>`) | M |
+| WA-02 | Opening a chat is logged as an activity on the client | M |
 
 ### FR-CALL: Call management
 | ID | Requirement | Pri |
@@ -159,7 +157,7 @@ best lead source · upcoming opportunities (next 7 days, score ≥ 60).
 ### FR-SET: Settings
 Profile & DP · Theme (light / dark / system) · Security (fingerprint, PIN, pattern, auto-lock,
 security log) · Notifications (offsets, motivation) · Backup · Cloud Sync · Product Manager ·
-WhatsApp Templates · Export Data · Sample data · App Info.
+Export Data · Sample data · App Info.
 
 ## 3. Non-functional requirements
 

@@ -41,14 +41,13 @@ Home → Today's Tasks / AI Recommendations
       No answer  → auto followup +2 h
       Rejected   → Not Interested
       Wrong no.  → flag + Low priority
-  [WhatsApp] → template picker → preview (placeholders filled) → WhatsApp opens → activity logged
+  [WhatsApp icon by the number] → WhatsApp chat opens → activity logged
   [✓] → followup completed → productivity +1
 ```
 
 ## UF-5 Document collection
 ```
 Profile → Documents → required list (6) + custom
-  [Request via WhatsApp] (Document Request template lists the pending docs)
   tap a doc → Camera scan | Gallery | PDF → status Received
   verify → Verified | Rejected (note)
   all required received → suggest status "Documents Received"

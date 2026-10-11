@@ -274,7 +274,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         );
       case 1:
         return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          _title(t, 'What should we call you?', 'Your name appears on greetings, reports and WhatsApp templates.'),
+          _title(t, 'What should we call you?', 'Your name appears on greetings and reports.'),
           TextField(
             controller: _name,
             autofocus: true,

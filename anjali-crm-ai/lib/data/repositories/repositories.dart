@@ -8,7 +8,6 @@ import '../../domain/entities/followup.dart';
 import '../../domain/entities/product.dart';
 import '../../domain/entities/security_event.dart';
 import '../../domain/entities/voice_note.dart';
-import '../../domain/entities/whatsapp_template.dart';
 import '../local/hive_repository.dart';
 
 typedef ClientRepository = HiveRepository<Client>;
@@ -18,7 +17,6 @@ typedef CallLogRepository = HiveRepository<CallLog>;
 typedef VoiceNoteRepository = HiveRepository<VoiceNote>;
 typedef DocumentRepository = HiveRepository<ClientDocument>;
 typedef ActivityRepository = HiveRepository<Activity>;
-typedef TemplateRepository = HiveRepository<WhatsAppTemplate>;
 typedef SecurityLogRepository = HiveRepository<SecurityEvent>;
 
 /// Client-specific queries.

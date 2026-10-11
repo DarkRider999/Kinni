@@ -19,7 +19,6 @@ import '../domain/entities/client_document.dart';
 import '../domain/entities/followup.dart';
 import '../domain/entities/product.dart';
 import '../domain/entities/voice_note.dart';
-import '../domain/entities/whatsapp_template.dart';
 
 const syncTask = 'anjali.sync';
 const backupTask = 'anjali.dailyBackup';
@@ -44,7 +43,6 @@ Future<void> registerBackgroundTasks() async {
 
 Map<String, HiveRepository> _repos() => {
       HiveService.products: HiveRepository(HiveService.instance.box(HiveService.products), Product.fromMap),
-      HiveService.templates: HiveRepository(HiveService.instance.box(HiveService.templates), WhatsAppTemplate.fromMap),
       HiveService.clients: HiveRepository(HiveService.instance.box(HiveService.clients), Client.fromMap),
       HiveService.followups: HiveRepository(HiveService.instance.box(HiveService.followups), Followup.fromMap),
       HiveService.callLogs: HiveRepository(HiveService.instance.box(HiveService.callLogs), CallLog.fromMap),

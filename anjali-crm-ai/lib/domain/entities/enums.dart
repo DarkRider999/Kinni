@@ -152,18 +152,6 @@ enum ActivityType {
   static ActivityType fromName(Object? n) => _byName(values, n, ActivityType.updated);
 }
 
-enum TemplateCategory {
-  documentRequest('Document Request'),
-  followup('Followup'),
-  approval('Approval'),
-  rejection('Rejection'),
-  custom('Custom');
-
-  const TemplateCategory(this.label);
-  final String label;
-  static TemplateCategory fromName(Object? n) => _byName(values, n, TemplateCategory.custom);
-}
-
 enum SecurityEventType {
   unlockSuccess('Unlocked'),
   failedPin('Wrong PIN'),

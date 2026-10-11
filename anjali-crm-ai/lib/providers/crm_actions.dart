@@ -20,11 +20,9 @@ import '../domain/entities/enums.dart';
 import '../domain/entities/followup.dart';
 import '../domain/entities/product.dart';
 import '../domain/entities/voice_note.dart';
-import '../domain/entities/whatsapp_template.dart';
 import '../domain/services/duplicate_detector.dart';
 import '../domain/services/motivation_picker.dart';
 import '../domain/services/status_automation.dart';
-import '../domain/services/template_renderer.dart';
 import 'app_providers.dart';
 
 /// Application use-cases. Every UI mutation goes through here so the
@@ -275,32 +273,8 @@ class CrmActions {
 
   // ── WhatsApp ─────────────────────────────────────────────────────────────
 
-  String renderTemplate(WhatsAppTemplate t, Client c) {
-    final productName = ref.read(productNamesProvider)[c.productId] ?? 'loan';
-    final pending = _docs.pendingRequiredFor(c.id).map((d) => '• ${d.displayName}').toList();
-    final docs = pending.isNotEmpty ? pending.join('\n') : DocumentType.required.map((d) => '• ${d.label}').join('\n');
-    final next = _followups.nextPendingFor(c.id);
-    return TemplateRenderer.render(t.body, {
-      'name': c.name.split(' ').first,
-      'product': productName,
-      'agent': ref.read(profileProvider).name,
-      'date': next == null ? Fmt.date(_now) : Fmt.dateTime(next.dueAt),
-      'documents': docs,
-    });
-  }
-
-  Future<void> logWhatsApp(Client c, String templateName) async {
-    await _log(c.id, ActivityType.whatsapp, 'WhatsApp · $templateName');
-    _sync();
-  }
-
-  Future<void> saveTemplate(WhatsAppTemplate t) async {
-    await ref.read(templateRepoProvider).upsert(t);
-    _sync();
-  }
-
-  Future<void> deleteTemplate(WhatsAppTemplate t) async {
-    await ref.read(templateRepoProvider).softDelete(t.id);
+  Future<void> logWhatsApp(Client c) async {
+    await _log(c.id, ActivityType.whatsapp, 'WhatsApp chat opened');
     _sync();
   }
 
@@ -417,8 +391,6 @@ class CrmActions {
   Future<void> seedDefaults(Iterable<String> productNames) async {
     final repo = ref.read(productRepoProvider);
     if (repo.getAll().isEmpty) await repo.upsertAll(Defaults.products(productNames));
-    final t = ref.read(templateRepoProvider);
-    if (t.getAll().isEmpty) await t.upsertAll(Defaults.templates());
   }
 
   Future<int> loadSampleData() async {

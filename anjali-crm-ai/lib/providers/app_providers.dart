@@ -23,7 +23,6 @@ import '../domain/entities/product.dart';
 import '../domain/entities/security_event.dart';
 import '../domain/entities/user_profile.dart';
 import '../domain/entities/voice_note.dart';
-import '../domain/entities/whatsapp_template.dart';
 import '../domain/services/insights_engine.dart';
 import '../domain/services/productivity_calculator.dart';
 import '../domain/services/report_engine.dart';
@@ -75,14 +74,12 @@ final callLogRepoProvider = Provider<CallLogRepository>((ref) => HiveRepository(
 final voiceNoteRepoProvider = Provider<VoiceNoteRepository>((ref) => HiveRepository(_box(ref, HiveService.voiceNotes), VoiceNote.fromMap));
 final documentRepoProvider = Provider<DocumentRepository>((ref) => HiveRepository(_box(ref, HiveService.documents), ClientDocument.fromMap));
 final activityRepoProvider = Provider<ActivityRepository>((ref) => HiveRepository(_box(ref, HiveService.activities), Activity.fromMap));
-final templateRepoProvider = Provider<TemplateRepository>((ref) => HiveRepository(_box(ref, HiveService.templates), WhatsAppTemplate.fromMap));
 final securityLogRepoProvider =
     Provider<SecurityLogRepository>((ref) => HiveRepository(_box(ref, HiveService.securityEvents), SecurityEvent.fromMap));
 
 /// Box name → repository for sync and backup.
 final syncedReposProvider = Provider<Map<String, HiveRepository>>((ref) => {
       HiveService.products: ref.watch(productRepoProvider),
-      HiveService.templates: ref.watch(templateRepoProvider),
       HiveService.clients: ref.watch(clientRepoProvider),
       HiveService.followups: ref.watch(followupRepoProvider),
       HiveService.callLogs: ref.watch(callLogRepoProvider),
@@ -113,8 +110,6 @@ final voiceNotesProvider = StreamProvider<List<VoiceNote>>((ref) => ref.watch(vo
 final documentsProvider = StreamProvider<List<ClientDocument>>((ref) => ref.watch(documentRepoProvider).watchAll());
 final activitiesProvider = StreamProvider<List<Activity>>(
     (ref) => ref.watch(activityRepoProvider).watchAll().map((l) => l..sort((a, b) => b.at.compareTo(a.at))));
-final templatesProvider = StreamProvider<List<WhatsAppTemplate>>(
-    (ref) => ref.watch(templateRepoProvider).watchAll().map((l) => l..sort((a, b) => a.category.index.compareTo(b.category.index))));
 final securityEventsProvider = StreamProvider<List<SecurityEvent>>(
     (ref) => ref.watch(securityLogRepoProvider).watchAll().map((l) => l..sort((a, b) => b.at.compareTo(a.at))));
 

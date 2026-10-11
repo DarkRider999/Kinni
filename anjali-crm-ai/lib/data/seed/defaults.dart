@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/utils/id.dart';
-import '../../domain/entities/enums.dart';
 import '../../domain/entities/product.dart';
-import '../../domain/entities/whatsapp_template.dart';
 
 /// Factory defaults created at onboarding.
 abstract final class Defaults {
@@ -34,22 +32,5 @@ abstract final class Defaults {
       ));
     }
     return out;
-  }
-
-  static List<WhatsAppTemplate> templates() {
-    final now = DateTime.now();
-    WhatsAppTemplate t(String name, TemplateCategory c, String body) =>
-        WhatsAppTemplate(id: newId(), createdAt: now, updatedAt: now, name: name, category: c, body: body, isDefault: true);
-    return [
-      t('Document request', TemplateCategory.documentRequest,
-          'Hello {name}, hope you are doing well! 😊\n\nTo process your {product} application, kindly share the following documents:\n{documents}\n\nYou can send clear photos or PDFs here on WhatsApp.\n\nThank you,\n{agent}'),
-      t('Followup', TemplateCategory.followup,
-          'Hi {name}, this is {agent}. Just following up on your {product} enquiry. Is now a good time to talk? I am happy to answer any questions. 🙏'),
-      t('Approval', TemplateCategory.approval,
-          'Congratulations {name}! 🎉 Your {product} application has been APPROVED. I will share the next steps shortly.\n\nWarm regards,\n{agent}'),
-      t('Rejection', TemplateCategory.rejection,
-          'Dear {name}, thank you for your patience. Unfortunately your {product} application could not be approved at this time. I will let you know as soon as a suitable option becomes available.\n\nRegards,\n{agent}'),
-      t('Custom message', TemplateCategory.custom, 'Hello {name}, '),
-    ];
   }
 }

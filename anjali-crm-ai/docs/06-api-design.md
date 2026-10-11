@@ -24,7 +24,6 @@ VoiceNoteRepository  : Repository<VoiceNote> + forClient(id)
 DocumentRepository   : Repository<ClientDocument> + forClient(id), ensureRequired(clientId)
 ActivityRepository   : Repository<Activity>   + forClient(id), recent(limit)
 ProductRepository    : Repository<Product>    + active()
-TemplateRepository   : Repository<WhatsAppTemplate>
 SettingsStore        : get/set typed keys (local only)
 SecurityLogRepository: add(event), all()               (local only)
 ```
@@ -38,7 +37,6 @@ SecurityLogRepository: add(event), all()               (local only)
 | `ReportEngine` | `KpiSummary kpis(...)`, `List<GroupRow> groupBy(ReportGroup g, ...)`, `List<FunnelStage> funnel(...)`, `List<MonthPoint> monthly(...)` |
 | `DuplicateDetector.find` | `DuplicateMatch? find(Client candidate, List<Client> existing)` |
 | `DuplicateDetector.merge` | `Client merge(Client primary, Client other)` (keeps non-empty primary fields, fills gaps) |
-| `TemplateRenderer.render` | `String render(String body, Map<String,String> vars)` |
 | `FollowupBucketer.bucket` | `Map<FollowupBucket, List<Followup>> bucket(List<Followup>, DateTime now)` |
 | `ProductivityCalculator` | `Productivity compute({followups, calls, clients, docs, now})` |
 | `MotivationPicker.pick` | `int pick({required int total, required List<int> history, required Random rng, int window = 30})` |

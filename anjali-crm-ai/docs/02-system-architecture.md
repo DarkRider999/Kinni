@@ -24,7 +24,7 @@
 
 | Layer | Folder | Depends on | Contains |
 |---|---|---|---|
-| Domain | `lib/domain` | nothing (pure Dart) | Entities, enums, repository interfaces, business services (scoring, insights, reports, duplicates, template rendering, followup bucketing, productivity score, card parsing, motivation picker) |
+| Domain | `lib/domain` | nothing (pure Dart) | Entities, enums, repository interfaces, business services (scoring, insights, reports, duplicates, followup bucketing, productivity score, card parsing, motivation picker) |
 | Data | `lib/data` | domain | Hive data sources, repository implementations, Firestore/Storage sync, backup ZIP, Excel/PDF export, sample data |
 | Application | `lib/providers` | domain, data | Riverpod providers that wire repositories and expose streams and derived view-models |
 | Presentation | `lib/features`, `lib/core/widgets` | application, domain | Screens, sheets, dialogs, reusable glass widgets |
@@ -118,10 +118,10 @@ anjali-crm-ai/
 │   │   └── widgets/                 # glass_card · tab_background · stat_card · status_chip · avatar …
 │   ├── domain/
 │   │   ├── entities/                # client · product · followup · call_log · voice_note · client_document
-│   │   │                            # activity · whatsapp_template · user_profile · security_event · enums
+│   │   │                            # activity · user_profile · security_event · enums
 │   │   ├── repositories/            # repository interfaces
 │   │   └── services/                # lead_scoring · insights_engine · report_engine · duplicate_detector
-│   │                                # template_renderer · followup_bucketer · productivity_calculator
+│   │                                # followup_bucketer · productivity_calculator
 │   │                                # motivation_picker · business_card_parser · status_automation
 │   ├── data/
 │   │   ├── local/                   # hive_service (boxes + cipher) · hive_repository (generic CRUD)
@@ -129,12 +129,12 @@ anjali-crm-ai/
 │   │   ├── remote/                  # sync_service (Firestore + Storage)
 │   │   ├── backup/                  # backup_service (ZIP, rotate 7, restore)
 │   │   ├── export/                  # excel_exporter · pdf_exporter
-│   │   └── seed/                    # sample_data · default_templates · default_products
+│   │   └── seed/                    # sample_data · defaults (products)
 │   ├── providers/                   # Riverpod wiring + derived view models
 │   └── features/
 │       ├── splash/  lock/  onboarding/  motivation/  shell/
 │       ├── home/  clients/  add_lead/  followups/  reports/  settings/
-│       └── calls/  whatsapp/  voice_notes/  documents/  maps/  search/  card_scanner/  contacts/
+│       └── calls/  whatsapp/ (direct-chat button)  voice_notes/  documents/  maps/  search/  card_scanner/  contacts/
 ├── test/                            # unit + widget tests
 ├── scripts/                         # test.sh · build_release.sh · gen_keystore.sh
 ├── pubspec.yaml

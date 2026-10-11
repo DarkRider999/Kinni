@@ -75,8 +75,6 @@ Uniqueness: one row per (clientId, type) except `custom`.
 `clientId?` · `type` enum `ActivityType {created, updated, statusChanged, call, whatsapp, followupScheduled, followupCompleted, document, voiceNote, merged, report}` ·
 `title` · `detail?` · `fromStatus?` · `toStatus?` · `at`.
 
-### `templates`
-`name` · `category` enum `TemplateCategory {documentRequest, followup, approval, rejection, custom}` · `body` · `isDefault`.
 
 ### `security_events` (local only, never synced)
 `type` enum `SecurityEventType {unlockSuccess, failedPin, failedPattern, failedBiometric, lockout, pinChanged, recoveryUsed}` · `at` · `photoPath?` · `detail?`.
@@ -123,7 +121,7 @@ products 1 ──< clients 1 ──< followups
                   │  1 ──< voice_notes
                   │  1 ──< documents
                   │  1 ──< activities
-templates (independent)   security_events (independent, local)   settings (kv, local)
+security_events (independent, local)   settings (kv, local)
 ```
 
 ## 6. Derived metrics (computed, never stored)
@@ -143,7 +141,7 @@ templates (independent)   security_events (independent, local)   settings (kv, l
 users/{uid}
   ├── clients/{id}        ├── followups/{id}   ├── call_logs/{id}
   ├── voice_notes/{id}    ├── documents/{id}   ├── activities/{id}
-  ├── products/{id}       └── templates/{id}
+  └── products/{id}
 ```
 Composite index: none needed. Pull uses a single-field `updatedAt >` range query per collection.
 

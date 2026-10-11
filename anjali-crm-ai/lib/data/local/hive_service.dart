@@ -16,12 +16,11 @@ class HiveService {
   static const voiceNotes = 'voice_notes';
   static const documents = 'documents';
   static const activities = 'activities';
-  static const templates = 'templates';
   static const securityEvents = 'security_events';
   static const settings = 'settings';
 
   /// Boxes mirrored to Firestore, in dependency order.
-  static const syncedBoxes = [products, templates, clients, followups, callLogs, voiceNotes, documents, activities];
+  static const syncedBoxes = [products, clients, followups, callLogs, voiceNotes, documents, activities];
 
   static const encryptedBoxes = [...syncedBoxes, securityEvents, settings];
 
