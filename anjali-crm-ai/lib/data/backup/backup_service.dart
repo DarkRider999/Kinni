@@ -10,6 +10,15 @@ import '../local/hive_repository.dart';
 import '../local/hive_service.dart';
 import '../local/settings_store.dart';
 
+/// Readable backup/restore failure (wraps file-system errors).
+class BackupException implements Exception {
+  const BackupException(this.message, [this.cause]);
+  final String message;
+  final Object? cause;
+  @override
+  String toString() => message;
+}
+
 /// Local ZIP backups: `manifest.json`, one JSON file per box, and every
 /// attachment under `files/` (FR BAK-01/02).
 class BackupService {
@@ -69,7 +78,11 @@ class BackupService {
     final dir = await FileStore.backupsDir();
     final name = 'anjali_crm_${automatic ? 'auto' : 'manual'}_${Fmt.fileStamp(DateTime.now())}.zip';
     final out = File(p.join(dir.path, name));
-    await out.writeAsBytes(zip, flush: true);
+    try {
+      await out.writeAsBytes(zip, flush: true);
+    } on FileSystemException catch (e) {
+      throw BackupException('Could not write the backup file (is storage full?)', e);
+    }
     await settings.setLastBackupAt(DateTime.now());
     if (automatic) await _rotate();
     return out;
@@ -84,7 +97,12 @@ class BackupService {
 
   /// Reads and validates the manifest without changing anything.
   Future<Map<String, dynamic>> inspect(File zip) async {
-    final archive = ZipDecoder().decodeBytes(await zip.readAsBytes());
+    final Archive archive;
+    try {
+      archive = ZipDecoder().decodeBytes(await zip.readAsBytes());
+    } catch (e) {
+      throw BackupException('This file is not a readable backup', e);
+    }
     final mf = archive.findFile('manifest.json');
     if (mf == null) throw const FormatException('Not an Anjali CRM backup (manifest missing)');
     final manifest = jsonDecode(utf8.decode(mf.content as List<int>)) as Map<String, dynamic>;
@@ -103,10 +121,14 @@ class BackupService {
     final root = (await FileStore.root()).path;
     final oldRootPattern = RegExp(r'^.*?/files/');
 
-    for (final f in archive.files.where((f) => f.isFile && f.name.startsWith('files/'))) {
-      final dest = File(p.join(root, f.name));
-      await dest.parent.create(recursive: true);
-      await dest.writeAsBytes(f.content as List<int>, flush: true);
+    try {
+      for (final f in archive.files.where((f) => f.isFile && f.name.startsWith('files/'))) {
+        final dest = File(p.join(root, f.name));
+        await dest.parent.create(recursive: true);
+        await dest.writeAsBytes(f.content as List<int>, flush: true);
+      }
+    } on FileSystemException catch (e) {
+      throw BackupException('Could not restore attachments (is storage full?)', e);
     }
 
     final restored = <String, int>{};
