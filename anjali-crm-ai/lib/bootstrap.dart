@@ -9,6 +9,7 @@ import 'package:workmanager/workmanager.dart';
 import 'background/background_tasks.dart';
 import 'core/config/firebase_config.dart';
 import 'core/services/analytics_service.dart';
+import 'core/services/error_reporter.dart';
 import 'core/services/notification_service.dart';
 import 'data/local/hive_service.dart';
 
@@ -21,14 +22,11 @@ Future<Box> bootstrap() async {
     FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
     PlatformDispatcher.instance.onError = (error, stack) {
       FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-      return true;
+      return ErrorReporter.report(error, stack);
     };
     await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(!kDebugMode);
   } else {
-    PlatformDispatcher.instance.onError = (error, stack) {
-      Telemetry.recordError(error, stack, fatal: true);
-      return true;
-    };
+    PlatformDispatcher.instance.onError = ErrorReporter.report;
   }
 
   final prefs = await HiveService.instance.openPrefs();

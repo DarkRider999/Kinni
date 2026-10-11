@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/constants/app_assets.dart';
+import 'core/services/error_reporter.dart';
 import 'core/theme/app_theme.dart';
 import 'features/gate/app_gate.dart';
 import 'providers/app_providers.dart';
@@ -18,6 +19,7 @@ class AnjaliApp extends ConsumerWidget {
       title: AppInfo.name,
       debugShowCheckedModeBanner: false,
       navigatorKey: rootNavigatorKey,
+      scaffoldMessengerKey: ErrorReporter.messengerKey,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
       themeMode: ref.watch(themeModeProvider),
