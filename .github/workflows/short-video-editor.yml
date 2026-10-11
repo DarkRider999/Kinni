@@ -1,0 +1,43 @@
+name: Short video editor (web)
+
+on:
+  push:
+    paths:
+      - "short-video-editor/**"
+      - ".github/workflows/short-video-editor.yml"
+  pull_request:
+    paths:
+      - "short-video-editor/**"
+      - ".github/workflows/short-video-editor.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: short-video-editor/web
+
+jobs:
+  web:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: short-video-editor/web/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: npm ci
+      - name: Contrast (WCAG AA on every token pair)
+        run: npm run contrast
+      - name: Tokens in sync with replica/design/tokens.json
+        run: npm run tokens:check
+      - run: npm run lint
+      - name: Typecheck
+        run: npx tsc -b
+      - run: npm test
+      - run: npm run build

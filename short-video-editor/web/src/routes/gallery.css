@@ -1,0 +1,14 @@
+.g-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--layout-inspector);
+}
+.g-editor > aside { border-left: 1px solid var(--color-border); }
+
+/* Timeline scrolls horizontally inside its card; the page never does. */
+.g-timeline { overflow-x: auto; }
+.g-timeline-inner { display: grid; gap: var(--space-3); min-width: 960px; }
+
+@media (max-width: 899px) {
+  .g-editor { grid-template-columns: minmax(0, 1fr); }
+  .g-editor > aside { border-left: 0; border-top: 1px solid var(--color-border); }
+}
