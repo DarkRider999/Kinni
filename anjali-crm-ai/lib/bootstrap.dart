@@ -32,7 +32,12 @@ Future<Box> bootstrap() async {
   }
 
   final prefs = await HiveService.instance.openPrefs();
-  await NotificationService.instance.init();
+  try {
+    await NotificationService.instance.init();
+  } catch (e, st) {
+    // Reminders degrade gracefully; the CRM must still open.
+    Telemetry.recordError(e, st);
+  }
 
   try {
     await Workmanager().initialize(callbackDispatcher);
