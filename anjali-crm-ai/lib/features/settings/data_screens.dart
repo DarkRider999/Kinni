@@ -4,8 +4,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
-import 'package:share_plus/share_plus.dart';
 
+import '../common/file_actions.dart';
 import '../../core/config/firebase_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/formatters.dart';
@@ -21,14 +21,6 @@ import '../../providers/app_providers.dart';
 import '../../providers/crm_actions.dart';
 import 'settings_widgets.dart';
 
-/// Shares [file] through the system sheet.
-Future<void> _share(File file) => SharePlus.instance.share(ShareParams(files: [XFile(file.path)]));
-
-/// Saves a copy of [file] where the user chooses; true when saved.
-Future<bool> _saveAs(File file) async {
-  final uri = await FilePicker.saveFile(fileName: p.basename(file.path), bytes: await file.readAsBytes());
-  return uri != null;
-}
 
 // ── Export ──────────────────────────────────────────────────────────────────
 
@@ -82,8 +74,12 @@ class _ExportScreenState extends ConsumerState<ExportScreen> {
         ]),
       ),
     );
-    if (action == 'share') await _share(file);
-    if (action == 'save' && await _saveAs(file) && mounted) showSnack(context, 'Saved');
+    if (!mounted) return;
+    if (action == 'share') {
+      await safeShare(context, [file.path]);
+    } else if (action == 'save') {
+      if (await safeSaveCopy(context, file) && mounted) showSnack(context, 'Saved');
+    }
   }
 
   @override
@@ -152,11 +148,11 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
         title: 'Contains customer data',
         message: 'This backup holds all your clients, documents and notes in readable form. Keep it somewhere private.',
         ok: save ? 'Save' : 'Share');
-    if (!ok) return;
+    if (!ok || !mounted) return;
     if (save) {
-      if (await _saveAs(f) && mounted) showSnack(context, 'Saved');
+      if (await safeSaveCopy(context, f) && mounted) showSnack(context, 'Saved');
     } else {
-      await _share(f);
+      await safeShare(context, [f.path]);
     }
   }
 
@@ -168,8 +164,14 @@ class _BackupScreenState extends ConsumerState<BackupScreen> {
   }
 
   Future<void> _pickAndRestore() async {
-    final r = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['zip']);
-    final path = r.isEmpty ? null : r.first.path;
+    String? path;
+    try {
+      final r = await FilePicker.pickFiles(type: FileType.custom, allowedExtensions: ['zip']);
+      path = r.isEmpty ? null : r.first.path;
+    } catch (e) {
+      if (mounted) showSnack(context, 'Could not open the file picker: $e', error: true);
+      return;
+    }
     if (path != null) await _restore(File(path));
   }
 

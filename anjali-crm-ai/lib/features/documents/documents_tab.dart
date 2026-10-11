@@ -4,8 +4,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:share_plus/share_plus.dart';
 
+import '../common/file_actions.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/glass_card.dart';
@@ -96,7 +96,7 @@ class _DocumentsTabState extends ConsumerState<DocumentsTab> {
     if (mime.startsWith('image/')) {
       await Navigator.of(context).push(MaterialPageRoute(builder: (_) => _ImageViewer(path: path, title: d.displayName)));
     } else {
-      await SharePlus.instance.share(ShareParams(files: [XFile(path)], subject: d.displayName));
+      await safeShare(context, [path], subject: d.displayName);
     }
   }
 
@@ -282,7 +282,7 @@ class _ImageViewer extends StatelessWidget {
           actions: [
             IconButton(
               tooltip: 'Share',
-              onPressed: () => SharePlus.instance.share(ShareParams(files: [XFile(path)], subject: title)),
+              onPressed: () => safeShare(context, [path], subject: title),
               icon: const Icon(Icons.share_rounded),
             ),
           ],

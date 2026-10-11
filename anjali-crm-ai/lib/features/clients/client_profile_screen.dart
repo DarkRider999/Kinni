@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
-import 'package:share_plus/share_plus.dart';
 
+import '../common/file_actions.dart';
 import '../../core/services/file_storage_service.dart';
 import '../../core/services/launcher_service.dart';
 import '../../core/theme/app_colors.dart';
@@ -749,7 +749,7 @@ class _FilesTabState extends ConsumerState<_FilesTab> {
     }
   }
 
-  Future<void> _share(File f) => SharePlus.instance.share(ShareParams(files: [XFile(f.path)], subject: p.basename(f.path)));
+  Future<void> _share(File f) => safeShare(context, [f.path], subject: p.basename(f.path));
 
   Future<void> _delete(File f) async {
     if (!await confirm(context, title: 'Delete file?', message: p.basename(f.path), ok: 'Delete', destructive: true)) return;

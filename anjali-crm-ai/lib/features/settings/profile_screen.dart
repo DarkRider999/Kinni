@@ -38,10 +38,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _pick(ImageSource source) async {
     final x = await ImagePicker().pickImage(source: source, maxWidth: 900, imageQuality: 85);
     if (x == null) return;
-    final dir = await FileStore.profileDir();
-    final ext = p.extension(x.path).isEmpty ? '.jpg' : p.extension(x.path);
-    final dest = p.join(dir.path, 'profile_${newId().substring(0, 8)}$ext');
-    await File(x.path).copy(dest);
+    final String dest;
+    try {
+      final dir = await FileStore.profileDir();
+      final ext = p.extension(x.path).isEmpty ? '.jpg' : p.extension(x.path);
+      dest = p.join(dir.path, 'profile_${newId().substring(0, 8)}$ext');
+      await File(x.path).copy(dest);
+    } catch (e) {
+      if (mounted) showSnack(context, 'Could not save the photo: $e', error: true);
+      return;
+    }
     if (_photo != null && _photo != ref.read(profileProvider).photoPath) await FileStore.deleteQuietly(_photo);
     if (mounted) setState(() => _photo = dest);
   }

@@ -1,11 +1,10 @@
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
-import 'package:share_plus/share_plus.dart';
 
+import '../common/file_actions.dart';
 import '../../core/widgets/common.dart';
 import '../../data/export/excel_exporter.dart';
 import '../../data/export/export_bundle.dart';
@@ -76,10 +75,11 @@ Future<void> shareOrSaveFile(BuildContext context, File file, {required String s
       ]),
     ),
   );
+  if (!context.mounted) return;
   if (choice == 'share') {
-    await SharePlus.instance.share(ShareParams(files: [XFile(file.path)], subject: subject, text: subject));
+    await safeShare(context, [file.path], subject: subject, text: subject);
   } else if (choice == 'save') {
-    final uri = await FilePicker.saveFile(fileName: p.basename(file.path), bytes: await file.readAsBytes());
-    if (context.mounted) showSnack(context, uri == null ? 'Save cancelled' : 'Saved ${p.basename(file.path)}');
+    final saved = await safeSaveCopy(context, file);
+    if (saved && context.mounted) showSnack(context, 'Saved ${p.basename(file.path)}');
   }
 }
