@@ -100,35 +100,13 @@ enum CallOutcome {
   static CallOutcome fromName(Object? n) => _byName(values, n, CallOutcome.noAnswer);
 }
 
-enum DocumentType {
-  emiratesId('Emirates ID'),
-  passport('Passport'),
-  visa('Visa'),
-  salaryCertificate('Salary Certificate'),
-  bankStatement('Bank Statement'),
-  labourContract('Labour Contract'),
-  custom('Custom');
-
-  const DocumentType(this.label);
-  final String label;
-  static DocumentType fromName(Object? n) => _byName(values, n, DocumentType.custom);
-
-  /// The six documents every application needs.
-  static const required = [
-    emiratesId,
-    passport,
-    visa,
-    salaryCertificate,
-    bankStatement,
-    labourContract,
-  ];
-}
-
 enum DocumentStatus {
   pending('Pending'),
+  requested('Requested'),
   received('Received'),
   verified('Verified'),
-  rejected('Rejected');
+  rejected('Rejected'),
+  expired('Expired');
 
   const DocumentStatus(this.label);
   final String label;

@@ -16,6 +16,8 @@ abstract final class FileStore {
 
   static Future<Directory> root() => getApplicationDocumentsDirectory();
   static Future<Directory> clientDir(String clientId) => _dir(p.join('files', clientId));
+  /// Encrypted per-client document vault: files/{clientId}/vault/.
+  static Future<Directory> vaultDir(String clientId) => _dir(p.join('files', clientId, 'vault'));
   static Future<Directory> exportsDir() => _dir('exports');
   static Future<Directory> backupsDir() => _dir('backups');
   static Future<Directory> profileDir() => _dir('profile');
@@ -46,6 +48,15 @@ abstract final class FileStore {
     final d = await clientDir(clientId);
     if (await d.exists()) await d.delete(recursive: true);
   }
+
+  static String extensionForMime(String? mime) => switch (mime) {
+        'application/pdf' => '.pdf',
+        'image/png' => '.png',
+        'image/webp' => '.webp',
+        'image/heic' => '.heic',
+        'image/jpeg' => '.jpg',
+        _ => '',
+      };
 
   static String mimeFor(String path) {
     final e = p.extension(path).toLowerCase();

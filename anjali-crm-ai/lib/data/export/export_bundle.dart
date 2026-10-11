@@ -4,6 +4,7 @@ import '../../domain/entities/client_document.dart';
 import '../../domain/entities/enums.dart';
 import '../../domain/entities/followup.dart';
 import '../../domain/entities/product.dart';
+import '../../domain/services/document_checklist.dart';
 import '../../domain/services/report_engine.dart';
 
 /// Everything an exporter needs, already filtered to the chosen period.
@@ -18,6 +19,7 @@ class ExportBundle {
     required this.period,
     required this.agentName,
     required this.generatedAt,
+    this.categoryNames = const {},
   });
 
   final List<Client> clients;
@@ -29,6 +31,9 @@ class ExportBundle {
   final ReportPeriod period;
   final String agentName;
   final DateTime generatedAt;
+
+  /// Document category id → display name.
+  final Map<String, String> categoryNames;
 
   late final Map<String, String> productNames = {for (final p in products) p.id: p.name};
   late final Map<String, Client> clientById = {for (final c in clients) c.id: c};
@@ -42,16 +47,19 @@ class ExportBundle {
   List<Client> get disbursed => where((c) => c.status == LeadStatus.disbursed);
 
   /// Clients in a document stage or with any required document still pending.
-  List<Client> get documentsPending {
-    final pendingIds = documents
-        .where((d) => !d.deleted && d.type != DocumentType.custom && d.status == DocumentStatus.pending)
-        .map((d) => d.clientId)
-        .toSet();
-    return where((c) => c.status.isOpen && (c.status.isDocumentStage || pendingIds.contains(c.id)));
-  }
+  late final Map<String, Product> _productById = {for (final p in products) p.id: p};
 
-  List<String> pendingDocsFor(String clientId) => documents
-      .where((d) => d.clientId == clientId && !d.deleted && d.status == DocumentStatus.pending)
-      .map((d) => d.displayName)
-      .toList();
+  DocumentChecklist checklistFor(Client c) =>
+      DocumentChecklist.build(_productById[c.productId], documents.where((d) => d.clientId == c.id));
+
+  /// Open clients in a document stage or with an incomplete checklist.
+  List<Client> get documentsPending => where((c) =>
+      c.status.isOpen && (c.status.isDocumentStage || (documents.any((d) => d.clientId == c.id) && !checklistFor(c).isComplete)));
+
+  /// Names of checklist documents not yet received.
+  List<String> pendingDocsFor(String clientId) {
+    final c = clientById[clientId];
+    if (c == null) return const [];
+    return [for (final i in checklistFor(c).items) if (!i.done) categoryNames[i.categoryId] ?? i.categoryId];
+  }
 }

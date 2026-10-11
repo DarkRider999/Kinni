@@ -384,7 +384,7 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
         followupAt: followupChanged ? _followupAt : null,
         followupNote: followupChanged && !_isEdit ? 'First followup' : null,
       );
-      if (!_isEdit && saved.status.isDocumentStage) await actions.ensureRequiredDocuments(saved.id);
+      if (!_isEdit && saved.status.isDocumentStage) await actions.requestChecklistDocuments(saved);
       if (match != null && choice == _DupChoice.merge) {
         final primary = ref.read(clientByIdProvider(match.existing.id)) ?? match.existing;
         saved = await actions.mergeClients(primary, saved);

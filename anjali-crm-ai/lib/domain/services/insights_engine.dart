@@ -3,6 +3,7 @@ import '../entities/client_document.dart';
 import '../entities/enums.dart';
 import '../entities/followup.dart';
 import '../entities/product.dart';
+import 'document_checklist.dart';
 import 'lead_scoring.dart';
 import 'report_engine.dart';
 
@@ -59,8 +60,10 @@ abstract final class InsightsEngine {
     for (final d in documents.where((d) => !d.deleted)) {
       docBy.putIfAbsent(d.clientId, () => []).add(d);
     }
+    final productById = {for (final p in products) p.id: p};
+    DocumentChecklist checklist(Client c) => DocumentChecklist.build(productById[c.productId], docBy[c.id] ?? const []);
     final scores = {
-      for (final c in live) c.id: LeadScoring.score(c, followups: fuBy[c.id] ?? const [], docs: docBy[c.id] ?? const [], now: now),
+      for (final c in live) c.id: LeadScoring.score(c, followups: fuBy[c.id] ?? const [], docs: docBy[c.id] ?? const [], product: productById[c.productId], now: now),
     };
     final open = live.where((c) => c.status.isOpen).toList();
 
@@ -94,12 +97,12 @@ abstract final class InsightsEngine {
 
     final pendingDocs = top(
       open.where((c) {
-        final d = docBy[c.id] ?? const [];
-        return c.status.isDocumentStage || d.any((x) => x.status == DocumentStatus.pending && x.type != DocumentType.custom);
+        final hasDocs = (docBy[c.id] ?? const []).isNotEmpty;
+        return c.status.isDocumentStage || (hasDocs && !checklist(c).isComplete);
       }),
       (a, b) => (scores[b.id] ?? 0).compareTo(scores[a.id] ?? 0),
       (c) {
-        final n = (docBy[c.id] ?? const []).where((x) => x.status == DocumentStatus.pending && x.type != DocumentType.custom).length;
+        final n = checklist(c).missing;
         return n > 0 ? '$n document${n == 1 ? '' : 's'} pending' : 'Waiting for documents';
       },
     );

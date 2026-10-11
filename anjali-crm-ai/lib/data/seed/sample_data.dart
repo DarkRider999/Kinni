@@ -8,6 +8,7 @@ import '../../domain/entities/client_document.dart';
 import '../../domain/entities/enums.dart';
 import '../../domain/entities/followup.dart';
 import '../../domain/entities/product.dart';
+import '../../domain/services/document_checklist.dart';
 
 /// Realistic demo data so the dashboard, charts and AI insights have
 /// something to show on day one. Every sample record is tagged in
@@ -130,11 +131,11 @@ abstract final class SampleData {
 
       // Documents for leads past "interested".
       if (status.pipelineIndex >= LeadStatus.documentsRequested.pipelineIndex || status == LeadStatus.rejected) {
-        for (final type in DocumentType.required) {
+        for (final cat in product?.requiredCategoryIds.isNotEmpty == true ? product!.requiredCategoryIds : DocumentChecklist.fallbackRequired) {
           final st = status.pipelineIndex >= LeadStatus.applicationSubmitted.pipelineIndex
               ? DocumentStatus.verified
-              : [DocumentStatus.pending, DocumentStatus.received, DocumentStatus.pending][rng.nextInt(3)];
-          docs.add(ClientDocument(id: newId(), createdAt: created, updatedAt: c.statusChangedAt, clientId: c.id, type: type, status: st));
+              : [DocumentStatus.requested, DocumentStatus.received, DocumentStatus.pending][rng.nextInt(3)];
+          docs.add(ClientDocument(id: newId(), createdAt: created, updatedAt: c.statusChangedAt, clientId: c.id, categoryId: cat, status: st, encrypted: false));
         }
       }
     }

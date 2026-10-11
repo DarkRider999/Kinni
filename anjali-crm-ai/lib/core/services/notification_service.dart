@@ -8,6 +8,7 @@ import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../../domain/entities/client.dart';
+import '../../domain/entities/client_document.dart';
 import '../../domain/entities/followup.dart';
 import '../utils/formatters.dart';
 
@@ -46,6 +47,15 @@ class NotificationService {
     importance: Importance.high,
     priority: Priority.high,
     color: Color(0xFFFF6B9D),
+  );
+
+  static const _expiryChannel = AndroidNotificationDetails(
+    'document_expiry',
+    'Document expiry',
+    channelDescription: 'Customer passports, visas and IDs nearing expiry',
+    importance: Importance.high,
+    priority: Priority.high,
+    color: Color(0xFFF59E0B),
   );
 
   static const _generalChannel = AndroidNotificationDetails(
@@ -124,6 +134,40 @@ class NotificationService {
       } catch (e) {
         debugPrint('schedule failed: $e');
       }
+    }
+  }
+
+  /// Reminders 30, 15, 7 and 1 day(s) before a document expires, at 9 AM.
+  Future<void> scheduleDocumentExpiry(ClientDocument d, Client c, String docName) async {
+    if (!_ready) await init();
+    await cancelDocumentExpiry(d);
+    final exp = d.expiryDate;
+    if (exp == null || d.deleted) return;
+    final now = DateTime.now();
+    final mode = await _mode();
+    const days = [30, 15, 7, 1];
+    for (var i = 0; i < days.length; i++) {
+      final at = DateTime(exp.year, exp.month, exp.day - days[i], 9);
+      if (!at.isAfter(now)) continue;
+      try {
+        await _plugin.zonedSchedule(
+          id: d.notificationBaseId + i,
+          scheduledDate: tz.TZDateTime.from(at, tz.local),
+          notificationDetails: const NotificationDetails(android: _expiryChannel),
+          androidScheduleMode: mode,
+          title: '$docName expires in ${days[i]} day${days[i] == 1 ? '' : 's'}',
+          body: '${c.name} · expiry ${Fmt.date(exp)}. Ask for a renewed copy.',
+          payload: 'client:${c.id}',
+        );
+      } catch (e) {
+        debugPrint('expiry schedule failed: $e');
+      }
+    }
+  }
+
+  Future<void> cancelDocumentExpiry(ClientDocument d) async {
+    for (var i = 0; i < 4; i++) {
+      await _plugin.cancel(id: d.notificationBaseId + i);
     }
   }
 

@@ -1,8 +1,11 @@
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
 
 import '../core/constants/motivation_messages.dart';
+import '../core/security/file_vault.dart';
 import '../core/services/analytics_service.dart';
 import '../core/services/file_storage_service.dart';
 import '../core/services/notification_service.dart';
@@ -16,13 +19,17 @@ import '../domain/entities/activity.dart';
 import '../domain/entities/call_log.dart';
 import '../domain/entities/client.dart';
 import '../domain/entities/client_document.dart';
+import '../domain/entities/document_category.dart';
+import '../domain/entities/message_template.dart';
 import '../domain/entities/enums.dart';
 import '../domain/entities/followup.dart';
 import '../domain/entities/product.dart';
 import '../domain/entities/voice_note.dart';
+import '../domain/services/document_checklist.dart';
 import '../domain/services/duplicate_detector.dart';
 import '../domain/services/motivation_picker.dart';
 import '../domain/services/status_automation.dart';
+import '../domain/services/template_renderer.dart';
 import 'app_providers.dart';
 
 /// Application use-cases. Every UI mutation goes through here so the
@@ -99,10 +106,10 @@ class CrmActions {
       disbursedAmount: status == LeadStatus.disbursed ? (amount ?? c.disbursedAmount ?? c.approvedAmount) : c.disbursedAmount,
     );
     await _clients.upsert(updated);
-    await _log(c.id, ActivityType.statusChanged, 'Status → ${status.label}',
+    await _log(c.id, ActivityType.statusChanged, _statusTitle(status),
         from: c.status, to: status, detail: amount == null ? null : Fmt.aed(amount));
     if (status.isConverted) Telemetry.event('lead_converted', {'status': status.name});
-    if (status == LeadStatus.documentsRequested) await ensureRequiredDocuments(c.id);
+    if (status == LeadStatus.documentsRequested) await requestChecklistDocuments(updated);
     if (!status.isOpen) {
       // Closed leads need no more reminders.
       for (final f in _followups.forClient(c.id).where((f) => f.isPending)) {
@@ -111,6 +118,15 @@ class CrmActions {
     }
     _sync();
   }
+
+  /// Timeline wording for a status change.
+  static String _statusTitle(LeadStatus s) => switch (s) {
+        LeadStatus.applicationSubmitted => 'Application submitted',
+        LeadStatus.approved => 'Application approved',
+        LeadStatus.disbursed => 'Loan disbursed',
+        LeadStatus.rejected => 'Application rejected',
+        _ => 'Status → ${s.label}',
+      };
 
   Future<void> deleteClient(Client c) async {
     await _clients.softDelete(c.id);
@@ -149,11 +165,11 @@ class CrmActions {
     final notes = ref.read(voiceNoteRepoProvider);
     await move(notes.getAll().where((x) => x.clientId == duplicate.id).toList(),
         (x) => notes.upsert(VoiceNote.fromMap({...x.toMap(), 'clientId': primary.id})));
-    final existingTypes = _docs.forClient(primary.id).map((d) => d.type).toSet();
     for (final d in _docs.forClient(duplicate.id)) {
-      if (d.type != DocumentType.custom && existingTypes.contains(d.type) && !d.hasFile) {
+      if (!d.hasFile && _docs.inCategory(primary.id, d.categoryId).isNotEmpty) {
         await _docs.softDelete(d.id);
       } else {
+        // Files stay where they are; only ownership changes.
         await _docs.upsert(ClientDocument.fromMap({...d.toMap(), 'clientId': primary.id}));
       }
     }
@@ -271,76 +287,273 @@ class CrmActions {
 
   Future<void> setPendingCall(String? clientId) => ref.read(settingsStoreProvider).setPendingCall(clientId);
 
-  // ── WhatsApp ─────────────────────────────────────────────────────────────
+  // ── WhatsApp & message templates ─────────────────────────────────────────
 
-  Future<void> logWhatsApp(Client c) async {
-    await _log(c.id, ActivityType.whatsapp, 'WhatsApp chat opened');
+  /// Logs a WhatsApp action ("Chat opened", template name, "Client details shared").
+  Future<void> logWhatsApp(Client c, {String what = 'Chat opened'}) async {
+    await _log(c.id, ActivityType.whatsapp, 'WhatsApp sent · $what');
     _sync();
   }
 
-  // ── Documents ────────────────────────────────────────────────────────────
+  /// Fills a template's tags with this client's values.
+  String renderTemplate(MessageTemplate t, Client c) =>
+      TemplateRenderer.render(t.body, TemplateRenderer.valuesFor(c, productName: ref.read(productNamesProvider)[c.productId]));
 
-  /// Creates the six required document rows for a client if missing.
-  Future<void> ensureRequiredDocuments(String clientId) async {
-    final have = _docs.forClient(clientId).map((d) => d.type).toSet();
+  String clientSummary(Client c) => TemplateRenderer.clientSummary(c, productName: ref.read(productNamesProvider)[c.productId]);
+
+  TemplateRepository get _templates => ref.read(templateRepoProvider);
+
+  Future<void> saveTemplate(MessageTemplate t) async {
+    await _templates.upsert(t);
+    if (t.isDefault) await setDefaultTemplate(t);
+    _sync();
+  }
+
+  Future<MessageTemplate> createTemplate(String name, String body) async {
     final now = _now;
-    final missing = [
-      for (final t in DocumentType.required)
-        if (!have.contains(t)) ClientDocument(id: newId(), createdAt: now, updatedAt: now, clientId: clientId, type: t),
+    final all = _templates.getAll();
+    final t = MessageTemplate(
+      id: newId(),
+      createdAt: now,
+      updatedAt: now,
+      name: name,
+      body: body,
+      isDefault: all.isEmpty,
+      sortOrder: all.fold<int>(-1, (m, x) => x.sortOrder > m ? x.sortOrder : m) + 1,
+    );
+    await _templates.upsert(t);
+    _sync();
+    return t;
+  }
+
+  Future<MessageTemplate> duplicateTemplate(MessageTemplate t) => createTemplate('${t.name} (copy)', t.body);
+
+  /// Makes [t] the only default template.
+  Future<void> setDefaultTemplate(MessageTemplate t) async {
+    final changed = [
+      for (final x in _templates.getAll())
+        if (x.isDefault != (x.id == t.id)) x.copyWith(isDefault: x.id == t.id),
     ];
-    if (missing.isNotEmpty) await _docs.upsertAll(missing);
-  }
-
-  Future<ClientDocument> addCustomDocument(String clientId, String name) async {
-    final now = _now;
-    final d = ClientDocument(id: newId(), createdAt: now, updatedAt: now, clientId: clientId, type: DocumentType.custom, customName: name);
-    await _docs.upsert(d);
+    if (changed.isNotEmpty) await _templates.upsertAll(changed);
     _sync();
-    return d;
   }
 
-  /// Attaches a file and marks the document Received.
-  Future<void> attachDocumentFile(ClientDocument d, String sourcePath) async {
-    final stored = await FileStore.importForClient(d.clientId, sourcePath, prefix: d.type.name);
-    if (d.filePath != null && d.filePath != stored) await FileStore.deleteQuietly(d.filePath);
-    await _docs.upsert(d.copyWith(
-      filePath: stored,
-      mimeType: FileStore.mimeFor(stored),
-      remotePath: null,
-      status: d.status == DocumentStatus.verified ? DocumentStatus.verified : DocumentStatus.received,
-    ));
-    await _log(d.clientId, ActivityType.document, '${d.displayName} received');
-    await _suggestDocumentsReceived(d.clientId);
+  Future<void> deleteTemplate(MessageTemplate t) async {
+    await _templates.softDelete(t.id);
+    if (t.isDefault) {
+      final rest = _templates.getAll()..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+      if (rest.isNotEmpty) await setDefaultTemplate(rest.first);
+    }
+    _sync();
+  }
+
+  Future<void> reorderTemplates(List<MessageTemplate> ordered) async {
+    await _templates.upsertAll([for (var i = 0; i < ordered.length; i++) ordered[i].copyWith(sortOrder: i)]);
+    _sync();
+  }
+
+  // ── Document vault ───────────────────────────────────────────────────────
+
+  String _categoryName(String id) => ref.read(categoryNamesProvider)[id] ?? 'Document';
+
+  /// Display name of a document (custom title or its category).
+  String documentName(ClientDocument d) => d.title ?? _categoryName(d.categoryId);
+
+  /// Requests every checklist document the client hasn't provided yet.
+  Future<void> requestChecklistDocuments(Client c) async {
+    final product = ref.read(productRepoProvider).getById(c.productId ?? '');
+    final list = DocumentChecklist.build(product, _docs.forClient(c.id));
+    final missing = [for (final i in list.items) if (!i.done && i.status != DocumentStatus.requested) i.categoryId];
+    if (missing.isNotEmpty) await requestDocuments(c.id, missing);
+  }
+
+  /// Marks checklist documents as Requested (creating placeholders).
+  Future<void> requestDocuments(String clientId, Iterable<String> categoryIds) async {
+    final now = _now;
+    for (final cat in categoryIds) {
+      final inCat = _docs.inCategory(clientId, cat);
+      if (inCat.any((d) => d.status.isCollected)) continue;
+      final placeholder = inCat.where((d) => !d.hasFile).firstOrNull;
+      await _docs.upsert(placeholder?.copyWith(status: DocumentStatus.requested) ??
+          ClientDocument(id: newId(), createdAt: now, updatedAt: now, clientId: clientId, categoryId: cat, status: DocumentStatus.requested));
+    }
+    await _log(clientId, ActivityType.document, 'Documents requested', detail: categoryIds.map(_categoryName).join(', '));
+    _sync();
+  }
+
+  Future<String> _storeEncrypted(String clientId, String docId, String sourcePath) async {
+    final dir = await FileStore.vaultDir(clientId);
+    final dest = p.join(dir.path, '$docId.enc');
+    await FileVault.instance.encryptFile(sourcePath, dest);
+    return dest;
+  }
+
+  /// Adds files to a client's vault category (each file = one document).
+  /// A Pending/Requested placeholder in that category is filled first.
+  Future<List<ClientDocument>> addDocumentFiles(
+    String clientId,
+    String categoryId,
+    List<String> sourcePaths, {
+    String? title,
+    DateTime? expiryDate,
+    String source = 'Uploaded',
+  }) async {
+    final out = <ClientDocument>[];
+    var placeholder = _docs.inCategory(clientId, categoryId).where((d) => !d.hasFile).firstOrNull;
+    for (final src in sourcePaths) {
+      final now = _now;
+      final id = placeholder?.id ?? newId();
+      final stored = await _storeEncrypted(clientId, id, src);
+      final base = placeholder ?? ClientDocument(id: id, createdAt: now, updatedAt: now, clientId: clientId, categoryId: categoryId);
+      final doc = base.copyWith(
+        title: title ?? (sourcePaths.length > 1 ? p.basenameWithoutExtension(src) : null),
+        filePath: stored,
+        mimeType: FileStore.mimeFor(src),
+        remotePath: null,
+        status: DocumentStatus.received,
+        expiryDate: expiryDate ?? base.expiryDate,
+        encrypted: true,
+      );
+      await _docs.upsert(doc);
+      await _scheduleExpiry(doc);
+      out.add(doc);
+      placeholder = null;
+    }
+    await _log(clientId, ActivityType.document, '$source: ${_categoryName(categoryId)}',
+        detail: sourcePaths.length == 1 ? null : '${sourcePaths.length} files');
+    await _advanceIfDocumentsComplete(clientId);
+    _sync();
+    return out;
+  }
+
+  Future<void> replaceDocumentFile(ClientDocument d, String sourcePath) async {
+    await FileStore.deleteQuietly(d.filePath);
+    final stored = await _storeEncrypted(d.clientId, d.id, sourcePath);
+    await _docs.upsert(d.copyWith(filePath: stored, mimeType: FileStore.mimeFor(sourcePath), remotePath: null, status: DocumentStatus.received, encrypted: true));
+    await _log(d.clientId, ActivityType.document, 'Document replaced: ${documentName(d)}');
+    _sync();
+  }
+
+  Future<void> renameDocument(ClientDocument d, String title) async {
+    await _docs.upsert(d.copyWith(title: title.trim().isEmpty ? null : title.trim()));
+    _sync();
+  }
+
+  Future<void> moveDocument(ClientDocument d, String categoryId) async {
+    await _docs.upsert(d.copyWith(categoryId: categoryId));
+    await _log(d.clientId, ActivityType.document, 'Document moved: ${documentName(d)}', detail: '${_categoryName(d.categoryId)} → ${_categoryName(categoryId)}');
+    await _advanceIfDocumentsComplete(d.clientId);
+    _sync();
+  }
+
+  Future<void> setDocumentNote(ClientDocument d, String note) async {
+    await _docs.upsert(d.copyWith(note: note.trim().isEmpty ? null : note.trim()));
     _sync();
   }
 
   Future<void> setDocumentStatus(ClientDocument d, DocumentStatus s, {String? note}) async {
     await _docs.upsert(d.copyWith(status: s, note: note ?? d.note));
-    await _log(d.clientId, ActivityType.document, '${d.displayName} → ${s.label}', detail: note);
-    await _suggestDocumentsReceived(d.clientId);
+    await _log(d.clientId, ActivityType.document, 'Document ${s.label.toLowerCase()}: ${documentName(d)}', detail: note);
+    await _advanceIfDocumentsComplete(d.clientId);
+    _sync();
+  }
+
+  Future<void> setDocumentExpiry(ClientDocument d, DateTime? expiry) async {
+    final updated = d.copyWith(expiryDate: expiry, status: d.status == DocumentStatus.expired && expiry != null && expiry.isAfter(_now) ? DocumentStatus.received : null);
+    await _docs.upsert(updated);
+    await _scheduleExpiry(updated);
     _sync();
   }
 
   Future<void> deleteDocument(ClientDocument d) async {
-    if (d.type == DocumentType.custom) {
-      await FileStore.deleteQuietly(d.filePath);
-      await _docs.softDelete(d.id);
-    } else {
-      await FileStore.deleteQuietly(d.filePath);
-      await _docs.upsert(d.copyWith(filePath: null, mimeType: null, remotePath: null, status: DocumentStatus.pending));
-    }
+    await FileStore.deleteQuietly(d.filePath);
+    await _notifications.cancelDocumentExpiry(d);
+    await _docs.softDelete(d.id);
+    await _log(d.clientId, ActivityType.document, 'Document deleted: ${documentName(d)}');
     _sync();
   }
 
-  /// When every required document is collected while the lead sits in
+  Future<void> logDocumentShared(ClientDocument d) => _log(d.clientId, ActivityType.document, 'Document shared: ${documentName(d)}');
+
+  /// Decrypted bytes for in-app preview (never written to disk).
+  Future<List<int>> readDocument(ClientDocument d) => FileVault.instance.readFile(d.filePath!, encrypted: d.encrypted);
+
+  /// Decrypted temporary copy for sharing / saving.
+  Future<File> exportDocument(ClientDocument d) {
+    final ext = FileStore.extensionForMime(d.mimeType);
+    final safe = '${ref.read(clientRepoProvider).getById(d.clientId)?.name ?? 'Client'} ${documentName(d)}'.replaceAll(RegExp(r'[^A-Za-z0-9 _-]'), '').trim().replaceAll(' ', '_');
+    return FileVault.instance.exportTemp(d.filePath!, encrypted: d.encrypted, fileName: '$safe$ext');
+  }
+
+  Future<void> _scheduleExpiry(ClientDocument d) async {
+    final c = _clients.getById(d.clientId);
+    if (c == null) return;
+    await _notifications.scheduleDocumentExpiry(d, c, documentName(d));
+  }
+
+  /// Marks documents past their expiry date as Expired (once) and logs it.
+  Future<int> expireDocuments() async {
+    final now = _now;
+    var n = 0;
+    for (final d in _docs.getAll().where((d) => d.expiryDate != null && d.status != DocumentStatus.expired && DocumentExpiry.isExpired(d, now))) {
+      await _docs.upsert(d.copyWith(status: DocumentStatus.expired));
+      await _log(d.clientId, ActivityType.document, 'Document expired: ${documentName(d)}', detail: Fmt.date(d.expiryDate!));
+      n++;
+    }
+    if (n > 0) _sync();
+    return n;
+  }
+
+  /// When every checklist document is collected while the lead sits in
   /// "Documents Requested", advance it to "Documents Received".
-  Future<void> _suggestDocumentsReceived(String clientId) async {
+  Future<void> _advanceIfDocumentsComplete(String clientId) async {
     final c = _clients.getById(clientId);
     if (c == null || c.status != LeadStatus.documentsRequested) return;
-    final req = _docs.forClient(clientId).where((d) => d.type != DocumentType.custom).toList();
-    if (req.length >= DocumentType.required.length && req.every((d) => d.status.isCollected)) {
+    final product = ref.read(productRepoProvider).getById(c.productId ?? '');
+    if (DocumentChecklist.build(product, _docs.forClient(clientId)).isComplete) {
       await changeStatus(c, LeadStatus.documentsReceived);
     }
+  }
+
+  /// Saves OCR text as a note on the client (notes section).
+  Future<void> saveOcrNote(String clientId, String text, {String? source}) =>
+      addVoiceNote(clientId, transcript: source == null ? text : 'OCR · $source\n$text');
+
+  // ── Document categories ──────────────────────────────────────────────────
+
+  CategoryRepository get _categories => ref.read(categoryRepoProvider);
+
+  Future<void> addCategory(String name) async {
+    final now = _now;
+    final all = _categories.getAll();
+    await _categories.upsert(DocumentCategory(
+      id: newId(),
+      createdAt: now,
+      updatedAt: now,
+      name: name.trim(),
+      sortOrder: all.fold<int>(-1, (m, x) => x.sortOrder > m ? x.sortOrder : m) + 1,
+    ));
+    _sync();
+  }
+
+  Future<void> saveCategory(DocumentCategory c) async {
+    await _categories.upsert(c);
+    _sync();
+  }
+
+  Future<void> reorderCategories(List<DocumentCategory> ordered) async {
+    await _categories.upsertAll([for (var i = 0; i < ordered.length; i++) ordered[i].copyWith(sortOrder: i)]);
+    _sync();
+  }
+
+  /// Deletes a category; its documents move to "Other Documents".
+  Future<void> deleteCategory(DocumentCategory c) async {
+    if (c.id == DocumentCategory.other) return;
+    for (final d in _docs.getAll().where((d) => d.categoryId == c.id)) {
+      await _docs.upsert(d.copyWith(categoryId: DocumentCategory.other));
+    }
+    await _categories.softDelete(c.id);
+    _sync();
   }
 
   // ── Voice notes ──────────────────────────────────────────────────────────
@@ -391,6 +604,10 @@ class CrmActions {
   Future<void> seedDefaults(Iterable<String> productNames) async {
     final repo = ref.read(productRepoProvider);
     if (repo.getAll().isEmpty) await repo.upsertAll(Defaults.products(productNames));
+    final cats = ref.read(categoryRepoProvider);
+    if (cats.getAll(includeDeleted: true).isEmpty) await cats.upsertAll(Defaults.categories());
+    final t = ref.read(templateRepoProvider);
+    if (t.getAll(includeDeleted: true).isEmpty) await t.upsertAll(Defaults.templates(agent: ref.read(profileProvider).firstName));
   }
 
   Future<int> loadSampleData() async {

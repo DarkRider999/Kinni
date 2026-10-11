@@ -74,6 +74,12 @@ dependencies:
   permission_handler: ^13.0.2
   package_info_plus: ^10.2.2
   archive: ^3.6.1
+  flutter_tts: ^4.2.5
+  cunning_document_scanner: ^3.0.3
+  pdfx: ^2.11.0
+  cryptography: ^2.9.0
+  cryptography_flutter: ^2.3.4
+  receive_sharing_intent: ^1.9.0
 
 dev_dependencies:
   flutter_test:

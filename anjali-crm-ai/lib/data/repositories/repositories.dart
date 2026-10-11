@@ -3,7 +3,8 @@ import '../../domain/entities/activity.dart';
 import '../../domain/entities/call_log.dart';
 import '../../domain/entities/client.dart';
 import '../../domain/entities/client_document.dart';
-import '../../domain/entities/enums.dart';
+import '../../domain/entities/document_category.dart';
+import '../../domain/entities/message_template.dart';
 import '../../domain/entities/followup.dart';
 import '../../domain/entities/product.dart';
 import '../../domain/entities/security_event.dart';
@@ -17,6 +18,8 @@ typedef CallLogRepository = HiveRepository<CallLog>;
 typedef VoiceNoteRepository = HiveRepository<VoiceNote>;
 typedef DocumentRepository = HiveRepository<ClientDocument>;
 typedef ActivityRepository = HiveRepository<Activity>;
+typedef TemplateRepository = HiveRepository<MessageTemplate>;
+typedef CategoryRepository = HiveRepository<DocumentCategory>;
 typedef SecurityLogRepository = HiveRepository<SecurityEvent>;
 
 /// Client-specific queries.
@@ -82,8 +85,8 @@ extension FollowupQueries on HiveRepository<Followup> {
 
 extension DocumentQueries on HiveRepository<ClientDocument> {
   List<ClientDocument> forClient(String id) => getAll().where((d) => d.clientId == id).toList();
-  List<ClientDocument> pendingRequiredFor(String id) =>
-      forClient(id).where((d) => d.type != DocumentType.custom && d.status == DocumentStatus.pending).toList();
+  List<ClientDocument> inCategory(String clientId, String categoryId) =>
+      forClient(clientId).where((d) => d.categoryId == categoryId).toList()..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
 }
 
 extension ProductQueries on HiveRepository<Product> {

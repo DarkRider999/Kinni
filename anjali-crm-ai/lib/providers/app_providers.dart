@@ -17,12 +17,14 @@ import '../domain/entities/activity.dart';
 import '../domain/entities/call_log.dart';
 import '../domain/entities/client.dart';
 import '../domain/entities/client_document.dart';
-import '../domain/entities/enums.dart';
+import '../domain/entities/document_category.dart';
+import '../domain/entities/message_template.dart';
 import '../domain/entities/followup.dart';
 import '../domain/entities/product.dart';
 import '../domain/entities/security_event.dart';
 import '../domain/entities/user_profile.dart';
 import '../domain/entities/voice_note.dart';
+import '../domain/services/document_checklist.dart';
 import '../domain/services/insights_engine.dart';
 import '../domain/services/productivity_calculator.dart';
 import '../domain/services/report_engine.dart';
@@ -74,12 +76,17 @@ final callLogRepoProvider = Provider<CallLogRepository>((ref) => HiveRepository(
 final voiceNoteRepoProvider = Provider<VoiceNoteRepository>((ref) => HiveRepository(_box(ref, HiveService.voiceNotes), VoiceNote.fromMap));
 final documentRepoProvider = Provider<DocumentRepository>((ref) => HiveRepository(_box(ref, HiveService.documents), ClientDocument.fromMap));
 final activityRepoProvider = Provider<ActivityRepository>((ref) => HiveRepository(_box(ref, HiveService.activities), Activity.fromMap));
+final templateRepoProvider = Provider<TemplateRepository>((ref) => HiveRepository(_box(ref, HiveService.templates), MessageTemplate.fromMap));
+final categoryRepoProvider =
+    Provider<CategoryRepository>((ref) => HiveRepository(_box(ref, HiveService.documentCategories), DocumentCategory.fromMap));
 final securityLogRepoProvider =
     Provider<SecurityLogRepository>((ref) => HiveRepository(_box(ref, HiveService.securityEvents), SecurityEvent.fromMap));
 
 /// Box name → repository for sync and backup.
 final syncedReposProvider = Provider<Map<String, HiveRepository>>((ref) => {
       HiveService.products: ref.watch(productRepoProvider),
+      HiveService.templates: ref.watch(templateRepoProvider),
+      HiveService.documentCategories: ref.watch(categoryRepoProvider),
       HiveService.clients: ref.watch(clientRepoProvider),
       HiveService.followups: ref.watch(followupRepoProvider),
       HiveService.callLogs: ref.watch(callLogRepoProvider),
@@ -110,6 +117,14 @@ final voiceNotesProvider = StreamProvider<List<VoiceNote>>((ref) => ref.watch(vo
 final documentsProvider = StreamProvider<List<ClientDocument>>((ref) => ref.watch(documentRepoProvider).watchAll());
 final activitiesProvider = StreamProvider<List<Activity>>(
     (ref) => ref.watch(activityRepoProvider).watchAll().map((l) => l..sort((a, b) => b.at.compareTo(a.at))));
+final templatesProvider = StreamProvider<List<MessageTemplate>>(
+    (ref) => ref.watch(templateRepoProvider).watchAll().map((l) => l..sort((a, b) => a.sortOrder.compareTo(b.sortOrder))));
+final categoriesProvider = StreamProvider<List<DocumentCategory>>(
+    (ref) => ref.watch(categoryRepoProvider).watchAll().map((l) => l..sort((a, b) => a.sortOrder.compareTo(b.sortOrder))));
+final categoryNamesProvider = Provider<Map<String, String>>((ref) => {
+      for (final c in ref.watch(categoryRepoProvider).getAll(includeDeleted: true)) c.id: c.name,
+      for (final c in _v(ref, categoriesProvider)) c.id: c.name,
+    });
 final securityEventsProvider = StreamProvider<List<SecurityEvent>>(
     (ref) => ref.watch(securityLogRepoProvider).watchAll().map((l) => l..sort((a, b) => b.at.compareTo(a.at))));
 
@@ -159,11 +174,58 @@ final clientByIdProvider = Provider.family<Client?, String>((ref, id) {
   return null;
 });
 
-/// Client ids with at least one required document still pending.
-final clientsWithPendingDocsProvider = Provider<Set<String>>((ref) => _v(ref, documentsProvider)
-    .where((d) => d.type != DocumentType.custom && d.status == DocumentStatus.pending)
-    .map((d) => d.clientId)
-    .toSet());
+/// Required-document checklist per client id (product-specific).
+final checklistsProvider = Provider<Map<String, DocumentChecklist>>((ref) {
+  final products = {for (final p in _v(ref, productsProvider)) p.id: p};
+  final byClient = <String, List<ClientDocument>>{};
+  for (final d in _v(ref, documentsProvider)) {
+    byClient.putIfAbsent(d.clientId, () => []).add(d);
+  }
+  return {for (final c in _v(ref, clientsProvider)) c.id: DocumentChecklist.build(products[c.productId], byClient[c.id] ?? const [])};
+});
+
+final clientChecklistProvider = Provider.family<DocumentChecklist?, String>((ref, id) => ref.watch(checklistsProvider)[id]);
+
+/// Open clients whose checklist is incomplete and who have started collecting.
+final clientsWithPendingDocsProvider = Provider<Set<String>>((ref) {
+  final withDocs = _v(ref, documentsProvider).map((d) => d.clientId).toSet();
+  final open = {for (final c in _v(ref, clientsProvider)) if (c.status.isOpen) c.id};
+  return {
+    for (final e in ref.watch(checklistsProvider).entries)
+      if (open.contains(e.key) && withDocs.contains(e.key) && !e.value.isComplete) e.key,
+  };
+});
+
+/// Dashboard document counters.
+class DocumentStats {
+  const DocumentStats({required this.awaitingClients, required this.completedClients, required this.pendingDocuments, required this.expiringSoon});
+  final int awaitingClients;
+  final int completedClients;
+  final int pendingDocuments;
+  final int expiringSoon;
+}
+
+final documentStatsProvider = Provider<DocumentStats>((ref) {
+  final lists = ref.watch(checklistsProvider);
+  final open = {for (final c in _v(ref, clientsProvider)) if (c.status.isOpen || c.status.isConverted) c.id};
+  final withDocs = _v(ref, documentsProvider).map((d) => d.clientId).toSet();
+  var awaiting = 0, completed = 0, pending = 0;
+  for (final e in lists.entries) {
+    if (!open.contains(e.key) || !withDocs.contains(e.key)) continue;
+    if (e.value.isComplete) {
+      completed++;
+    } else {
+      awaiting++;
+      pending += e.value.missing;
+    }
+  }
+  return DocumentStats(
+    awaitingClients: awaiting,
+    completedClients: completed,
+    pendingDocuments: pending,
+    expiringSoon: DocumentExpiry.expiringSoon(_v(ref, documentsProvider), _now(ref)).length,
+  );
+});
 
 final kpiProvider = Provider<KpiSummary>((ref) => ReportEngine.kpis(
       _v(ref, clientsProvider),
@@ -201,7 +263,7 @@ final clientCallsProvider = Provider.family<List<CallLog>, String>(
 final clientDocumentsProvider = Provider.family<List<ClientDocument>, String>((ref, id) => _v(ref, documentsProvider)
     .where((d) => d.clientId == id)
     .toList()
-  ..sort((a, b) => a.type.index != b.type.index ? a.type.index.compareTo(b.type.index) : a.createdAt.compareTo(b.createdAt)));
+  ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt)));
 final clientVoiceNotesProvider = Provider.family<List<VoiceNote>, String>(
     (ref, id) => _v(ref, voiceNotesProvider).where((v) => v.clientId == id).toList()..sort((a, b) => b.createdAt.compareTo(a.createdAt)));
 final clientActivitiesProvider =

@@ -12,6 +12,7 @@ class Product extends SyncEntity {
     this.colorValue = 0xFF6C63FF,
     this.active = true,
     this.sortOrder = 0,
+    this.requiredCategoryIds = const [],
   });
 
   final String name;
@@ -20,7 +21,10 @@ class Product extends SyncEntity {
   final bool active;
   final int sortOrder;
 
-  Product copyWith({String? name, int? iconCode, int? colorValue, bool? active, int? sortOrder, bool? deleted}) =>
+  /// Document Vault categories required for this product's checklist.
+  final List<String> requiredCategoryIds;
+
+  Product copyWith({String? name, int? iconCode, int? colorValue, bool? active, int? sortOrder, List<String>? requiredCategoryIds, bool? deleted}) =>
       Product(
         id: id,
         createdAt: createdAt,
@@ -31,6 +35,7 @@ class Product extends SyncEntity {
         colorValue: colorValue ?? this.colorValue,
         active: active ?? this.active,
         sortOrder: sortOrder ?? this.sortOrder,
+        requiredCategoryIds: requiredCategoryIds ?? this.requiredCategoryIds,
       );
 
   @override
@@ -40,6 +45,7 @@ class Product extends SyncEntity {
         'colorValue': colorValue,
         'active': active,
         'sortOrder': sortOrder,
+        'requiredCategoryIds': requiredCategoryIds,
       };
 
   factory Product.fromMap(Map m) => Product(
@@ -52,5 +58,6 @@ class Product extends SyncEntity {
         colorValue: MapRead.integer(m, 'colorValue', 0xFF6C63FF),
         active: MapRead.boolean(m, 'active', true),
         sortOrder: MapRead.integer(m, 'sortOrder'),
+        requiredCategoryIds: [for (final x in (m['requiredCategoryIds'] as List?) ?? const []) '$x'],
       );
 }

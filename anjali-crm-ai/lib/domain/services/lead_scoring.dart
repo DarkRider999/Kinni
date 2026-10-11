@@ -2,6 +2,8 @@ import '../entities/client.dart';
 import '../entities/client_document.dart';
 import '../entities/enums.dart';
 import '../entities/followup.dart';
+import '../entities/product.dart';
+import 'document_checklist.dart';
 
 /// Local "AI" lead score, 0–100. Higher = more likely to convert soon.
 ///
@@ -34,6 +36,7 @@ abstract final class LeadScoring {
     Client c, {
     List<Followup> followups = const [],
     List<ClientDocument> docs = const [],
+    Product? product,
     DateTime? now,
   }) {
     final t = now ?? DateTime.now();
@@ -44,11 +47,7 @@ abstract final class LeadScoring {
     s += c.rating * 3;
     s += _salaryPoints(c.monthlySalary);
 
-    final required = docs.where((d) => d.type != DocumentType.custom && !d.deleted).toList();
-    if (required.isNotEmpty) {
-      final collected = required.where((d) => d.status.isCollected).length;
-      s += 10 * collected / DocumentType.required.length;
-    }
+    if (docs.isNotEmpty) s += 10 * DocumentChecklist.build(product, docs).completion;
 
     final daysIdle = t.difference(c.updatedAt).inDays;
     s += daysIdle <= 1 ? 10 : daysIdle <= 3 ? 7 : daysIdle <= 7 ? 4 : daysIdle <= 30 ? 1 : 0;

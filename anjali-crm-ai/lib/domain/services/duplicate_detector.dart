@@ -1,7 +1,7 @@
 import '../../core/utils/phone_utils.dart';
 import '../entities/client.dart';
 
-enum DuplicateReason { phone, email, whatsapp }
+enum DuplicateReason { phone, whatsapp, nameAndPhone, email }
 
 class DuplicateMatch {
   const DuplicateMatch(this.existing, this.reason);
@@ -9,24 +9,48 @@ class DuplicateMatch {
   final DuplicateReason reason;
 
   String get description => switch (reason) {
-        DuplicateReason.phone => 'Same phone number as ${existing.name}',
-        DuplicateReason.email => 'Same email as ${existing.name}',
+        DuplicateReason.phone => 'Same phone number as ${existing.name} (${existing.phone})',
         DuplicateReason.whatsapp => 'Same WhatsApp number as ${existing.name}',
+        DuplicateReason.nameAndPhone => 'Same name and a very similar phone number as ${existing.name} (${existing.phone})',
+        DuplicateReason.email => 'Same email as ${existing.name}',
       };
 }
 
-/// Finds an existing client with the same phone / WhatsApp / email and
-/// merges two client records.
+/// Finds a likely duplicate before a client is saved, and merges two records.
 abstract final class DuplicateDetector {
+  static String _name(String n) => n.trim().toLowerCase().replaceAll(RegExp(r'\s+'), ' ');
+
+  /// Checks (in order): phone, WhatsApp number (against both phone and
+  /// WhatsApp of existing clients), name + near-identical phone, email.
   static DuplicateMatch? find(Client candidate, Iterable<Client> existing) {
     final phone = candidate.phoneKey;
-    final wa = candidate.whatsapp == null ? null : PhoneUtils.key(candidate.whatsapp!);
+    final wa = (candidate.whatsapp == null || candidate.whatsapp!.trim().isEmpty) ? null : PhoneUtils.key(candidate.whatsapp!);
     final email = candidate.emailKey;
-    for (final c in existing) {
-      if (c.deleted || c.id == candidate.id) continue;
-      if (phone.length >= 7 && (c.phoneKey == phone)) return DuplicateMatch(c, DuplicateReason.phone);
-      if (email != null && c.emailKey == email) return DuplicateMatch(c, DuplicateReason.email);
-      if (wa != null && wa.length >= 7 && c.phoneKey == wa) return DuplicateMatch(c, DuplicateReason.whatsapp);
+    final name = _name(candidate.name);
+    final others = existing.where((c) => !c.deleted && c.id != candidate.id).toList();
+
+    for (final c in others) {
+      if (phone.length >= 7 && (c.phoneKey == phone || (c.whatsapp != null && PhoneUtils.key(c.whatsapp!) == phone))) {
+        return DuplicateMatch(c, DuplicateReason.phone);
+      }
+    }
+    if (wa != null && wa.length >= 7) {
+      for (final c in others) {
+        if (c.phoneKey == wa || (c.whatsapp != null && PhoneUtils.key(c.whatsapp!) == wa)) return DuplicateMatch(c, DuplicateReason.whatsapp);
+      }
+    }
+    // Same name and the phone differs only in its last digits (typo / old number).
+    if (name.length >= 3 && phone.length >= 7) {
+      for (final c in others) {
+        if (_name(c.name) == name && c.phoneKey.length >= 7 && c.phoneKey.substring(0, 6) == phone.substring(0, 6)) {
+          return DuplicateMatch(c, DuplicateReason.nameAndPhone);
+        }
+      }
+    }
+    if (email != null) {
+      for (final c in others) {
+        if (c.emailKey == email) return DuplicateMatch(c, DuplicateReason.email);
+      }
     }
     return null;
   }

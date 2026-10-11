@@ -1,5 +1,7 @@
 import 'package:hive_ce_flutter/hive_ce_flutter.dart';
 
+import '../../core/security/file_vault.dart';
+
 /// Owns every Hive box. Sensitive boxes are opened with AES-256 using the
 /// vault key; `prefs` (non-sensitive lock-screen preferences) is plain.
 class HiveService {
@@ -15,12 +17,14 @@ class HiveService {
   static const callLogs = 'call_logs';
   static const voiceNotes = 'voice_notes';
   static const documents = 'documents';
+  static const templates = 'templates';
+  static const documentCategories = 'document_categories';
   static const activities = 'activities';
   static const securityEvents = 'security_events';
   static const settings = 'settings';
 
   /// Boxes mirrored to Firestore, in dependency order.
-  static const syncedBoxes = [products, clients, followups, callLogs, voiceNotes, documents, activities];
+  static const syncedBoxes = [products, templates, documentCategories, clients, followups, callLogs, voiceNotes, documents, activities];
 
   static const encryptedBoxes = [...syncedBoxes, securityEvents, settings];
 
@@ -50,6 +54,7 @@ class HiveService {
         await Hive.openBox(name, encryptionCipher: cipher);
       }
     }
+    FileVault.instance.unlock(key);
     final s = Hive.box(settings);
     if (s.get('schemaVersion') == null) await s.put('schemaVersion', schemaVersion);
   }
@@ -57,6 +62,7 @@ class HiveService {
   /// Closes encrypted boxes; data stays AES-encrypted on disk and the key
   /// is no longer referenced by Hive.
   Future<void> closeVault() async {
+    FileVault.instance.lock();
     for (final name in encryptedBoxes) {
       if (Hive.isBoxOpen(name)) await Hive.box(name).close();
     }

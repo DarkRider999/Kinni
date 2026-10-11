@@ -59,7 +59,9 @@ abstract final class AppColors {
       };
 
   static Color document(DocumentStatus s) => switch (s) {
-        DocumentStatus.pending => const Color(0xFFF59E0B),
+        DocumentStatus.pending => const Color(0xFF94A3B8),
+        DocumentStatus.requested => const Color(0xFFF59E0B),
+        DocumentStatus.expired => const Color(0xFF7F1D1D),
         DocumentStatus.received => const Color(0xFF0EA5E9),
         DocumentStatus.verified => const Color(0xFF22C55E),
         DocumentStatus.rejected => const Color(0xFFEF4444),
