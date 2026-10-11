@@ -8,9 +8,7 @@ abstract final class AppAssets {
   static const bgBlush = 'assets/backgrounds/bg_blush.jpg';
   static const bgLotus = 'assets/backgrounds/bg_lotus.jpg';
 
-  static const lottieSuccess = 'assets/lottie/success.json';
-  static const lottieEmpty = 'assets/lottie/empty.json';
-  static const lottieHeart = 'assets/lottie/heart.json';
+  static const lottieCelebration = 'assets/lottie/celebration.json';
 
   /// Background per bottom-nav tab: Home, Clients, Add Lead, Followups, Reports, Settings.
   static const tabBackgrounds = [bgGold, bgBlush, bgLotus, bgBlush, bgGold, bgLotus];
