@@ -46,3 +46,9 @@ app.*.map.json
 
 # Widget Preview related
 .widget_preview/
+
+# Secrets: never commit
+/config/firebase.json
+/android/key.properties
+*.jks
+*.keystore

@@ -1,0 +1,17 @@
+rules_version = '2';
+// Anjali CRM AI: each anonymous Firebase user may read/write only their own tree.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/{collection}/{docId} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && collection in ['clients', 'products', 'followups', 'call_logs', 'voice_notes', 'documents', 'activities']
+        && request.resource.data.id == docId
+        && request.resource.data.updatedAt is string;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
