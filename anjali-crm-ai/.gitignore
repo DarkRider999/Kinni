@@ -52,3 +52,7 @@ app.*.map.json
 /android/key.properties
 *.jks
 *.keystore
+
+# Local tool working data (not part of the app)
+.cto-toolkit/
+.harnesskit/
