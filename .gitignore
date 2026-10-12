@@ -16,3 +16,8 @@
 local.properties
 .env
 debug.keystore
+
+# Local Claude Code plugin bookkeeping (session logs, pattern cache) -
+# not part of the app, shouldn't be committed.
+/.cto-toolkit/
+/.harnesskit/
