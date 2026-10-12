@@ -164,15 +164,29 @@ class SyncService {
         final f = File(path);
         if (!f.existsSync()) continue;
         final remote = 'users/$uid/files/${m['clientId']}/${p.basename(path)}';
-        if (m['encrypted'] == true) {
-          // Vault files are encrypted with this phone's key, which no other
-          // phone has. Upload the plain bytes (Storage is private to this
-          // user and encrypted at rest by Firebase); every phone re-encrypts
-          // with its own key on download. Skipped while the vault is locked.
-          if (!FileVault.instance.isUnlocked) continue;
-          await storage.ref(remote).putData(await FileVault.instance.decryptBytes(await f.readAsBytes()));
-        } else {
-          await storage.ref(remote).putFile(f);
+        try {
+          if (m['encrypted'] == true) {
+            // Vault files are encrypted with this phone's key, which no other
+            // phone has. Upload the plain bytes (Storage is private to this
+            // user and encrypted at rest by Firebase); every phone re-encrypts
+            // with its own key on download. Skipped while the vault is locked.
+            if (!FileVault.instance.isUnlocked) continue;
+            await storage.ref(remote).putData(await FileVault.instance.decryptBytes(await f.readAsBytes()));
+          } else {
+            await storage.ref(remote).putFile(f);
+          }
+        } on StateError {
+          break; // Vault locked mid-sync: the rest waits for the next sync.
+        } on FirebaseException catch (e) {
+          debugPrint('upload $path failed: ${e.code}');
+          continue;
+        } on FileSystemException catch (e) {
+          debugPrint('could not read $path: $e');
+          continue;
+        } catch (e) {
+          // A damaged file must not block every later sync: skip it.
+          debugPrint('could not prepare $path for upload: $e');
+          continue;
         }
         await repo.box.put(key, {...Map<String, dynamic>.from(m), 'remotePath': remote, 'dirty': true});
         uploaded++;
@@ -216,6 +230,8 @@ class SyncService {
           debugPrint('download $remote failed: ${e.code}');
         } on FileSystemException catch (e) {
           debugPrint('could not save $remote: $e');
+        } on StateError {
+          return downloaded; // Vault locked mid-sync: resume next sync.
         }
       }
     }

@@ -113,8 +113,10 @@ class _WhatsAppFilesScreenState extends State<WhatsAppFilesScreen> {
     // no-op on the Android versions it does not apply to.
     try {
       await [Permission.photos, Permission.storage].request();
-    } catch (_) {
-      // Permission plugin unavailable (tests): scan whatever is readable.
+    } catch (e) {
+      // Permission plugin unavailable (tests, desktop): scan whatever is
+      // readable; the empty state offers the file picker.
+      debugPrint('WhatsApp import: permission request failed: $e');
     }
     final files = WhatsAppFilesScreen.scan(widget.extensions);
     if (mounted) setState(() => _files = files);
