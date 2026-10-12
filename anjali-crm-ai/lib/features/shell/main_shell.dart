@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:path/path.dart' as p;
+import 'package:receive_sharing_intent/receive_sharing_intent.dart';
 
 import '../../core/services/connectivity_service.dart';
 import '../../core/services/notification_service.dart';
@@ -11,7 +13,9 @@ import '../../providers/app_providers.dart';
 import '../../providers/crm_actions.dart';
 import '../../providers/lock_controller.dart';
 import '../calls/call_actions.dart';
+import '../../core/widgets/common.dart';
 import '../clients/client_form_screen.dart';
+import '../documents/documents_tab.dart';
 import '../clients/client_list_screen.dart';
 import '../clients/client_profile_screen.dart';
 import '../followups/followups_screen.dart';
@@ -19,6 +23,7 @@ import '../home/home_screen.dart';
 import '../motivation/motivation_dialog.dart';
 import '../reports/reports_screen.dart';
 import '../settings/settings_screen.dart';
+import '../tts/speak_button.dart';
 
 /// Bottom-navigation shell: Home · Clients · Add Lead · Followups · Reports ·
 /// Settings. Also owns cross-cutting runtime behaviour:
@@ -41,6 +46,7 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
   bool _motivationShown = false;
   StreamSubscription<String>? _taps;
   StreamSubscription<bool>? _net;
+  StreamSubscription<List<SharedMediaFile>>? _shares;
 
   static const _destinations = [
     NavigationDestination(icon: Icon(Icons.dashboard_outlined), selectedIcon: Icon(Icons.dashboard_rounded), label: 'Home'),
@@ -68,6 +74,11 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _taps = NotificationService.instance.taps.listen(_openPayload);
+    try {
+      _shares = ReceiveSharingIntent.instance.getMediaStream().listen(_onShared, onError: (_) {});
+    } catch (_) {
+      // Not supported on this platform.
+    }
     _net = Net.changes().listen((online) {
       if (online) ref.read(syncServiceProvider).requestSync();
     });
@@ -78,6 +89,7 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _taps?.cancel();
+    _shares?.cancel();
     _net?.cancel();
     super.dispose();
   }
@@ -117,6 +129,13 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
     }
     await _checkPendingCall();
     await actions.notifyMissed();
+    await actions.expireDocuments();
+    try {
+      _onShared(await ReceiveSharingIntent.instance.getInitialMedia());
+    } catch (_) {
+      // Share intents are unavailable on this platform (tests, desktop).
+    }
+    await _processShares();
     ref.read(syncServiceProvider).requestSync();
   }
 
@@ -137,11 +156,51 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
     await showCallOutcomeSheet(context, ref, c);
   }
 
+  /// Notification tap: `followup:<id>` or `client:<id>` (document expiry).
   void _openPayload(String payload) {
-    if (!payload.startsWith('followup:') || !mounted) return;
+    if (!mounted) return;
+    if (payload.startsWith('client:')) {
+      final id = payload.substring('client:'.length);
+      if (ref.read(clientRepoProvider).getById(id) != null) ClientProfileScreen.open(context, id, tab: ClientProfileScreen.vaultTab);
+      return;
+    }
+    if (!payload.startsWith('followup:')) return;
     final Followup? f = ref.read(followupRepoProvider).getById(payload.substring('followup:'.length));
     if (f == null) return;
     ClientProfileScreen.open(context, f.clientId);
+  }
+
+  // ── Share-to-app (WhatsApp, Files, Gallery → client vault) ───────────────
+
+  /// Files shared while locked wait here until the next unlock.
+  final _pendingShares = <String>[];
+
+  void _onShared(List<SharedMediaFile> files) {
+    final paths = [
+      for (final f in files)
+        if (vaultExtensions.contains(p.extension(f.path).replaceFirst('.', '').toLowerCase())) f.path,
+    ];
+    if (files.isNotEmpty && paths.isEmpty && mounted && !ref.read(lockControllerProvider).locked) {
+      showSnack(context, 'Only PDF, JPG, PNG and WEBP files can be saved to the vault', error: true);
+    }
+    if (paths.isEmpty) return;
+    _pendingShares.addAll(paths);
+    if (!ref.read(lockControllerProvider).locked) _processShares();
+  }
+
+  Future<void> _processShares() async {
+    if (_pendingShares.isEmpty || !mounted) return;
+    final paths = [..._pendingShares];
+    _pendingShares.clear();
+    ReceiveSharingIntent.instance.reset();
+    showSnack(context, 'Choose the client to save ${paths.length == 1 ? 'this document' : '${paths.length} documents'} to');
+    final client = await pickClient(context, ref.read(clientsProvider).value ?? const []);
+    if (client == null || !mounted) return;
+    for (final path in paths) {
+      if (!mounted) return;
+      await attachSharedFile(context, ref, client.id, path);
+    }
+    if (mounted) ClientProfileScreen.open(context, client.id, tab: ClientProfileScreen.vaultTab);
   }
 
   @override
@@ -158,9 +217,16 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
       },
       child: Scaffold(
         extendBody: true,
-        body: IndexedStack(
-          index: _index,
-          children: [for (var i = 0; i < 6; i++) _built.contains(i) ? _tab(i) : const SizedBox.shrink()],
+        body: Stack(
+          children: [
+            IndexedStack(
+              index: _index,
+              children: [for (var i = 0; i < 6; i++) _built.contains(i) ? _tab(i) : const SizedBox.shrink()],
+            ),
+            // Read-aloud controls (pause / resume / stop / speed) stay
+            // reachable from every tab while text is being spoken.
+            const Positioned(left: 12, right: 12, bottom: 96, child: TtsMiniPlayer()),
+          ],
         ),
         bottomNavigationBar: NavigationBar(
           selectedIndex: _index,

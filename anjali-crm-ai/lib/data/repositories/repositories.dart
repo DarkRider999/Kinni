@@ -38,6 +38,13 @@ extension ClientQueries on HiveRepository<Client> {
   List<Client> search(String query, {Map<String, String> productNames = const {}}) {
     final q = query.trim().toLowerCase();
     if (q.isEmpty) return const [];
+    // "10k-20k", "10000-20000", ">15k", "<8k": salary range search.
+    final range = SalaryRange.tryParse(q);
+    if (range != null) {
+      final hits = getAll().where((c) => !c.deleted && c.monthlySalary != null && range.contains(c.monthlySalary!)).toList()
+        ..sort((a, b) => b.monthlySalary!.compareTo(a.monthlySalary!));
+      return hits;
+    }
     final qDigits = PhoneUtils.digits(q);
     final scored = <(Client, int)>[];
     for (final c in getAll()) {
@@ -92,4 +99,46 @@ extension DocumentQueries on HiveRepository<ClientDocument> {
 extension ProductQueries on HiveRepository<Product> {
   List<Product> active() => getAll().where((p) => p.active).toList()..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
   Map<String, String> names() => {for (final p in getAll(includeDeleted: true)) p.id: p.name};
+}
+
+
+/// Monthly-salary range typed into search: "10k-20k", "10000 - 20000",
+/// ">15k", "<8000", "15k+". Returns null for anything else.
+class SalaryRange {
+  const SalaryRange(this.min, this.max);
+  final double min;
+  final double max;
+
+  bool contains(double v) => v >= min && v <= max;
+
+  static double? _amount(String s) {
+    final m = RegExp(r'^(\d+(?:\.\d+)?)\s*(k)?$').firstMatch(s.trim());
+    if (m == null) return null;
+    final n = double.parse(m.group(1)!);
+    return m.group(2) != null ? n * 1000 : n;
+  }
+
+  static SalaryRange? tryParse(String input) {
+    final q = input.trim().toLowerCase().replaceAll(',', '').replaceAll('aed', '').trim();
+    final between = RegExp(r'^(\d+(?:\.\d+)?\s*k?)\s*(?:-|to|–)\s*(\d+(?:\.\d+)?\s*k?)$').firstMatch(q);
+    if (between != null) {
+      final a = _amount(between.group(1)!);
+      final b = _amount(between.group(2)!);
+      if (a == null || b == null) return null;
+      return a <= b ? SalaryRange(a, b) : SalaryRange(b, a);
+    }
+    if (q.startsWith('>')) {
+      final a = _amount(q.substring(1));
+      return a == null ? null : SalaryRange(a, double.infinity);
+    }
+    if (q.endsWith('+')) {
+      final a = _amount(q.substring(0, q.length - 1));
+      return a == null ? null : SalaryRange(a, double.infinity);
+    }
+    if (q.startsWith('<')) {
+      final a = _amount(q.substring(1));
+      return a == null ? null : SalaryRange(0, a);
+    }
+    return null;
+  }
 }

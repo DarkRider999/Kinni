@@ -17,6 +17,7 @@ import '../../core/widgets/glass_card.dart';
 import '../../domain/entities/voice_note.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/crm_actions.dart';
+import '../tts/speak_button.dart';
 
 enum _Mode { idle, recording, dictating }
 
@@ -39,6 +40,10 @@ class _VoiceNotesTabState extends ConsumerState<VoiceNotesTab> {
   String? _recordPath;
   DateTime? _startedAt;
   Duration _elapsed = Duration.zero;
+
+  /// Recording time banked before the current pause, and the pause flag.
+  Duration _banked = Duration.zero;
+  bool _paused = false;
   Timer? _ticker;
   String _words = '';
   String? _playingId;
@@ -67,13 +72,39 @@ class _VoiceNotesTabState extends ConsumerState<VoiceNotesTab> {
 
   CrmActions get _actions => ref.read(crmActionsProvider);
 
+  /// Recorded time so far, excluding paused stretches.
+  Duration get _recorded => _banked + (_paused || _startedAt == null ? Duration.zero : DateTime.now().difference(_startedAt!));
+
   void _startTicker() {
     _startedAt = DateTime.now();
+    _banked = Duration.zero;
+    _paused = false;
     _elapsed = Duration.zero;
     _ticker?.cancel();
     _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() => _elapsed = DateTime.now().difference(_startedAt!));
+      if (mounted) setState(() => _elapsed = _recorded);
     });
+  }
+
+  Future<void> _togglePause() async {
+    try {
+      if (_paused) {
+        await _recorder.resume();
+        setState(() {
+          _startedAt = DateTime.now();
+          _paused = false;
+        });
+      } else {
+        await _recorder.pause();
+        setState(() {
+          _banked = _recorded;
+          _paused = true;
+          _elapsed = _banked;
+        });
+      }
+    } catch (_) {
+      if (mounted) showSnack(context, 'This device cannot pause recordings', error: true);
+    }
   }
 
   Future<bool> _ensureMic() =>
@@ -100,9 +131,12 @@ class _VoiceNotesTabState extends ConsumerState<VoiceNotesTab> {
 
   Future<void> _stopRecording({bool save = true}) async {
     _ticker?.cancel();
-    final duration = DateTime.now().difference(_startedAt ?? DateTime.now());
+    final duration = _recorded;
     final path = await _recorder.stop() ?? _recordPath;
-    setState(() => _mode = _Mode.idle);
+    setState(() {
+      _mode = _Mode.idle;
+      _paused = false;
+    });
     if (path == null) return;
     if (!save || duration.inMilliseconds < 500) {
       await FileStore.deleteQuietly(path);
@@ -232,6 +266,8 @@ class _VoiceNotesTabState extends ConsumerState<VoiceNotesTab> {
         _Recorder(
           mode: _mode,
           elapsed: _elapsed,
+          paused: _paused,
+          onPause: _togglePause,
           words: _words,
           onRecord: _startRecording,
           onDictate: _startDictation,
@@ -261,6 +297,8 @@ class _Recorder extends StatelessWidget {
   const _Recorder({
     required this.mode,
     required this.elapsed,
+    required this.paused,
+    required this.onPause,
     required this.words,
     required this.onRecord,
     required this.onDictate,
@@ -269,6 +307,8 @@ class _Recorder extends StatelessWidget {
   });
   final _Mode mode;
   final Duration elapsed;
+  final bool paused;
+  final VoidCallback onPause;
   final String words;
   final VoidCallback onRecord;
   final VoidCallback onDictate;
@@ -298,9 +338,9 @@ class _Recorder extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.fiber_manual_record_rounded, color: AppColors.danger, size: 16),
+              Icon(paused ? Icons.pause_circle_rounded : Icons.fiber_manual_record_rounded, color: paused ? AppColors.warning : AppColors.danger, size: 16),
               const SizedBox(width: 8),
-              Expanded(child: Text(recording ? 'Recording…' : 'Listening…', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700))),
+              Expanded(child: Text(recording ? (paused ? 'Paused' : 'Recording…') : 'Listening…', style: t.titleSmall?.copyWith(fontWeight: FontWeight.w700))),
               Text(Fmt.duration(elapsed.inMilliseconds), style: t.titleMedium?.copyWith(fontFeatures: const [FontFeature.tabularFigures()])),
             ],
           ),
@@ -312,6 +352,16 @@ class _Recorder extends StatelessWidget {
           Row(
             children: [
               Expanded(child: OutlinedButton(onPressed: onCancel, child: const Text('Discard'))),
+              if (recording) ...[
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton.tonalIcon(
+                    onPressed: onPause,
+                    icon: Icon(paused ? Icons.play_arrow_rounded : Icons.pause_rounded),
+                    label: Text(paused ? 'Resume' : 'Pause'),
+                  ),
+                ),
+              ],
               const SizedBox(width: 10),
               Expanded(child: FilledButton.icon(onPressed: onStop, icon: const Icon(Icons.stop_rounded), label: const Text('Save'))),
             ],
@@ -395,7 +445,10 @@ class _NoteCard extends StatelessWidget {
           if (note.transcript != null && note.transcript!.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(4, 6, 8, 0),
-              child: InkWell(onTap: onEdit, child: Text(note.transcript!, style: t.bodyMedium)),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(child: InkWell(onTap: onEdit, child: Text(note.transcript!, style: t.bodyMedium))),
+                SpeakButton(textBuilder: () => note.transcript!),
+              ]),
             ),
         ],
       ),

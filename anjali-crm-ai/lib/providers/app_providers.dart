@@ -282,3 +282,31 @@ final syncStatusProvider = StreamProvider<SyncStatus>((ref) {
   });
   return c.stream;
 });
+
+/// Number of local records not yet pushed to the cloud. Re-counted on every
+/// write to any synced box.
+final pendingSyncCountProvider = StreamProvider<int>((ref) {
+  final repos = ref.watch(syncedReposProvider).values.toList();
+  int count() => repos.fold(0, (n, r) => n + r.dirtyMaps().length);
+  final c = StreamController<int>();
+  c.add(count());
+  final subs = [for (final r in repos) r.box.watch().listen((_) => c.add(count()))];
+  ref.onDispose(() {
+    for (final s in subs) {
+      s.cancel();
+    }
+    c.close();
+  });
+  return c.stream.distinct();
+});
+
+/// What the user sees: Synced / Pending Sync / Sync Failed.
+enum SyncIndicator { synced, pending, failed }
+
+final syncIndicatorProvider = Provider<SyncIndicator>((ref) {
+  final status = ref.watch(syncStatusProvider).value ?? SyncStatus.idle;
+  final pending = ref.watch(pendingSyncCountProvider).value ?? 0;
+  if (status == SyncStatus.error) return SyncIndicator.failed;
+  if (pending > 0 || status == SyncStatus.syncing) return SyncIndicator.pending;
+  return SyncIndicator.synced;
+});

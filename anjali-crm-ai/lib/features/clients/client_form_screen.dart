@@ -28,7 +28,7 @@ import '../common/date_time_picker.dart';
 import '../maps/location_picker_screen.dart';
 import 'client_profile_screen.dart';
 
-enum _DupChoice { open, merge, saveAnyway }
+enum _DupChoice { open, merge, saveAnyway, cancel }
 
 /// Add / edit client form.
 class ClientFormScreen extends ConsumerStatefulWidget {
@@ -339,21 +339,26 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
     );
   }
 
-  Future<_DupChoice?> _askDuplicate(DuplicateMatch m) => showDialog<_DupChoice>(
+  /// "Potential Duplicate Customer Found": view the existing record,
+  /// merge into it, continue anyway or cancel. Dismissing = cancel.
+  Future<_DupChoice> _askDuplicate(DuplicateMatch m) async =>
+      await showDialog<_DupChoice>(
         context: context,
         builder: (c) => AlertDialog(
           icon: const Icon(Icons.people_alt_rounded, color: AppColors.warning),
-          title: const Text('Possible duplicate'),
+          title: const Text('Potential Duplicate Customer Found'),
           content: Text('${m.description}.\n\n${m.existing.name} · ${m.existing.phone} · ${m.existing.status.label}'),
           actionsOverflowDirection: VerticalDirection.down,
           actionsOverflowButtonSpacing: 4,
           actions: [
-            TextButton(onPressed: () => Navigator.pop(c, _DupChoice.open), child: const Text('Open existing')),
+            TextButton(onPressed: () => Navigator.pop(c, _DupChoice.cancel), child: const Text('Cancel')),
             TextButton(onPressed: () => Navigator.pop(c, _DupChoice.merge), child: const Text('Merge')),
-            FilledButton(onPressed: () => Navigator.pop(c, _DupChoice.saveAnyway), child: const Text('Save anyway')),
+            TextButton(onPressed: () => Navigator.pop(c, _DupChoice.open), child: const Text('View Existing Record')),
+            FilledButton(onPressed: () => Navigator.pop(c, _DupChoice.saveAnyway), child: const Text('Continue Anyway')),
           ],
         ),
-      );
+      ) ??
+      _DupChoice.cancel;
 
   Future<void> _save() async {
     if (_saving) return;
@@ -367,8 +372,8 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
     final match = actions.findDuplicate(draft);
     var choice = _DupChoice.saveAnyway;
     if (match != null && match.existing.id != draft.id) {
-      choice = await _askDuplicate(match) ?? _DupChoice.saveAnyway;
-      if (!mounted) return;
+      choice = await _askDuplicate(match);
+      if (!mounted || choice == _DupChoice.cancel) return;
       if (choice == _DupChoice.open) {
         if (!widget.embedded) nav.pop();
         await ClientProfileScreen.open(widget.embedded ? context : nav.context, match.existing.id);

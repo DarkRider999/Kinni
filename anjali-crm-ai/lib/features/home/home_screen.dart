@@ -15,6 +15,7 @@ import '../../domain/entities/activity.dart';
 import '../../domain/entities/client.dart';
 import '../../domain/entities/enums.dart';
 import '../../domain/entities/followup.dart';
+import '../../domain/services/document_checklist.dart';
 import '../../domain/services/insights_engine.dart';
 import '../../domain/services/report_engine.dart';
 import '../../providers/app_providers.dart';
@@ -25,6 +26,7 @@ import '../clients/client_profile_screen.dart';
 import '../reports/charts.dart';
 import '../search/search_screen.dart';
 import '../shell/main_shell.dart';
+import '../sync/sync_status_chip.dart';
 import '../whatsapp/whatsapp_button.dart';
 
 /// Home dashboard (FR HOME-01…08).
@@ -88,6 +90,8 @@ class _Header extends ConsumerWidget {
               Text('${DateX.greeting(now)}, ${profile.firstName}', style: t.headlineSmall?.copyWith(fontWeight: FontWeight.w800)),
               const SizedBox(height: 2),
               Text(Fmt.weekday(now), style: t.bodyMedium?.copyWith(color: t.bodySmall?.color)),
+              const SizedBox(height: 6),
+              const SyncStatusChip(),
             ],
           ),
         ),
@@ -191,6 +195,9 @@ class _KpiGrid extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final k = ref.watch(kpiProvider);
     final pendingDocs = ref.watch(clientsWithPendingDocsProvider);
+    final ds = ref.watch(documentStatsProvider);
+    final checklists = ref.watch(checklistsProvider);
+    final allDocs = ref.watch(documentsProvider).value ?? const [];
     final now = ref.watch(nowProvider);
     final cards = <(String, String, IconData, Color, VoidCallback)>[
       ('Total leads', '${k.total}', Icons.groups_rounded, AppColors.primary, () => _openList(context, 'All leads')),
@@ -198,8 +205,15 @@ class _KpiGrid extends ConsumerWidget {
           () => _openList(context, 'New leads', status: LeadStatus.newLead)),
       ('Interested', '${k.count(LeadStatus.interested)}', Icons.favorite_rounded, AppColors.secondary,
           () => _openList(context, 'Interested', status: LeadStatus.interested)),
-      ('Documents pending', '${k.documentsPending}', Icons.folder_open_rounded, AppColors.warning,
-          () => _openList(context, 'Documents pending', filter: (c) => c.status.isDocumentStage || (c.status.isOpen && pendingDocs.contains(c.id)))),
+      ('Awaiting documents', '${ds.awaitingClients}', Icons.folder_open_rounded, AppColors.status(LeadStatus.documentsRequested),
+          () => _openList(context, 'Awaiting documents', filter: (c) => c.status.isDocumentStage || (c.status.isOpen && pendingDocs.contains(c.id)))),
+      ('Documents completed', '${ds.completedClients}', Icons.task_rounded, AppColors.success,
+          () => _openList(context, 'Documents completed', filter: (c) => checklists[c.id]?.isComplete ?? false)),
+      ('Pending documents', '${ds.pendingDocuments}', Icons.pending_actions_rounded, AppColors.warning,
+          () => _openList(context, 'Pending documents', filter: (c) => c.status.isOpen && pendingDocs.contains(c.id))),
+      if (ds.expiringSoon > 0)
+        ('Docs expiring soon', '${ds.expiringSoon}', Icons.event_busy_rounded, AppColors.danger,
+            () => _openList(context, 'Documents expiring soon', filter: (c) => DocumentExpiry.expiringSoon(allDocs.where((d) => d.clientId == c.id), now).isNotEmpty)),
       ('Submitted', '${k.count(LeadStatus.applicationSubmitted)}', Icons.send_rounded, AppColors.status(LeadStatus.applicationSubmitted),
           () => _openList(context, 'Application submitted', status: LeadStatus.applicationSubmitted)),
       ('Approved', '${k.count(LeadStatus.approved)}', Icons.verified_rounded, AppColors.success,

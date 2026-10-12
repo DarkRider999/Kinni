@@ -6,7 +6,7 @@ service cloud.firestore {
       allow read, delete: if request.auth != null && request.auth.uid == uid;
       allow create, update: if request.auth != null
         && request.auth.uid == uid
-        && collection in ['clients', 'products', 'followups', 'call_logs', 'voice_notes', 'documents', 'activities']
+        && collection in ['clients', 'products', 'followups', 'call_logs', 'voice_notes', 'documents', 'activities', 'templates', 'document_categories']
         && request.resource.data.id == docId
         && request.resource.data.updatedAt is string;
     }

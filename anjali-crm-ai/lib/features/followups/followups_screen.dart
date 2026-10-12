@@ -15,6 +15,7 @@ import '../../providers/crm_actions.dart';
 import '../calls/call_actions.dart';
 import '../clients/client_profile_screen.dart';
 import '../common/date_time_picker.dart';
+import '../tts/speak_button.dart';
 import '../whatsapp/whatsapp_button.dart';
 
 /// Followups tab (FR FUP-01…05): six segments, nearest date first.
@@ -255,8 +256,11 @@ class FollowupCard extends ConsumerWidget {
           ),
           if (f.note != null && f.note!.isNotEmpty)
             Padding(
-              padding: const EdgeInsets.only(top: 8, right: 8),
-              child: Text(f.note!, style: t.bodyMedium),
+              padding: const EdgeInsets.only(top: 8),
+              child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Expanded(child: Text(f.note!, style: t.bodyMedium)),
+                SpeakButton(textBuilder: () => f.note!),
+              ]),
             ),
           Row(
             children: [

@@ -16,6 +16,7 @@ import 'notification_settings_screen.dart';
 import 'product_manager_screen.dart';
 import 'profile_screen.dart';
 import 'security_screens.dart';
+import '../sync/sync_status_chip.dart';
 import 'settings_widgets.dart';
 import 'voice_settings_screen.dart';
 
@@ -162,6 +163,7 @@ class SettingsScreen extends ConsumerWidget {
                   color: AppColors.chart[5],
                   title: 'Cloud sync',
                   subtitle: 'Firebase sync status',
+                  trailing: const SyncStatusChip(),
                   onTap: () => _open(context, const CloudSyncScreen()),
                 ),
                 SettingsTile(

@@ -19,7 +19,7 @@ abstract final class TemplateRenderer {
   /// with no value become empty, and the doubled spaces this leaves are tidied.
   static String render(String body, Map<String, String> values) {
     final out = body.replaceAllMapped(RegExp(r'\{(\w+)\}'), (m) => values[m.group(1)] ?? m.group(0)!);
-    return out.replaceAll(RegExp(r'[ \t]{2,}'), ' ').replaceAll(RegExp(r' ([,.!?])'), r'$1').trim();
+    return out.replaceAll(RegExp(r'[ \t]{2,}'), ' ').replaceAllMapped(RegExp(r' ([,.!?])'), (m) => m.group(1)!).trim();
   }
 
   /// Plain-text client summary for "Share client details".

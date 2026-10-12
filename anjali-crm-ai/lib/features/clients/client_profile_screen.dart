@@ -23,20 +23,27 @@ import '../../providers/crm_actions.dart';
 import '../calls/call_actions.dart';
 import '../common/date_time_picker.dart';
 import '../documents/documents_tab.dart';
+import '../tts/speak_button.dart';
 import '../voice_notes/voice_notes_tab.dart';
 import '../whatsapp/whatsapp_button.dart';
 import 'client_form_screen.dart';
 
 /// Full customer profile.
 class ClientProfileScreen extends ConsumerWidget {
-  const ClientProfileScreen({super.key, required this.clientId});
+  const ClientProfileScreen({super.key, required this.clientId, this.initialTab = 0});
   final String clientId;
 
+  /// Tab shown first (e.g. [vaultTab] from a document notification).
+  final int initialTab;
+
   /// Pushes the profile for [clientId].
-  static Future<void> open(BuildContext context, String clientId) =>
-      Navigator.of(context).push(MaterialPageRoute(builder: (_) => ClientProfileScreen(clientId: clientId)));
+  static Future<void> open(BuildContext context, String clientId, {int tab = 0}) =>
+      Navigator.of(context).push(MaterialPageRoute(builder: (_) => ClientProfileScreen(clientId: clientId, initialTab: tab)));
 
   static const _tabs = ['Timeline', 'Notes', 'Documents', 'Calls', 'Followups', 'Files'];
+
+  /// Index of the Document Vault tab, opened by the header's Vault button.
+  static const vaultTab = 2;
 
   Future<void> _delete(BuildContext context, WidgetRef ref, Client c) async {
     final ok = await confirm(
@@ -68,6 +75,7 @@ class ClientProfileScreen extends ConsumerWidget {
     }
     return DefaultTabController(
       length: _tabs.length,
+      initialIndex: initialTab.clamp(0, _tabs.length - 1),
       child: Scaffold(
         appBar: AppBar(
           title: Text(c.name, overflow: TextOverflow.ellipsis),
@@ -155,6 +163,29 @@ class _Header extends ConsumerWidget {
     }
   }
 
+  /// Upload into the vault from the gallery, files / PDF or WhatsApp.
+  Future<void> _upload(BuildContext context, WidgetRef ref) async {
+    final source = await showModalBottomSheet<String>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          ListTile(leading: const Icon(Icons.photo_library_rounded), title: const Text('Gallery (multi-select)'), onTap: () => Navigator.pop(ctx, 'gallery')),
+          ListTile(leading: const Icon(Icons.picture_as_pdf_rounded), title: const Text('PDF / Files app'), onTap: () => Navigator.pop(ctx, 'files')),
+          ListTile(leading: const Icon(Icons.chat_rounded, color: whatsappGreen), title: const Text('WhatsApp files'), onTap: () => Navigator.pop(ctx, 'whatsapp')),
+        ]),
+      ),
+    );
+    if (source == null || !context.mounted) return;
+    switch (source) {
+      case 'gallery':
+        await uploadFromGallery(context, ref, client.id);
+      case 'files':
+        await importFiles(context, ref, client.id);
+      case 'whatsapp':
+        await importFiles(context, ref, client.id, fromWhatsApp: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = client;
@@ -230,7 +261,13 @@ class _Header extends ConsumerWidget {
                     ),
                   ),
                 if (c.remarks != null && c.remarks!.trim().isNotEmpty)
-                  Padding(padding: const EdgeInsets.fromLTRB(10, 6, 10, 0), child: Text(c.remarks!, style: t.bodySmall)),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 6, 0, 0),
+                    child: Row(children: [
+                      Expanded(child: Text(c.remarks!, style: t.bodySmall)),
+                      SpeakButton(textBuilder: () => c.remarks!),
+                    ]),
+                  ),
               ],
             ),
           ),
@@ -244,7 +281,14 @@ class _Header extends ConsumerWidget {
                 color: whatsappGreen,
                 onTap: () => openWhatsApp(context, ref, c.whatsappNumber, client: c),
               ),
-              _ActionButton(icon: Icons.map_rounded, label: 'Map', color: AppColors.info, onTap: () => _openMap(context)),
+              _ActionButton(
+                icon: Icons.lock_rounded,
+                label: 'Vault',
+                color: AppColors.secondary,
+                onTap: () => DefaultTabController.of(context).animateTo(ClientProfileScreen.vaultTab),
+              ),
+              _ActionButton(icon: Icons.document_scanner_rounded, label: 'Scan', color: AppColors.info, onTap: () => scanIntoVault(context, ref, c.id)),
+              _ActionButton(icon: Icons.upload_file_rounded, label: 'Upload', color: AppColors.warning, onTap: () => _upload(context, ref)),
               _ActionButton(
                 icon: Icons.edit_rounded,
                 label: 'Edit',
