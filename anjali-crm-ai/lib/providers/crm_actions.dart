@@ -384,7 +384,13 @@ class CrmActions {
   Future<String> _storeEncrypted(String clientId, String docId, String sourcePath) async {
     final dir = await FileStore.vaultDir(clientId);
     final dest = p.join(dir.path, '$docId.enc');
-    await FileVault.instance.encryptFile(sourcePath, dest);
+    try {
+      await FileVault.instance.encryptFile(sourcePath, dest);
+    } on FileSystemException catch (e) {
+      throw DocumentStoreException('Could not store the document (is storage full or the file missing?)', e);
+    } on StateError catch (e) {
+      throw DocumentStoreException('Unlock the app before adding documents', e);
+    }
     return dest;
   }
 
@@ -667,3 +673,12 @@ class CrmActions {
 }
 
 final crmActionsProvider = Provider<CrmActions>((ref) => CrmActions(ref));
+
+/// Readable failure when a vault file cannot be encrypted to disk.
+class DocumentStoreException implements Exception {
+  const DocumentStoreException(this.message, [this.cause]);
+  final String message;
+  final Object? cause;
+  @override
+  String toString() => message;
+}
