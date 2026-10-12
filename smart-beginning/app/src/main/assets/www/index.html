@@ -801,6 +801,15 @@ body{font-size:15px}
             <button class="toy sm ghost" data-go="rewards" style="margin-top:10px;width:100%">🏆 View stickers &amp; badges</button>
           </div>
 
+          <div class="card" id="moodCard" style="margin-top:14px;background:linear-gradient(135deg,#eafff5,#fff)">
+            <h3 style="margin:0 0 6px">How do you feel today?</h3>
+            <div class="row" id="moodPicker" style="gap:8px;flex-wrap:wrap"></div>
+            <div id="moodDone" style="display:none">
+              <p class="muted" style="margin:6px 0 0" id="moodDoneTxt"></p>
+              <button class="toy sm ghost" id="moodChange" style="margin-top:8px">Change</button>
+            </div>
+          </div>
+
           <div class="tiny" style="margin:18px 4px 8px">KINNI'S LEARNING PATH — IN THIS ORDER</div>
           <div class="stack">
             <button class="act" data-go="colors"><span class="ico" style="background:#ffd0e2;font-family:var(--font-display);font-weight:800;font-size:20px;color:#d6306f">1</span>
@@ -868,9 +877,10 @@ body{font-size:15px}
           </div>
 
           <div class="card" style="margin-top:14px">
-            <div class="spread"><h3>Today's quest</h3><span class="tiny">0 / 2</span></div>
-            <p class="muted" style="margin:6px 0 0">Finish two colour activities to unlock the <b>Colour Star Sticker</b>.</p>
-            <div class="xpbar" style="margin-top:10px"><span style="width:6%;background:linear-gradient(90deg,var(--butter),var(--coral))"></span></div>
+            <div class="spread"><h3>Today's missions</h3><span class="tiny" id="dailyCount">0 / 2</span></div>
+            <p class="muted" style="margin:6px 0 0" id="dailyMsg">Finish 2 activities to earn today's sticker.</p>
+            <div class="xpbar" style="margin-top:10px"><span id="dailyBar" style="width:0%;background:linear-gradient(90deg,var(--butter),var(--coral))"></span></div>
+            <button class="toy sm mint" id="dailyClaim" style="margin-top:10px;width:100%;display:none">🎁 Claim today's sticker</button>
           </div>
           <p class="tiny" style="text-align:center;margin:16px 0 4px">Smart Beginning · newborn to age 5 · ad-free</p>
         </section>
@@ -2238,6 +2248,7 @@ function addXP(n,msg,srcEl){
   syncXP();
   if(msg)toast(msg,'⭐');
   if(srcEl)sparkle(srcEl);
+  if(typeof recordDailyActivity==='function')recordDailyActivity(n);
 }
 let stickerCur=0;
 function unlockSticker(){
@@ -3150,6 +3161,89 @@ $('#wheel').addEventListener('click',e=>{
   $('#wheelTip').textContent=F.tip+' Zuzu says: “'+F.z+'”';
   say(F.n+' — '+F.tip);
 });
+
+/* ============================================================
+   11b. HOME SCREEN WIDGETS — daily missions + mood check-in
+   Both are real, not sample data: the mission bar only fills from
+   actual addXP() calls (every activity in the app already calls this
+   on completion), and the mood widget reuses the same FEELINGS data
+   as the Feelings wheel instead of inventing a second mood system.
+   ============================================================ */
+function todayKey(){ const d=new Date(); return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate(); }
+const DAILY_GOAL=2;
+function loadDaily(){
+  let data=null;
+  try{ const raw=localStorage.getItem('sb_daily'); data=raw?JSON.parse(raw):null; }catch(e){}
+  if(!data||data.day!==todayKey()) data={day:todayKey(),count:0,claimed:false};
+  return data;
+}
+let DAILY=loadDaily();
+function saveDaily(){ try{localStorage.setItem('sb_daily',JSON.stringify(DAILY));}catch(e){} }
+function renderDaily(){
+  if(!$('#dailyCount'))return;
+  const n=Math.min(DAILY.count,DAILY_GOAL);
+  $('#dailyCount').textContent=n+' / '+DAILY_GOAL;
+  $('#dailyBar').style.width=Math.round(n/DAILY_GOAL*100)+'%';
+  const claimBtn=$('#dailyClaim');
+  if(n>=DAILY_GOAL){
+    $('#dailyMsg').textContent=DAILY.claimed?'Done for today — see you tomorrow!':'Mission complete! Tap to claim today’s sticker.';
+    claimBtn.style.display=DAILY.claimed?'none':'';
+  }else{
+    const left=DAILY_GOAL-n;
+    $('#dailyMsg').textContent=`Finish ${left} more ${left===1?'activity':'activities'} to earn today's sticker.`;
+    claimBtn.style.display='none';
+  }
+}
+function recordDailyActivity(xp){
+  /* Guard against any addXP(0)-style "just refresh the XP bar" call ever
+     being miscounted as a finished activity - only a real XP award (seen
+     once already, at the setTimeout(...,60) init refresh) should move the
+     mission bar. */
+  if(!xp)return;
+  DAILY=loadDaily();
+  if(DAILY.count<DAILY_GOAL){ DAILY.count++; saveDaily(); }
+  renderDaily();
+}
+const dailyClaimBtn=$('#dailyClaim');
+if(dailyClaimBtn)dailyClaimBtn.onclick=(e)=>{
+  if(DAILY.count<DAILY_GOAL||DAILY.claimed)return;
+  DAILY.claimed=true; saveDaily();
+  unlockSticker(); sfxYes(); sparkle(e.target); toast('Daily mission complete!','🎯');
+  renderDaily();
+};
+renderDaily();
+
+function moodTodayKey(){ return 'sb_mood_'+todayKey(); }
+function loadTodayMood(){
+  try{ const raw=localStorage.getItem(moodTodayKey()); return raw?JSON.parse(raw):null; }catch(e){ return null; }
+}
+function renderMoodWidget(){
+  const picker=$('#moodPicker'),done=$('#moodDone');
+  if(!picker)return;
+  const today=loadTodayMood();
+  if(today){
+    picker.style.display='none'; done.style.display='';
+    $('#moodDoneTxt').textContent='You told Kinni you felt '+today.e+' '+today.n+' today.';
+  }else{
+    picker.style.display='flex'; done.style.display='none';
+    picker.innerHTML=FEELINGS.map((f,i)=>`<button class="toy sm ghost" data-mood="${i}" style="min-width:52px;font-size:22px;padding:8px">${f.e}</button>`).join('');
+  }
+}
+const moodPickerEl=$('#moodPicker');
+if(moodPickerEl)moodPickerEl.addEventListener('click',e=>{
+  const b=e.target.closest('[data-mood]'); if(!b)return;
+  const f=FEELINGS[+b.dataset.mood]; sfxTap();
+  try{ localStorage.setItem(moodTodayKey(),JSON.stringify({e:f.e,n:f.n})); }catch(err){}
+  say(f.n+'. '+f.tip);
+  toast('Thanks for sharing!','💛');
+  renderMoodWidget();
+});
+const moodChangeBtn=$('#moodChange');
+if(moodChangeBtn)moodChangeBtn.addEventListener('click',()=>{
+  try{ localStorage.removeItem(moodTodayKey()); }catch(e){}
+  renderMoodWidget();
+});
+renderMoodWidget();
 
 /* ============================================================
    12. BREATHING
@@ -4898,7 +4992,7 @@ setLang(I18N[_savedLang]?_savedLang:'en',{silent:true});
 setVoiceStyle(_savedVoice,{silent:true});
 applyChild();
 updatePath();
-setTimeout(()=>{addXP(0);syncXP();},60);
+setTimeout(()=>{syncXP();},60);
 window.addEventListener('resize',()=>{tctx=fitCanvas(tc);pctx=fitCanvas(pc);});
 renderCount();
 console.log('Smart Beginning prototype ready');

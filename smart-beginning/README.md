@@ -372,6 +372,32 @@ Also addressed from the same report:
   Counting to 15 / Feelings faces / UAE animals) still work, now landing on
   the matching category.
 
+## Round 8: real Home screen widgets (daily missions, mood check-in)
+
+A large "rebuild as a full Flutter/NestJS/PostgreSQL production app" request
+came in; agreed with the user to keep the free, working single-file app and
+cherry-pick ideas from it instead of a rewrite. First slice:
+
+- **Mood check-in widget on Home.** Reuses the same `FEELINGS` data as the
+  existing Feelings wheel (no second mood system) — tap how you feel, Kinni
+  says the matching Zuzu tip back, and it remembers today's pick until the
+  next calendar day.
+- **Daily Missions, now real.** The Home screen already had a "Today's
+  quest" card, but it was hardcoded sample text (`0 / 2`, a fixed 6% bar) —
+  the same kind of fake-progress issue fixed elsewhere in round 6. It's
+  replaced with a real counter: every genuine `addXP()` award (every
+  activity in the app already calls this on completion) advances it, capped
+  at 2 for the day, with a claimable sticker once both are done.
+- **Bug caught by testing the above, not reported by the user:** wiring a
+  real counter to `addXP()` surfaced a pre-existing, harmless-until-now
+  call — `setTimeout(()=>{addXP(0);syncXP();},60)` in the startup code,
+  which only existed to refresh the XP bar on load but, once anything
+  listened for real activity on every `addXP()` call, made the mission
+  counter look like it already had progress before the child ever did
+  anything. Fixed by calling `syncXP()` directly instead of routing a
+  decorative refresh through `addXP()`, plus a guard so `recordDailyActivity()`
+  only ever counts an actual non-zero XP award.
+
 ## Known gaps / honest limitations
 
 - Tamil and Kannada interface text is a first machine-assisted translation
