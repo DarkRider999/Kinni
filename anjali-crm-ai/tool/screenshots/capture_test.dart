@@ -103,8 +103,17 @@ Future<void> _settleIo(WidgetTester t) async {
   }
 }
 
+/// Runs a file operation; a file-system error fails the run with the path named.
+T _io<T>(String path, T Function() op) {
+  try {
+    return op();
+  } on FileSystemException catch (e) {
+    fail('Screenshot harness could not access $path: ${e.message}');
+  }
+}
+
 Future<void> _loadFonts() async {
-  Future<ByteData> f(String n) async => ByteData.sublistView(await File('$_fonts/$n').readAsBytes());
+  Future<ByteData> f(String n) async => ByteData.sublistView(_io('$_fonts/$n', () => File('$_fonts/$n').readAsBytesSync()));
   final roboto = FontLoader('Roboto');
   for (final n in ['Roboto-Regular.ttf', 'Roboto-Medium.ttf', 'Roboto-Bold.ttf', 'Roboto-Light.ttf']) {
     roboto.addFont(f(n));
@@ -239,7 +248,7 @@ Future<void> _shot(WidgetTester tester, String file, Widget screen, {Future<void
   await tester.runAsync(() async {
     final image = await boundary.toImage(pixelRatio: 2);
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-    await File('$_out/$file.png').writeAsBytes(bytes!.buffer.asUint8List());
+    _io('$_out/$file.png', () => File('$_out/$file.png').writeAsBytesSync(bytes!.buffer.asUint8List()));
   });
   // Dispose the tree so stream subscriptions and timers are released.
   await tester.pumpWidget(const SizedBox());
@@ -252,7 +261,7 @@ void main() {
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
     await _loadFonts();
-    Directory(_out).createSync(recursive: true);
+    _io(_out, () => Directory(_out).createSync(recursive: true));
     dir = await Directory.systemTemp.createTemp('anjali_shots');
     Hive.init(dir.path);
     _prefs = await Hive.openBox(HiveService.prefsBox);
@@ -266,7 +275,7 @@ void main() {
 
     final png = await _samplePassportPng();
     _sampleDoc = '${dir.path}/passport_rajesh.png';
-    File(_sampleDoc).writeAsBytesSync(png);
+    _io(_sampleDoc, () => File(_sampleDoc).writeAsBytesSync(png));
 
     // Received WhatsApp files, newest first once scanned.
     final wa = Directory('${dir.path}/wa');
@@ -282,9 +291,11 @@ void main() {
     ];
     for (var i = 0; i < samples.length; i++) {
       final (folder, name, bytes) = samples[i];
-      final file = File('${_waFolders[folder].paths.first}/$name')..createSync(recursive: true);
-      file.writeAsBytesSync(bytes);
-      file.setLastModifiedSync(DateTime.now().subtract(Duration(hours: 3 * i + 1)));
+      final path = '${_waFolders[folder].paths.first}/$name';
+      _io(path, () => File(path)
+        ..createSync(recursive: true)
+        ..writeAsBytesSync(bytes)
+        ..setLastModifiedSync(DateTime.now().subtract(Duration(hours: 3 * i + 1))));
     }
 
     await _seed();
