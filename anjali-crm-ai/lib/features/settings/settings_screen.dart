@@ -10,11 +10,14 @@ import '../../providers/app_providers.dart';
 import '../../providers/lock_controller.dart';
 import 'about_screen.dart';
 import 'data_screens.dart';
+import 'document_categories_screen.dart';
+import 'message_templates_screen.dart';
 import 'notification_settings_screen.dart';
 import 'product_manager_screen.dart';
 import 'profile_screen.dart';
 import 'security_screens.dart';
 import 'settings_widgets.dart';
+import 'voice_settings_screen.dart';
 
 /// Settings tab (FR-SET): profile, appearance, security, notifications,
 /// products, data (export / backup / sync / sample data) and app info.
@@ -112,6 +115,27 @@ class SettingsScreen extends ConsumerWidget {
                   title: 'Products',
                   subtitle: 'Add, edit, reorder loan products',
                   onTap: () => _open(context, const ProductManagerScreen()),
+                ),
+                SettingsTile(
+                  icon: Icons.textsms_rounded,
+                  color: const Color(0xFF25D366),
+                  title: 'Message Templates',
+                  subtitle: 'WhatsApp templates with {CustomerName} tags',
+                  onTap: () => _open(context, const MessageTemplatesScreen()),
+                ),
+                SettingsTile(
+                  icon: Icons.folder_copy_rounded,
+                  color: AppColors.warning,
+                  title: 'Document Categories',
+                  subtitle: 'Vault folders: add, rename, reorder',
+                  onTap: () => _open(context, const DocumentCategoriesScreen()),
+                ),
+                SettingsTile(
+                  icon: Icons.record_voice_over_rounded,
+                  color: AppColors.secondary,
+                  title: 'Voice & Speech',
+                  subtitle: 'Read-aloud voice, language and speed',
+                  onTap: () => _open(context, const VoiceSettingsScreen()),
                 ),
               ],
             ),
