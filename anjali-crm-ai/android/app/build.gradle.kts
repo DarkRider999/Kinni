@@ -21,7 +21,8 @@ val mapsApiKey: String = localProperties.getProperty("MAPS_API_KEY") ?: System.g
 
 android {
     namespace = "com.anjalicrm.anjali_crm_ai"
-    compileSdk = flutter.compileSdkVersion
+    // permission_handler_android and receive_sharing_intent require SDK 37+.
+    compileSdk = maxOf(37, flutter.compileSdkVersion)
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
