@@ -83,7 +83,7 @@ under a theme-tinted gradient, so content stays readable).
 | CLI-06 | Soft delete with undo (snackbar, 5 s) | S |
 
 ### FR-PRO: Customer profile
-Header (photo, name, status chip, score) · actions **Call, WhatsApp, Map, Edit** ·
+Header (photo, name, status chip, score) · actions **Call, WhatsApp, Open Vault, Scan, Upload, Edit** ·
 tabs **Timeline · Notes (voice) · Documents · Calls · Followups · Files & Reports**.
 Generating a one-client PDF profile report adds it to "Generated Reports".
 
@@ -180,3 +180,35 @@ Export Data · Sample data · App Info.
 | Lost phone | Data loss | Daily backup + optional Firebase sync + recovery code |
 | PII in backups | Leakage when shared | Backups stay app-private; export shows a warning; cloud data is under a uid-scoped security rule |
 | Firebase keys are environment-specific | Build breaks without config | Options injected via `--dart-define-from-file`; the app degrades gracefully |
+
+
+## Addendum: additional requirements (v1.1)
+
+Everything here uses free, open-source or on-device components. Relationship memory, emotional AI,
+behavioural profiling and AI customer memory are explicitly out of scope.
+
+| ID | Requirement | Where |
+|---|---|---|
+| WA-02 | WhatsApp sheet: open the chat, share client details (name, phone, product, status, remarks), send a template in one tap; every send is logged on the timeline | `features/whatsapp/whatsapp_button.dart` |
+| TPL-01 | Settings → Message Templates: unlimited; create, edit, delete, duplicate, set default, reorder | `features/settings/message_templates_screen.dart` |
+| TPL-02 | Tags {CustomerName} {ProductName} {Phone} {Location} {Salary} {Status} {FollowupDate}; unknown tags stay visible | `domain/services/template_renderer.dart` |
+| TPL-03 | Defaults: Follow Up, Documents Required, Approved, Rejected, General Greeting | `data/seed/defaults.dart` |
+| TTS-01 | Offline Android TTS: play, pause, resume, stop, speed, voice, language; reads notes, followup notes, remarks and messages | `core/services/tts_service.dart`, `features/tts/` |
+| VN-01 | Voice notes: record, pause, resume, discard, save to the client, timeline entry | `features/voice_notes/voice_notes_tab.dart` |
+| SCN-01 | Free document scanner (auto-crop, edge detection, enhancement) → PDF into the vault | `features/documents/documents_tab.dart`, `data/export/scan_pdf.dart` |
+| OCR-01 | ML Kit OCR: name, Emirates ID, passport number (including MRZ), salary, full text; the user edits it before it is saved to notes | `domain/services/document_text_parser.dart` |
+| VLT-01 | A vault per client, with categories the admin manages (add, rename, delete, reorder) | `features/settings/document_categories_screen.dart` |
+| VLT-02 | Add by scan, gallery multi-select, PDF/Files, WhatsApp folder or the Android share target; PDF, JPG, JPEG, PNG, WEBP | `documents_tab.dart`, `shell/main_shell.dart`, AndroidManifest |
+| VLT-03 | Preview with zoom, rotate, fullscreen and page navigation | `features/documents/document_preview_screen.dart` |
+| VLT-04 | Actions: view, rename, replace, download, share, move, delete, add note, mark verified | `documents_tab.dart` |
+| VLT-05 | Statuses Pending, Requested, Received, Verified, Rejected, Expired, each with its colour | `core/theme/app_colors.dart` |
+| VLT-06 | Checklist per product with completion %; Home counts awaiting, completed, pending and expiring | `domain/services/document_checklist.dart`, `home_screen.dart` |
+| VLT-07 | Expiry reminders 30, 15, 7 and 1 days before; expired documents swept on unlock | `core/services/notification_service.dart` |
+| VLT-08 | Files AES-256-GCM encrypted and readable only after unlock; Firebase Storage sync; offline access | `core/security/file_vault.dart` |
+| TL-01 | Timeline entries: lead created, WhatsApp sent, status changed, followup added/completed, document uploaded, voice note added, application submitted/approved | `providers/crm_actions.dart` |
+| SRC-02 | Search by WhatsApp number and by salary range (`10k-20k`, `>15k`) | `data/repositories/repositories.dart` |
+| FLT-01 | Quick filters, plus salary range, company and location | `features/clients/client_list_screen.dart` |
+| DUP-02 | Phone, WhatsApp, name + phone. "Potential Duplicate Customer Found" → View Existing Record / Continue Anyway / Cancel (plus Merge) | `client_form_screen.dart` |
+| UX-01 | Swipe right = WhatsApp, swipe left = Edit, long-press = change status | `client_list_screen.dart`, `clients/status_sheet.dart` |
+| SYN-02 | Synced / Pending Sync / Sync Failed indicator | `features/sync/sync_status_chip.dart` |
+| BAK-03 | Backups hold templates, categories, settings, document metadata and files; vault files survive a reinstall | `data/backup/backup_service.dart` |
