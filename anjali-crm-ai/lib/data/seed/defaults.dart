@@ -66,7 +66,7 @@ abstract final class Defaults {
     (DocumentCategory.creditCardForm, 'Credit Card Form', false),
     (DocumentCategory.loanApplicationForm, 'Loan Application Form', false),
     (DocumentCategory.tradeLicense, 'Company Trade License', true),
-    (DocumentCategory.other, 'Other Documents', false),
+    (DocumentCategory.other, 'Other Documents', true),
   ];
 
   static List<DocumentCategory> categories() {

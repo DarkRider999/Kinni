@@ -8,6 +8,8 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 
 import '../../core/config/firebase_config.dart';
+import '../../core/security/file_vault.dart';
+import '../../core/services/file_storage_service.dart';
 import '../../core/services/connectivity_service.dart';
 import '../local/hive_repository.dart';
 import '../local/hive_service.dart';
@@ -89,6 +91,7 @@ class SyncService {
         if (r.$2 != null && (maxSeen == null || r.$2!.isAfter(maxSeen))) maxSeen = r.$2;
       }
       if (maxSeen != null) await settings.setLastPulledAt(maxSeen);
+      await _downloadMissingFiles();
       await settings.setLastSyncAt(DateTime.now());
       status.value = SyncStatus.idle;
       return SyncReport(pushed: pushed, pulled: pulled, filesUploaded: files);
@@ -161,11 +164,61 @@ class SyncService {
         final f = File(path);
         if (!f.existsSync()) continue;
         final remote = 'users/$uid/files/${m['clientId']}/${p.basename(path)}';
-        await storage.ref(remote).putFile(f);
+        if (m['encrypted'] == true) {
+          // Vault files are encrypted with this phone's key, which no other
+          // phone has. Upload the plain bytes (Storage is private to this
+          // user and encrypted at rest by Firebase); every phone re-encrypts
+          // with its own key on download. Skipped while the vault is locked.
+          if (!FileVault.instance.isUnlocked) continue;
+          await storage.ref(remote).putData(await FileVault.instance.decryptBytes(await f.readAsBytes()));
+        } else {
+          await storage.ref(remote).putFile(f);
+        }
         await repo.box.put(key, {...Map<String, dynamic>.from(m), 'remotePath': remote, 'dirty': true});
         uploaded++;
       }
     }
     return uploaded;
+  }
+
+  /// Largest attachment fetched automatically (bytes).
+  static const _maxDownload = 40 * 1024 * 1024;
+
+  /// Fetches attachments synced from another phone (or before a reinstall)
+  /// so they open offline here. Vault files are re-encrypted with this
+  /// phone's key; they wait for the next sync while the vault is locked.
+  /// A failed file is skipped and retried on the next sync.
+  Future<int> _downloadMissingFiles() async {
+    final storage = FirebaseStorage.instance;
+    final root = (await FileStore.root()).path;
+    var downloaded = 0;
+    for (final name in [HiveService.documents, HiveService.voiceNotes]) {
+      final repo = repos[name]!;
+      for (final key in repo.box.keys.toList()) {
+        final m = repo.box.get(key);
+        if (m is! Map || m['deleted'] == true) continue;
+        final remote = m['remotePath'];
+        if (remote is! String || remote.isEmpty) continue;
+        final local = m['filePath'];
+        if (local is String && local.isNotEmpty && File(local).existsSync()) continue;
+        final encrypted = m['encrypted'] == true;
+        if (encrypted && !FileVault.instance.isUnlocked) continue;
+        try {
+          final data = await storage.ref(remote).getData(_maxDownload);
+          if (data == null) continue;
+          final folder = name == HiveService.documents ? 'vault' : 'voice';
+          final dest = File(p.join(root, 'files', '${m['clientId']}', folder, p.basename(remote)));
+          await dest.parent.create(recursive: true);
+          await dest.writeAsBytes(encrypted ? await FileVault.instance.encryptBytes(data) : data, flush: true);
+          await repo.box.put(key, {...Map<String, dynamic>.from(m), 'filePath': dest.path});
+          downloaded++;
+        } on FirebaseException catch (e) {
+          debugPrint('download $remote failed: ${e.code}');
+        } on FileSystemException catch (e) {
+          debugPrint('could not save $remote: $e');
+        }
+      }
+    }
+    return downloaded;
   }
 }

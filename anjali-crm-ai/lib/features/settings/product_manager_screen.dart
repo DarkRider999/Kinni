@@ -6,6 +6,8 @@ import '../../core/theme/app_colors.dart';
 import '../../core/utils/id.dart';
 import '../../core/widgets/common.dart';
 import '../../core/widgets/glass_card.dart';
+import '../../data/seed/defaults.dart';
+import '../../domain/entities/document_category.dart';
 import '../../domain/entities/product.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/crm_actions.dart';
@@ -16,7 +18,7 @@ class ProductManagerScreen extends ConsumerWidget {
   const ProductManagerScreen({super.key});
 
   Future<void> _edit(BuildContext context, WidgetRef ref, List<Product> all, [Product? product]) async {
-    final result = await showDialog<Product>(context: context, builder: (_) => _ProductDialog(product: product, all: all));
+    final result = await showDialog<Product>(context: context, builder: (_) => _ProductDialog(product: product, all: all, categories: ref.read(categoriesProvider).value ?? const []));
     if (result == null) return;
     await ref.read(crmActionsProvider).saveProduct(result);
     if (context.mounted) showSnack(context, product == null ? '${result.name} added' : '${result.name} saved');
@@ -92,9 +94,12 @@ class ProductManagerScreen extends ConsumerWidget {
 }
 
 class _ProductDialog extends StatefulWidget {
-  const _ProductDialog({this.product, required this.all});
+  const _ProductDialog({this.product, required this.all, required this.categories});
   final Product? product;
   final List<Product> all;
+
+  /// Vault categories offered for the required-documents checklist.
+  final List<DocumentCategory> categories;
 
   @override
   State<_ProductDialog> createState() => _ProductDialogState();
@@ -105,6 +110,10 @@ class _ProductDialogState extends State<_ProductDialog> {
   late int _icon = widget.product == null ? ProductIcons.all.first.codePoint : ProductIcons.of(widget.product!.iconCode).codePoint;
   late int _color = widget.product?.colorValue ?? AppColors.chart.first.toARGB32();
   late bool _active = widget.product?.active ?? true;
+
+  /// Required documents; null until edited, so a new product follows its name.
+  late Set<String>? _required = (widget.product?.requiredCategoryIds.isNotEmpty ?? false) ? {...widget.product!.requiredCategoryIds} : null;
+  Set<String> get _checklist => _required ?? {...Defaults.requiredFor(_name.text)};
   String? _error;
 
   @override
@@ -129,10 +138,14 @@ class _ProductDialogState extends State<_ProductDialog> {
             iconCode: _icon,
             colorValue: _color,
             active: _active,
+            requiredCategoryIds: _orderedChecklist(),
             sortOrder: widget.all.isEmpty ? 0 : widget.all.map((p) => p.sortOrder).reduce((a, b) => a > b ? a : b) + 1)
-        : old.copyWith(name: name, iconCode: _icon, colorValue: _color, active: _active);
+        : old.copyWith(name: name, iconCode: _icon, colorValue: _color, active: _active, requiredCategoryIds: _orderedChecklist());
     Navigator.pop(context, result);
   }
+
+  /// Checklist in vault-folder order.
+  List<String> _orderedChecklist() => [for (final c in widget.categories) if (_checklist.contains(c.id)) c.id];
 
   @override
   Widget build(BuildContext context) => AlertDialog(
@@ -146,7 +159,7 @@ class _ProductDialogState extends State<_ProductDialog> {
                 autofocus: widget.product == null,
                 textCapitalization: TextCapitalization.words,
                 decoration: InputDecoration(labelText: 'Name', errorText: _error),
-                onChanged: (_) => _error == null ? null : setState(() => _error = null),
+                onChanged: (_) => setState(() => _error = null),
               ),
               const SizedBox(height: 16),
               const Text('Icon', style: TextStyle(fontWeight: FontWeight.w700)),
@@ -185,6 +198,22 @@ class _ProductDialogState extends State<_ProductDialog> {
                       ),
                       child: _color == c.toARGB32() ? const Icon(Icons.check_rounded, color: Colors.white, size: 18) : null,
                     ),
+                  ),
+              ]),
+              const SizedBox(height: 16),
+              const Text('Required documents', style: TextStyle(fontWeight: FontWeight.w700)),
+              const Text('Shown as this product\'s checklist with completion %.', style: TextStyle(fontSize: 12)),
+              const SizedBox(height: 8),
+              Wrap(spacing: 6, runSpacing: 6, children: [
+                for (final c in widget.categories)
+                  FilterChip(
+                    label: Text(c.name),
+                    selected: _checklist.contains(c.id),
+                    onSelected: (on) => setState(() {
+                      final next = {..._checklist};
+                      on ? next.add(c.id) : next.remove(c.id);
+                      _required = next;
+                    }),
                   ),
               ]),
               const SizedBox(height: 8),

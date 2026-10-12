@@ -1,6 +1,6 @@
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pdfx/pdfx.dart';
 
@@ -30,8 +30,17 @@ class _DocumentPreviewScreenState extends ConsumerState<DocumentPreviewScreen> {
   int _pages = 0;
   final _zoom = TransformationController();
 
+  /// Fullscreen hides the app bar and the system bars.
+  bool _full = false;
+
+  void _setFullscreen(bool on) {
+    setState(() => _full = on);
+    SystemChrome.setEnabledSystemUIMode(on ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge);
+  }
+
   @override
   void dispose() {
+    if (_full) SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _pdf?.dispose();
     _zoom.dispose();
     super.dispose();
@@ -49,9 +58,11 @@ class _DocumentPreviewScreenState extends ConsumerState<DocumentPreviewScreen> {
     }
   }
 
+  /// Zoom buttons work for images and PDFs (both are pinch-zoomable too).
   void _zoomBy(double factor) {
-    final m = _zoom.value.clone()..scaleByDouble(factor, factor, 1, 1);
-    _zoom.value = m;
+    final ValueNotifier<Matrix4>? c = widget.document.isPdf ? _pdf : _zoom;
+    if (c == null) return;
+    c.value = c.value.clone()..scaleByDouble(factor, factor, 1, 1);
   }
 
   @override
@@ -60,19 +71,29 @@ class _DocumentPreviewScreenState extends ConsumerState<DocumentPreviewScreen> {
     final name = ref.read(crmActionsProvider).documentName(d);
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
+      appBar: _full ? null : AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         title: Text(name, overflow: TextOverflow.ellipsis),
         actions: [
           IconButton(tooltip: 'Rotate', icon: const Icon(Icons.rotate_right_rounded), onPressed: () => setState(() => _turns = (_turns + 1) % 4)),
-          if (d.isImage) ...[
+          if (d.isImage || d.isPdf) ...[
             IconButton(tooltip: 'Zoom in', icon: const Icon(Icons.zoom_in_rounded), onPressed: () => _zoomBy(1.25)),
             IconButton(tooltip: 'Zoom out', icon: const Icon(Icons.zoom_out_rounded), onPressed: () => _zoomBy(.8)),
           ],
+          IconButton(tooltip: 'Fullscreen', icon: const Icon(Icons.fullscreen_rounded), onPressed: () => _setFullscreen(true)),
           IconButton(tooltip: 'Share', icon: const Icon(Icons.share_rounded), onPressed: _share),
         ],
       ),
+      floatingActionButton: _full
+          ? FloatingActionButton.small(
+              tooltip: 'Exit fullscreen',
+              backgroundColor: Colors.black54,
+              foregroundColor: Colors.white,
+              onPressed: () => _setFullscreen(false),
+              child: const Icon(Icons.fullscreen_exit_rounded),
+            )
+          : null,
       body: FutureBuilder<Uint8List>(
         future: _bytes,
         builder: (context, snap) {

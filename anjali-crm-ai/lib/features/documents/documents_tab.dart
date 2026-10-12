@@ -25,6 +25,7 @@ import '../../providers/crm_actions.dart';
 import '../common/file_actions.dart';
 import '../whatsapp/whatsapp_button.dart';
 import 'document_preview_screen.dart';
+import 'whatsapp_files_screen.dart';
 
 /// Formats accepted by every import path.
 const vaultExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'webp'];
@@ -275,6 +276,16 @@ Future<void> uploadFromGallery(BuildContext context, WidgetRef ref, String clien
 /// PDF / any supported file from storage. [fromWhatsApp] opens the
 /// picker in WhatsApp's media folder when Android allows it.
 Future<void> importFiles(BuildContext context, WidgetRef ref, String clientId, {String? categoryId, bool fromWhatsApp = false}) async {
+  if (fromWhatsApp) {
+    // Files found in WhatsApp / WhatsApp Business folders; an empty result
+    // means "use the system picker instead".
+    final found = await WhatsAppFilesScreen.pick(context, extensions: vaultExtensions);
+    if (found == null || !context.mounted) return;
+    if (found.isNotEmpty) {
+      await _save(context, ref, clientId, found, categoryId: categoryId, source: 'Imported from WhatsApp');
+      return;
+    }
+  }
   List<PlatformFile> picked;
   try {
     picked = await FilePicker.pickFiles(

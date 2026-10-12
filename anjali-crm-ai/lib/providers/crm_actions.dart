@@ -425,8 +425,8 @@ class CrmActions {
       out.add(doc);
       placeholder = null;
     }
-    await _log(clientId, ActivityType.document, '$source: ${_categoryName(categoryId)}',
-        detail: sourcePaths.length == 1 ? null : '${sourcePaths.length} files');
+    await _log(clientId, ActivityType.document, 'Document uploaded: ${_categoryName(categoryId)}',
+        detail: sourcePaths.length == 1 ? source : '$source · ${sourcePaths.length} files');
     await _advanceIfDocumentsComplete(clientId);
     _sync();
     return out;
