@@ -1,6 +1,7 @@
 import 'package:anjali_crm_ai/domain/entities/client_document.dart';
 import 'package:anjali_crm_ai/domain/entities/enums.dart';
 import 'package:anjali_crm_ai/domain/entities/product.dart';
+import 'package:anjali_crm_ai/domain/services/document_checklist.dart';
 import 'package:anjali_crm_ai/domain/services/insights_engine.dart';
 import 'package:anjali_crm_ai/domain/services/lead_scoring.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -33,8 +34,8 @@ void main() {
   test('collected documents raise the score', () {
     final c = client(status: LeadStatus.documentsRequested);
     final docs = [
-      for (final t in DocumentType.required)
-        ClientDocument(id: t.name, createdAt: t0, updatedAt: t0, clientId: 'c1', type: t, status: DocumentStatus.verified),
+      for (final cat in DocumentChecklist.fallbackRequired)
+        ClientDocument(id: cat, createdAt: t0, updatedAt: t0, clientId: 'c1', categoryId: cat, status: DocumentStatus.verified),
     ];
     expect(LeadScoring.score(c, docs: docs, now: now), greaterThan(LeadScoring.score(c, now: now)));
   });

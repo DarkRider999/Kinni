@@ -37,18 +37,21 @@ abstract final class AppColors {
     Color(0xFF84CC16),
   ];
 
+  /// Status colours: Green = Approved, Orange = Follow Up (new lead),
+  /// Blue = Interested, Purple = Awaiting Documents, Red = Rejected,
+  /// Grey = Not Eligible, Black = Not Interested.
   static Color status(LeadStatus s) => switch (s) {
-        LeadStatus.newLead => const Color(0xFF0EA5E9),
-        LeadStatus.interested => const Color(0xFF6C63FF),
-        LeadStatus.documentsRequested => const Color(0xFFF59E0B),
-        LeadStatus.documentsReceived => const Color(0xFFEAB308),
-        LeadStatus.applicationSubmitted => const Color(0xFF8B5CF6),
-        LeadStatus.underReview => const Color(0xFFD946EF),
-        LeadStatus.approved => const Color(0xFF22C55E),
-        LeadStatus.disbursed => const Color(0xFF14B8A6),
-        LeadStatus.rejected => const Color(0xFFEF4444),
-        LeadStatus.notEligible => const Color(0xFF64748B),
-        LeadStatus.notInterested => const Color(0xFF94A3B8),
+        LeadStatus.newLead => const Color(0xFFF97316),
+        LeadStatus.interested => const Color(0xFF2563EB),
+        LeadStatus.documentsRequested => const Color(0xFF9333EA),
+        LeadStatus.documentsReceived => const Color(0xFF7C3AED),
+        LeadStatus.applicationSubmitted => const Color(0xFF0D9488),
+        LeadStatus.underReview => const Color(0xFF0891B2),
+        LeadStatus.approved => const Color(0xFF16A34A),
+        LeadStatus.disbursed => const Color(0xFF15803D),
+        LeadStatus.rejected => const Color(0xFFDC2626),
+        LeadStatus.notEligible => const Color(0xFF9CA3AF),
+        LeadStatus.notInterested => const Color(0xFF111827),
       };
 
   static Color priority(Priority p) => switch (p) {

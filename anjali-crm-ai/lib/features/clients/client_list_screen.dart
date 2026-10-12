@@ -11,10 +11,10 @@ import '../../core/widgets/tab_background.dart';
 import '../../domain/entities/client.dart';
 import '../../domain/entities/enums.dart';
 import '../../providers/app_providers.dart';
-import '../../providers/crm_actions.dart';
 import '../calls/call_actions.dart';
 import '../whatsapp/whatsapp_button.dart';
 import 'client_form_screen.dart';
+import 'status_sheet.dart';
 import 'client_profile_screen.dart';
 
 /// Sort orders offered by the list.
@@ -48,15 +48,35 @@ class ClientListScreen extends ConsumerStatefulWidget {
   ConsumerState<ClientListScreen> createState() => _ClientListScreenState();
 }
 
+/// One-tap quick filters above the list.
+enum QuickFilter {
+  creditCard('Credit Card'),
+  loan('Loan'),
+  approved('Approved'),
+  rejected('Rejected'),
+  awaitingDocs('Awaiting Documents'),
+  notInterested('Not Interested'),
+  followUp('Follow Up'),
+  today('Today'),
+  thisWeek('This Week'),
+  thisMonth('This Month');
+
+  const QuickFilter(this.label);
+  final String label;
+}
+
 class _ClientListScreenState extends ConsumerState<ClientListScreen> {
+  QuickFilter? _quick;
+  RangeValues? _salary;
+  String? _company;
+  String? _location;
+  static const _salaryMax = 100000.0;
+
   final _search = TextEditingController();
   late LeadStatus? _status = widget.initialStatus;
   String? _productId;
   Priority? _priority;
   ClientSort _sort = ClientSort.updated;
-
-  /// Ids swiped away whose soft-delete has not reached the stream yet.
-  final _hidden = <String>{};
 
   @override
   void dispose() {
@@ -64,20 +84,50 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
     super.dispose();
   }
 
+  bool _quickMatch(Client c, Map<String, String> productNames, Set<String> awaiting, DateTime now) {
+    final product = (productNames[c.productId] ?? '').toLowerCase();
+    final next = c.nextFollowupAt;
+    final today = DateTime(now.year, now.month, now.day);
+    return switch (_quick) {
+      null => true,
+      QuickFilter.creditCard => product.contains('card'),
+      QuickFilter.loan => product.contains('loan') || product.contains('mortgage'),
+      QuickFilter.approved => c.status == LeadStatus.approved || c.status == LeadStatus.disbursed,
+      QuickFilter.rejected => c.status == LeadStatus.rejected,
+      QuickFilter.awaitingDocs => c.status.isDocumentStage || awaiting.contains(c.id),
+      QuickFilter.notInterested => c.status == LeadStatus.notInterested,
+      QuickFilter.followUp => next != null,
+      QuickFilter.today => next != null && next.isBefore(today.add(const Duration(days: 1))),
+      QuickFilter.thisWeek => next != null && next.isBefore(today.add(const Duration(days: 7))),
+      QuickFilter.thisMonth => next != null && next.isBefore(DateTime(now.year, now.month + 1)),
+    };
+  }
+
   List<Client> _apply(List<Client> all, Map<String, int> scores) {
+    final productNames = ref.read(productNamesProvider);
+    final awaiting = ref.read(clientsWithPendingDocsProvider);
+    final now = ref.read(nowProvider);
     final q = _search.text.trim().toLowerCase();
     final qDigits = PhoneUtils.digits(q);
     final list = all.where((c) {
-      if (_hidden.contains(c.id)) return false;
       if (_status != null && c.status != _status) return false;
       if (_productId != null && c.productId != _productId) return false;
       if (_priority != null && c.priority != _priority) return false;
       if (widget.filter != null && !widget.filter!(c)) return false;
+      if (!_quickMatch(c, productNames, awaiting, now)) return false;
+      if (_company != null && (c.company ?? '').trim() != _company) return false;
+      if (_location != null && (c.location ?? '').trim() != _location) return false;
+      if (_salary != null) {
+        final s = c.monthlySalary;
+        if (s == null || s < _salary!.start || (_salary!.end < _salaryMax && s > _salary!.end)) return false;
+      }
       if (q.isEmpty) return true;
       return c.name.toLowerCase().contains(q) ||
           (c.company ?? '').toLowerCase().contains(q) ||
           (c.email ?? '').toLowerCase().contains(q) ||
           (c.location ?? '').toLowerCase().contains(q) ||
+          (productNames[c.productId] ?? '').toLowerCase().contains(q) ||
+          c.status.label.toLowerCase().contains(q) ||
           (qDigits.length >= 3 && (PhoneUtils.digits(c.phone).contains(qDigits) || PhoneUtils.digits(c.whatsapp ?? '').contains(qDigits)));
     }).toList();
     final far = DateTime(9999);
@@ -90,34 +140,23 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
     return list;
   }
 
-  Future<void> _delete(Client c) async {
-    setState(() => _hidden.add(c.id));
-    final actions = ref.read(crmActionsProvider);
-    await actions.deleteClient(c);
-    if (!mounted) return;
-    showSnack(
-      context,
-      '${c.name} deleted',
-      action: SnackBarAction(
-        label: 'Undo',
-        onPressed: () async {
-          await actions.restoreClient(c);
-          if (mounted) setState(() => _hidden.remove(c.id));
-        },
-      ),
-    );
-  }
-
   Future<void> _openFilters() async {
     final products = (ref.read(productsProvider).value ?? const []).where((p) => p.active || p.id == _productId).toList();
     String? product = _productId;
     Priority? priority = _priority;
+    var salary = _salary ?? const RangeValues(0, _salaryMax);
+    String? company = _company;
+    String? location = _location;
+    final all = ref.read(clientsProvider).value ?? const <Client>[];
+    final companies = {for (final c in all) if ((c.company ?? '').trim().isNotEmpty) c.company!.trim()}.toList()..sort();
+    final locations = {for (final c in all) if ((c.location ?? '').trim().isNotEmpty) c.location!.trim()}.toList()..sort();
     final applied = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
       builder: (c) => StatefulBuilder(
         builder: (c, set) => SafeArea(
-          child: Padding(
+          child: SingleChildScrollView(
+            child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -152,6 +191,37 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
                       ),
                   ],
                 ),
+                const SizedBox(height: 16),
+                Text('Monthly salary: AED ${salary.start.round()} – ${salary.end >= _salaryMax ? '100k+' : salary.end.round()}',
+                    style: Theme.of(c).textTheme.labelLarge),
+                RangeSlider(
+                  values: salary,
+                  min: 0,
+                  max: _salaryMax,
+                  divisions: 20,
+                  onChanged: (v) => set(() => salary = v),
+                ),
+                DropdownButtonFormField<String?>(
+                  initialValue: company,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Company'),
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('All companies')),
+                    for (final x in companies) DropdownMenuItem(value: x, child: Text(x, overflow: TextOverflow.ellipsis)),
+                  ],
+                  onChanged: (v) => set(() => company = v),
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String?>(
+                  initialValue: location,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Location'),
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('All locations')),
+                    for (final x in locations) DropdownMenuItem(value: x, child: Text(x, overflow: TextOverflow.ellipsis)),
+                  ],
+                  onChanged: (v) => set(() => location = v),
+                ),
                 const SizedBox(height: 20),
                 Row(
                   children: [
@@ -160,6 +230,9 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
                         onPressed: () {
                           product = null;
                           priority = null;
+                          salary = const RangeValues(0, _salaryMax);
+                          company = null;
+                          location = null;
                           Navigator.pop(c, true);
                         },
                         child: const Text('Clear'),
@@ -174,11 +247,15 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
           ),
         ),
       ),
+      ),
     );
     if (applied == true) {
       setState(() {
         _productId = product;
         _priority = priority;
+        _salary = (salary.start <= 0 && salary.end >= _salaryMax) ? null : salary;
+        _company = company;
+        _location = location;
       });
     }
   }
@@ -190,7 +267,7 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
     final products = ref.watch(productNamesProvider);
     final now = ref.watch(nowProvider);
     final clients = _apply(async.value ?? const [], scores);
-    final filtersActive = _productId != null || _priority != null;
+    final filtersActive = _productId != null || _priority != null || _salary != null || _company != null || _location != null;
 
     final body = Column(
       children: [
@@ -238,6 +315,24 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             children: [
+              for (final f in QuickFilter.values)
+                Padding(
+                  padding: const EdgeInsets.only(right: 6),
+                  child: FilterChip(
+                    label: Text(f.label),
+                    selected: _quick == f,
+                    onSelected: (_) => setState(() => _quick = _quick == f ? null : f),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        SizedBox(
+          height: 44,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            children: [
               Padding(
                 padding: const EdgeInsets.only(right: 6),
                 child: ChoiceChip(label: const Text('All'), selected: _status == null, onSelected: (_) => setState(() => _status = null)),
@@ -271,22 +366,27 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
                       itemCount: clients.length,
                       itemBuilder: (_, i) {
                         final c = clients[i];
+                        // Swipe right = WhatsApp, swipe left = edit, long press = change status.
                         return Dismissible(
                           key: ValueKey('client-${c.id}'),
-                          direction: DismissDirection.endToStart,
-                          background: Container(
-                            alignment: Alignment.centerRight,
-                            margin: const EdgeInsets.symmetric(vertical: 5),
-                            padding: const EdgeInsets.only(right: 24),
-                            decoration: BoxDecoration(color: AppColors.danger, borderRadius: BorderRadius.circular(20)),
-                            child: const Icon(Icons.delete_rounded, color: Colors.white),
-                          ),
-                          onDismissed: (_) => _delete(c),
-                          child: ClientCard(
-                            client: c,
-                            productName: products[c.productId],
-                            score: scores[c.id] ?? 0,
-                            now: now,
+                          background: _swipeBg(Alignment.centerLeft, whatsappGreen, Icons.chat_rounded, 'WhatsApp'),
+                          secondaryBackground: _swipeBg(Alignment.centerRight, AppColors.primary, Icons.edit_rounded, 'Edit'),
+                          confirmDismiss: (dir) async {
+                            if (dir == DismissDirection.startToEnd) {
+                              await openWhatsApp(context, ref, c.whatsappNumber, client: c);
+                            } else {
+                              await Navigator.of(context).push(MaterialPageRoute(builder: (_) => ClientFormScreen(existing: c)));
+                            }
+                            return false;
+                          },
+                          child: GestureDetector(
+                            onLongPress: () => showStatusChangeSheet(context, ref, c),
+                            child: ClientCard(
+                              client: c,
+                              productName: products[c.productId],
+                              score: scores[c.id] ?? 0,
+                              now: now,
+                            ),
                           ),
                         );
                       },
@@ -318,6 +418,18 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
     );
     return widget.embedded ? TabBackground(image: AppAssets.tabBackgrounds[1], child: scaffold) : scaffold;
   }
+
+  Widget _swipeBg(Alignment align, Color color, IconData icon, String label) => Container(
+        alignment: align,
+        margin: const EdgeInsets.symmetric(vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, color: Colors.white),
+          const SizedBox(width: 8),
+          Text(label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+        ]),
+      );
 
   void _addLead() => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const ClientFormScreen()));
 }
