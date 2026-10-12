@@ -1,0 +1,22 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+.idea/
+
+# Generated platform folders (created via `flutter create .`)
+/android/
+/ios/
+/linux/
+/macos/
+/windows/
+/web/
+
+# Secrets / signing (never commit)
+android/key.properties
+*.jks
+*.keystore
+.env
