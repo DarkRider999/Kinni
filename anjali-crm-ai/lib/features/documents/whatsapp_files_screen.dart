@@ -36,10 +36,13 @@ class WhatsAppFile {
 /// Pops with the chosen paths, with an empty list when the user prefers the
 /// system file picker, or with null when cancelled.
 class WhatsAppFilesScreen extends StatefulWidget {
-  const WhatsAppFilesScreen({super.key, required this.extensions});
+  const WhatsAppFilesScreen({super.key, required this.extensions, this.searchFolders = folders});
 
   /// Allowed lower-case extensions (the vault's supported formats).
   final List<String> extensions;
+
+  /// Where to look; the real WhatsApp folders unless overridden (screenshots).
+  final List<WhatsAppFolder> searchFolders;
 
   static Future<List<String>?> pick(BuildContext context, {required List<String> extensions}) =>
       Navigator.of(context).push<List<String>>(MaterialPageRoute(builder: (_) => WhatsAppFilesScreen(extensions: extensions)));
@@ -118,7 +121,7 @@ class _WhatsAppFilesScreenState extends State<WhatsAppFilesScreen> {
       // readable; the empty state offers the file picker.
       debugPrint('WhatsApp import: permission request failed: $e');
     }
-    final files = WhatsAppFilesScreen.scan(widget.extensions);
+    final files = WhatsAppFilesScreen.scan(widget.extensions, from: widget.searchFolders);
     if (mounted) setState(() => _files = files);
   }
 
