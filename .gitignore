@@ -16,3 +16,8 @@
 local.properties
 .env
 debug.keystore
+
+# Session/plugin harness artifacts (not project files)
+.harnesskit/
+.cto-toolkit/
+.forge/
