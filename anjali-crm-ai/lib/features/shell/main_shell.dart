@@ -192,13 +192,22 @@ class _MainShellState extends ConsumerState<MainShell> with WidgetsBindingObserv
     if (_pendingShares.isEmpty || !mounted) return;
     final paths = [..._pendingShares];
     _pendingShares.clear();
-    ReceiveSharingIntent.instance.reset();
+    try {
+      ReceiveSharingIntent.instance.reset();
+    } catch (_) {
+      // Clearing the consumed intent is best effort.
+    }
     showSnack(context, 'Choose the client to save ${paths.length == 1 ? 'this document' : '${paths.length} documents'} to');
     final client = await pickClient(context, ref.read(clientsProvider).value ?? const []);
     if (client == null || !mounted) return;
-    for (final path in paths) {
-      if (!mounted) return;
-      await attachSharedFile(context, ref, client.id, path);
+    try {
+      for (final path in paths) {
+        if (!mounted) return;
+        await attachSharedFile(context, ref, client.id, path);
+      }
+    } catch (e) {
+      if (mounted) showSnack(context, 'Could not save the shared file: $e', error: true);
+      return;
     }
     if (mounted) ClientProfileScreen.open(context, client.id, tab: ClientProfileScreen.vaultTab);
   }

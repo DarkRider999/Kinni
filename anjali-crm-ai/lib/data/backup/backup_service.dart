@@ -68,6 +68,7 @@ class BackupService {
     var fileCount = 0;
     final stillEncrypted = <String>[];
     if (filesDir.existsSync()) {
+      try {
       for (final f in filesDir.listSync(recursive: true).whereType<File>()) {
         final rel = p.posix.joinAll(p.split(p.relative(f.path, from: root)));
         var bytes = await f.readAsBytes();
@@ -84,6 +85,9 @@ class BackupService {
         }
         archive.addFile(ArchiveFile(rel, bytes.length, bytes));
         fileCount++;
+      }
+      } on FileSystemException catch (e) {
+        throw BackupException('Could not read an attachment for the backup', e);
       }
     }
     final profile = settings.profile;
@@ -169,8 +173,12 @@ class BackupService {
     final settingsEntry = archive.findFile('data/settings.json');
     final settingsBox = settings.settings;
     if (settingsEntry != null && settingsBox != null) {
-      final map = jsonDecode(utf8.decode(settingsEntry.content as List<int>)) as Map<String, dynamic>;
-      await settingsBox.putAll(map);
+      try {
+        final map = jsonDecode(utf8.decode(settingsEntry.content as List<int>)) as Map<String, dynamic>;
+        await settingsBox.putAll(map);
+      } on FormatException catch (e) {
+        throw BackupException('The settings in this backup are damaged', e);
+      }
     }
 
     final restored = <String, int>{};
