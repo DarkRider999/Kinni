@@ -1,0 +1,24 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+.idea/
+
+# android/ IS committed (Option A: one-command local build). Flutter's own
+# android/.gitignore still excludes local.properties, the gradle wrapper,
+# keystores and key.properties inside it.
+# Other platform folders remain generated on demand via `flutter create .`.
+/ios/
+/linux/
+/macos/
+/windows/
+/web/
+
+# Secrets / signing (never commit)
+android/key.properties
+*.jks
+*.keystore
+.env
