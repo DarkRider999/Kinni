@@ -7,8 +7,10 @@ build/
 *.iml
 .idea/
 
-# Generated platform folders (created via `flutter create .`)
-/android/
+# android/ IS committed (Option A: one-command local build). Flutter's own
+# android/.gitignore still excludes local.properties, the gradle wrapper,
+# keystores and key.properties inside it.
+# Other platform folders remain generated on demand via `flutter create .`.
 /ios/
 /linux/
 /macos/

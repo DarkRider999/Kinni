@@ -38,15 +38,18 @@ flutter test           # unit + widget tests, must pass
 flutter run            # on a connected device/emulator
 ```
 
-## Build an APK (requires the Android SDK)
+## Build an APK (requires a normal Flutter + Android SDK install)
 
-Phase 0 ships no `android/` platform folder (not needed for analyze/test).
-To build an installable APK, generate the platform folders once, then build:
+The `android/` platform folder is committed, so on any machine with Flutter
+installed the debug build is a single command — no `flutter create` needed:
 
 ```bash
-flutter create --platforms=android,ios .   # adds android/ and ios/
-flutter build apk --debug                   # build/app/outputs/flutter-apk/app-debug.apk
+flutter pub get
+flutter build apk --debug    # → build/app/outputs/flutter-apk/app-debug.apk
 ```
+
+(iOS and other platform folders are not committed; run
+`flutter create --platforms=ios .` if you need them.)
 
 A **signed release** APK/AAB additionally needs a keystore and signing config
 (`android/key.properties` + `key.jks`, kept out of git) and Play Billing /
