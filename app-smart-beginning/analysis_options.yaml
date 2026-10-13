@@ -6,3 +6,4 @@ analyzer:
     todo: ignore
   exclude:
     - build/**
+    - android/**
