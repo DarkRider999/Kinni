@@ -16,6 +16,8 @@ import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
+import com.nocternal.playz.automix.Crossfade
+import com.nocternal.playz.automix.CrossfadeCurve
 import com.nocternal.playz.automix.CrossfadeTiming
 import com.nocternal.playz.automix.AutoMixPlanner
 import com.nocternal.playz.fx.EnhancerMode
@@ -114,6 +116,8 @@ class AudioEngine(
     private var xfadeTrackId: String? = null
     private var xfadeOverlapMs = 0L
     private var handoffStartedAt = 0L
+    /** Set once the main player is ready at the handoff position; drives the short ramp off the ghost. */
+    private var handoffReadyAt: Long? = null
 
     private val _state = MutableStateFlow(PlaybackState())
     val state: StateFlow<PlaybackState> = _state.asStateFlow()
@@ -241,6 +245,7 @@ class AudioEngine(
             // The main player stays silent until it is actually playing, then the ghost is stopped.
             xfade = Xfade.HANDOFF
             handoffStartedAt = System.currentTimeMillis()
+            handoffReadyAt = null
             fx.faderLevel = 0f
             player.seekTo(ghost.currentPosition + HANDOFF_LEAD_MS)
         } else if (xfade != Xfade.IDLE) {
@@ -339,19 +344,26 @@ class AudioEngine(
             }
             Xfade.HANDOFF -> {
                 // The ghost keeps playing (audible) for as long as it takes the main player to finish seeking
-                // into the handoff position, so cutting over only once it's actually ready never leaves a gap.
-                // A long crossfade can mean seeking the main player many seconds into the track it just
-                // auto-advanced to, which is not instant — only the generous backstop below forces a cutover
-                // before it's ready, as a last resort if something has gone wrong with the seek.
+                // into the handoff position — a long crossfade can mean seeking many seconds into the track
+                // it just auto-advanced to, which is not instant. Once the main player reports ready, a fresh
+                // seek like this can still have a brief hardware startup transient even though playback has
+                // "started" in software, so instead of an instant cut, ramp off the ghost over a short window
+                // (the same equal-power curve used for the overlap) so that transient lands while the ghost is
+                // still covering it, not as a bare gap. The timeout is a last resort if the seek never finishes.
+                val readyAt = handoffReadyAt
+                if (readyAt != null) {
+                    val t = ((System.currentTimeMillis() - readyAt).toFloat() / HANDOFF_RAMP_MS).coerceIn(0f, 1f)
+                    val g = Crossfade.gains(t, CrossfadeCurve.EQUAL_POWER)
+                    fx.faderLevel = g.incoming * sleep
+                    ghostFx.faderLevel = g.outgoing * sleep
+                    if (t >= 1f) stopGhost()
+                    return
+                }
                 val ready = player.playbackState == Player.STATE_READY && player.isPlaying
                 val elapsed = System.currentTimeMillis() - handoffStartedAt
-                if ((ready && elapsed >= HANDOFF_LEAD_MS) || elapsed > HANDOFF_TIMEOUT_MS) {
-                    fx.faderLevel = sleep
-                    stopGhost()
-                } else {
-                    fx.faderLevel = 0f
-                    ghostFx.faderLevel = sleep
-                }
+                if ((ready && elapsed >= HANDOFF_LEAD_MS) || elapsed > HANDOFF_TIMEOUT_MS) handoffReadyAt = System.currentTimeMillis()
+                fx.faderLevel = 0f
+                ghostFx.faderLevel = sleep
             }
         }
     }
@@ -376,6 +388,7 @@ class AudioEngine(
         ghost.clearMediaItems()
         xfade = Xfade.IDLE
         xfadeTrackId = null
+        handoffReadyAt = null
     }
 
     /** User skipped, seeked or changed the queue mid-blend: drop the incoming song, restore full volume. */
@@ -417,5 +430,7 @@ class AudioEngine(
          * can't leave the ghost playing forever. The ghost stays audible the whole time, so this being high
          * costs nothing in the normal case — it only matters when something has actually gone wrong. */
         const val HANDOFF_TIMEOUT_MS = 6000L
+        /** Final ramp from the ghost to the main player once it's ready, to mask the seek's startup transient. */
+        const val HANDOFF_RAMP_MS = 350L
     }
 }
