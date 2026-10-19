@@ -61,7 +61,7 @@ private val ACCENTS = listOf("#00F0FF", "#FF00E5", "#8F00FF", "#00A3FF", "#00F5A
 
 /** Settings (spec §10): theme mode, accent, crossfade, sleep timer, private mode, backup & restore, AI, plugins. */
 @Composable
-fun SettingsScreen(c: AppContainer, onOpenAnalytics: () -> Unit) {
+fun SettingsScreen(c: AppContainer, onOpenAnalytics: () -> Unit, onOpenAudioInspector: () -> Unit, onOpenHeadphoneProfiles: () -> Unit) {
     val p = Neon.palette
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -160,6 +160,20 @@ fun SettingsScreen(c: AppContainer, onOpenAnalytics: () -> Unit) {
             GlowCard(Modifier.fillMaxWidth()) {
                 Text("Heatmap, monthly report, genres, moods, top artists and listening streaks.", color = p.muted, style = MaterialTheme.typography.labelSmall)
                 NeonButton("Open listening analytics", onClick = onOpenAnalytics)
+            }
+        }
+
+        item { SectionTitle("Audio") }
+        item {
+            GlowCard(Modifier.fillMaxWidth()) {
+                Text("Bitrate, codec, sample rate and loudness for the current track.", color = p.muted, style = MaterialTheme.typography.labelSmall)
+                NeonButton("Open Audio Inspector", onClick = onOpenAudioInspector)
+            }
+        }
+        item {
+            GlowCard(Modifier.fillMaxWidth()) {
+                Text("Headphone profiles: built-in brand tunings, or save your own EQ as one.", color = p.muted, style = MaterialTheme.typography.labelSmall)
+                NeonButton("Open headphone profiles", onClick = onOpenHeadphoneProfiles)
             }
         }
 

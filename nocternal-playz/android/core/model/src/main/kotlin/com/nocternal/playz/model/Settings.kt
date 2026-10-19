@@ -35,6 +35,21 @@ data class AppSettings(
     val assistantApiKey: String? = null,
     /** Free Jamendo developer client ID (devportal.jamendo.com) for Creative Commons music search. */
     val jamendoClientId: String? = null,
+    val headphoneProfiles: List<HeadphoneProfile> = emptyList(),
+)
+
+/**
+ * Headphone Profile (spec #12): either a built-in brand profile backed by an existing [EqPreset] id,
+ * or a user-created one carrying its own 10-band gains (a snapshot of whatever EQ was active when
+ * the user saved it) - no new EQ engine, just a named shortcut to apply one.
+ */
+@Serializable
+data class HeadphoneProfile(
+    val id: String,
+    val name: String,
+    val eqPresetId: String? = null,
+    val customGainsDb: List<Float>? = null,
+    val isUserCreated: Boolean = false,
 )
 
 @Serializable

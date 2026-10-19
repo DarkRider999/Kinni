@@ -23,6 +23,7 @@ import com.nocternal.playz.audio.AudioEngine
 import com.nocternal.playz.audio.PlaybackEvent
 import com.nocternal.playz.automix.AutoSetBuilder
 import com.nocternal.playz.backup.BackupManager
+import com.nocternal.playz.library.AudioFormatReader
 import com.nocternal.playz.library.LibraryRepository
 import com.nocternal.playz.lighting.LightingEngineImpl
 import com.nocternal.playz.lyrics.EmbeddedLyricsProvider
@@ -80,6 +81,7 @@ class AppContainer(val context: Context) {
 
     val settingsRepo = SettingsRepository(context, scope)
     val library = LibraryRepository(context, scope)
+    val audioFormatReader = AudioFormatReader(context)
     val genreDetector = GenreDetector()
     val moodDetector = MoodDetector(genreDetector)
     val smartPlaylists = SmartPlaylistEngine(genreDetector) { moodDetector.detect(it)?.mood }

@@ -143,7 +143,15 @@ fun NocternalRoot(c: AppContainer, actions: ActionExecutor) {
                             )
                         }
                         composable(Tab.LIGHTING.route) { LightingScreen(c, spectrum, playback.isPlaying) }
-                        composable(Tab.SETTINGS.route) { SettingsScreen(c, onOpenAnalytics = { nav.navigate("analytics") }) }
+                        composable(Tab.SETTINGS.route) {
+                            SettingsScreen(
+                                c, onOpenAnalytics = { nav.navigate("analytics") },
+                                onOpenAudioInspector = { nav.navigate("audio_inspector") },
+                                onOpenHeadphoneProfiles = { nav.navigate("headphone_profiles") },
+                            )
+                        }
+                        composable("audio_inspector") { AudioInspectorScreen(c, onBack = { nav.popBackStack() }) }
+                        composable("headphone_profiles") { HeadphoneProfilesScreen(c, onBack = { nav.popBackStack() }) }
                         composable("analytics") {
                             val hasDjSessions = remember(library.playlists) { library.playlists.any { it.id.startsWith("dj_session_") } }
                             val musicDna = remember(library.history, library.tracks, hasDjSessions) {
