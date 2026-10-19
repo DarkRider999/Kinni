@@ -14,5 +14,6 @@ kotlin {
 dependencies {
     api(project(":core:model"))
     implementation(project(":theme_manager"))
+    implementation(project(":auto_mix_engine"))
     testImplementation(libs.junit)
 }
