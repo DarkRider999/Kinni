@@ -5,12 +5,16 @@ import com.nocternal.playz.ai.AssistantAction
 import com.nocternal.playz.ai.AssistantContext
 import com.nocternal.playz.ai.EqAdvisor
 import com.nocternal.playz.ai.TransportCommand
+import com.nocternal.playz.intelligence.QueueAction
 import com.nocternal.playz.model.Playlist
 import com.nocternal.playz.theme.EqPresets
 import com.nocternal.playz.theme.ThemeEvent
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Runs assistant actions and the UI's own commands against the engine, theme and library. */
 class ActionExecutor(private val c: AppContainer) {
@@ -66,6 +70,19 @@ class ActionExecutor(private val c: AppContainer) {
             is AssistantAction.EnableAutoMix -> c.audio.setAutoMix(a.on)
             is AssistantAction.UpdateSetting -> applySettingToggle(a.setting, a.on)
             is AssistantAction.SetCrossfadeSeconds -> c.settingsRepo.update { it.copy(crossfadeSeconds = a.seconds, autoFaderEnabled = true) }
+            is AssistantAction.AdjustQueueEnergy -> c.scope.launch(Dispatchers.Default) {
+                val state = c.audio.state.value
+                val action = if (a.up) QueueAction.BUILD_ENERGY else QueueAction.COOL_DOWN
+                val suggestions = c.queueIntelligence.apply(action, state.track, c.library.data.value.tracks, state.queue.map { it.id }.toSet())
+                if (suggestions.isNotEmpty()) withContext(Dispatchers.Main.immediate) {
+                    c.audio.playQueue(listOfNotNull(state.track) + suggestions.map { it.track }, 0)
+                }
+            }
+            is AssistantAction.StartJourney -> c.scope.launch(Dispatchers.Default) {
+                val lib = c.library.data.value
+                val plan = c.journeyPlanner.plan(a.prompt, lib.tracks, lib.history, c.hour(), c.audio.state.value.track)
+                if (plan != null) withContext(Dispatchers.Main.immediate) { c.audio.playQueue(plan.steps.map { it.track }, 0) }
+            }
         }
     }
 

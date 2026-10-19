@@ -65,6 +65,20 @@ object CommandParser {
 
         source(t)?.let { if (has(t, "switch", "go to", "open", "change to", "use", "move to")) return AssistantIntent.SwitchSource(it) }
 
+        if (has(t, "why")) {
+            if (has(t, "recommend", "suggested", "picked", "this song", "play this", "this track")) return AssistantIntent.Coach(CoachTopic.RECOMMENDATION)
+            if (has(t, "eq", "equalizer")) return AssistantIntent.Coach(CoachTopic.EQ)
+            if (has(t, "mood", "feel", "vibe")) return AssistantIntent.Coach(CoachTopic.MOOD)
+        }
+
+        if (has(t, "more energetic", "build energy", "energize", "energise", "pump it up", "raise the energy") && has(t, "playlist", "queue", "mix", "this", "set"))
+            return AssistantIntent.AdjustQueueEnergy(true)
+        if (has(t, "calmer", "cool down", "wind down", "less energetic", "mellow") && has(t, "playlist", "queue", "mix", "this", "set"))
+            return AssistantIntent.AdjustQueueEnergy(false)
+
+        if (has(t, "journey") || ((has(t, "generate", "create", "build", "make") && has(t, "mix", "set")) && Regex("\\d+\\s*(minute|min|hour|hr)").containsMatchIn(t)))
+            return AssistantIntent.GenerateJourney(input)
+
         if (has(t, "explain", "what is", "what does", "how does", "how do", "tell me about", "meaning of")) {
             FeatureExplainer.topicFor(t)?.let { return AssistantIntent.ExplainFeature(it) }
         }

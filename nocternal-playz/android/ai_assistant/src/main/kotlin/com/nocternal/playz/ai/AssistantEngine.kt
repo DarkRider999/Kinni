@@ -88,7 +88,32 @@ class AssistantEngine(
             if (intent.seconds <= 0f) "Crossfade off — true gapless playback." else "Crossfade set to ${intent.seconds.toInt()}s.",
             listOf(AssistantAction.SetCrossfadeSeconds(intent.seconds)),
         )
+        is AssistantIntent.AdjustQueueEnergy -> AssistantResponse(
+            if (intent.up) "Building the energy — swapping in higher-energy tracks next." else "Cooling it down — easing into calmer tracks next.",
+            listOf(AssistantAction.AdjustQueueEnergy(intent.up)),
+        )
+        is AssistantIntent.GenerateJourney -> AssistantResponse("On it — building your journey now 🚀", listOf(AssistantAction.StartJourney(intent.prompt)))
+        is AssistantIntent.Coach -> coach(intent.topic, ctx)
         is AssistantIntent.Unknown -> AssistantResponse(helpText())
+    }
+
+    private fun coach(topic: CoachTopic, ctx: AssistantContext): AssistantResponse {
+        val track = ctx.nowPlaying ?: return AssistantResponse("Play something first and I'll explain my thinking.")
+        return when (topic) {
+            CoachTopic.RECOMMENDATION -> {
+                val g = genres.detect(track)
+                val m = moods.detect(track, ctx.hourOfDay)
+                val bits = listOfNotNull(
+                    g?.let { "it's ${it.genre.displayName} (${it.reason})" },
+                    m?.let { "it feels ${it.mood.label.lowercase()} (${it.reason})" },
+                    track.bpm?.let { "${it.toInt()} BPM" },
+                )
+                AssistantResponse(if (bits.isEmpty()) "Not enough signal on this track yet to explain it well." else "Because " + bits.joinToString(", ") + ".")
+            }
+            CoachTopic.EQ -> AssistantResponse(EqAdvisor.recommend(track, ctx.route, genres).reason)
+            CoachTopic.MOOD -> moods.detect(track, ctx.hourOfDay)?.let { AssistantResponse("${it.mood.label} — ${it.reason}.") }
+                ?: AssistantResponse("Not enough signal to call a mood on this one.")
+        }
     }
 
     private fun playGenre(genreId: String, ctx: AssistantContext): AssistantResponse {

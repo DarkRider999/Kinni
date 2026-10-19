@@ -82,4 +82,21 @@ class AssistantTest {
         assertEquals(g.generate(lib[1]), g.generate(lib[1]))
         assertTrue(g.generate(lib[1]).prompt.contains("Sacred Gold Aura"))
     }
+
+    @Test fun conversationalJourneyAndQueueCommands() {
+        assertEquals(AssistantIntent.GenerateJourney("generate a deep house journey"), CommandParser.parse("generate a deep house journey"))
+        assertEquals(AssistantIntent.GenerateJourney("create a 60 minute workout mix"), CommandParser.parse("create a 60 minute workout mix"))
+        assertEquals(AssistantIntent.AdjustQueueEnergy(true), CommandParser.parse("make this playlist more energetic"))
+        assertEquals(AssistantIntent.AdjustQueueEnergy(false), CommandParser.parse("cool down this queue"))
+    }
+
+    @Test fun musicCoachExplainsWithoutActingOnThePlayer() = runTest {
+        val playingCtx = ctx.copy(nowPlaying = lib[0])
+        assertEquals(AssistantIntent.Coach(CoachTopic.RECOMMENDATION), CommandParser.parse("why was this song recommended"))
+        assertEquals(AssistantIntent.Coach(CoachTopic.MOOD), CommandParser.parse("why does this have this mood"))
+
+        val r = AssistantEngine().execute(AssistantIntent.Coach(CoachTopic.RECOMMENDATION), playingCtx)
+        assertTrue(r.actions.isEmpty())
+        assertTrue(r.reply.contains("Trance"))
+    }
 }

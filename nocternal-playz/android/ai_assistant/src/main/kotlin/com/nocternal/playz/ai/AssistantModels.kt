@@ -30,8 +30,16 @@ sealed interface AssistantIntent {
     data object AutoMix : AssistantIntent
     data class ToggleSetting(val setting: AppSettingKey, val on: Boolean) : AssistantIntent
     data class SetCrossfade(val seconds: Float) : AssistantIntent
+    /** "Make this playlist more energetic" / "calm this down" — nudges the upcoming queue. */
+    data class AdjustQueueEnergy(val up: Boolean) : AssistantIntent
+    /** "Generate a deep house journey", "create a 60 minute workout mix" — Journey Mode from chat. */
+    data class GenerateJourney(val prompt: String) : AssistantIntent
+    /** Music Coach: explains a choice already made, rather than making a new one. */
+    data class Coach(val topic: CoachTopic) : AssistantIntent
     data class Unknown(val text: String) : AssistantIntent
 }
+
+enum class CoachTopic { RECOMMENDATION, EQ, MOOD }
 
 /** Every on/off app setting the bot can change directly, with the words it recognizes for each. */
 enum class AppSettingKey(val label: String, val aliases: List<String>) {
@@ -76,6 +84,8 @@ sealed interface AssistantAction {
     data class EnableAutoMix(val on: Boolean) : AssistantAction
     data class UpdateSetting(val setting: AppSettingKey, val on: Boolean) : AssistantAction
     data class SetCrossfadeSeconds(val seconds: Float) : AssistantAction
+    data class AdjustQueueEnergy(val up: Boolean) : AssistantAction
+    data class StartJourney(val prompt: String) : AssistantAction
 }
 
 data class AssistantResponse(
