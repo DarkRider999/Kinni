@@ -120,6 +120,15 @@ fun NocternalRoot(c: AppContainer, actions: ActionExecutor) {
                                 isFavorite = track?.id in library.favorites,
                                 artSpec = remember(track?.id) { track?.let(c.artGenerator::generate) },
                                 sleepRemainingMs = sleepLeft,
+                                isLyricBookmarked = { line -> track != null && c.library.isLyricBookmarked(track.id, line.startMs) },
+                                onToggleLyricBookmark = { line ->
+                                    track?.let { t ->
+                                        if (c.library.isLyricBookmarked(t.id, line.startMs)) c.library.removeLyricBookmark(t.id, line.startMs)
+                                        else c.library.addLyricBookmark(
+                                            com.nocternal.playz.model.LyricBookmark(t.id, line.startMs, line.text, t.title, t.artist, System.currentTimeMillis()),
+                                        )
+                                    }
+                                },
                                 callbacks = PlayerCallbacks(
                                     togglePlay = c.audio::togglePlay, next = c.audio::next, previous = c.audio::previous,
                                     seek = c.audio::seekTo, shuffle = { c.audio.setShuffle(!playback.shuffle) }, repeat = c.audio::cycleRepeat,
@@ -148,10 +157,12 @@ fun NocternalRoot(c: AppContainer, actions: ActionExecutor) {
                                 c, onOpenAnalytics = { nav.navigate("analytics") },
                                 onOpenAudioInspector = { nav.navigate("audio_inspector") },
                                 onOpenHeadphoneProfiles = { nav.navigate("headphone_profiles") },
+                                onOpenLyricBookmarks = { nav.navigate("lyric_bookmarks") },
                             )
                         }
                         composable("audio_inspector") { AudioInspectorScreen(c, onBack = { nav.popBackStack() }) }
                         composable("headphone_profiles") { HeadphoneProfilesScreen(c, onBack = { nav.popBackStack() }) }
+                        composable("lyric_bookmarks") { LyricBookmarksScreen(c, onOpenPlayer = { nav.navigate(Tab.PLAYER.route) }, onBack = { nav.popBackStack() }) }
                         composable("analytics") {
                             val hasDjSessions = remember(library.playlists) { library.playlists.any { it.id.startsWith("dj_session_") } }
                             val musicDna = remember(library.history, library.tracks, hasDjSessions) {

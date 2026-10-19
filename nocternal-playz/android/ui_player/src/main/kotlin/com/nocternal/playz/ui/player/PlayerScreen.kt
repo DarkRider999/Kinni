@@ -63,6 +63,7 @@ import com.nocternal.playz.lighting.LightingCanvas
 import com.nocternal.playz.lighting.LightingState
 import com.nocternal.playz.lighting.NeonLightBar
 import com.nocternal.playz.lyrics.Lyrics
+import com.nocternal.playz.lyrics.LyricsLine
 import com.nocternal.playz.model.RepeatMode
 import com.nocternal.playz.model.SpectrumFrame
 
@@ -109,6 +110,8 @@ fun PlayerScreen(
     sleepRemainingMs: Long?,
     callbacks: PlayerCallbacks,
     modifier: Modifier = Modifier,
+    isLyricBookmarked: (LyricsLine) -> Boolean = { false },
+    onToggleLyricBookmark: (LyricsLine) -> Unit = {},
 ) {
     val p = Neon.palette
     var showLyrics by remember { mutableStateOf(false) }
@@ -131,7 +134,10 @@ fun PlayerScreen(
 
             AnimatedContent(targetState = showLyrics, label = "art-lyrics", modifier = Modifier.weight(1f)) { lyricsMode ->
                 if (lyricsMode) {
-                    LyricsView(lyrics, state.positionMs, Modifier.fillMaxSize(), loading = lyricsLoading, onLineClick = callbacks.seek)
+                    LyricsView(
+                        lyrics, state.positionMs, Modifier.fillMaxSize(), loading = lyricsLoading, onLineClick = callbacks.seek,
+                        isBookmarked = isLyricBookmarked, onToggleBookmark = onToggleLyricBookmark,
+                    )
                 } else {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         SpinningAlbumArt(track?.artworkUri, artSpec, spinning = state.isPlaying, modifier = Modifier.fillMaxWidth(0.96f).aspectRatio(1f))

@@ -6,13 +6,16 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -36,12 +39,22 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nocternal.playz.designsystem.Neon
 import com.nocternal.playz.lyrics.Lyrics
+import com.nocternal.playz.lyrics.LyricsLine
 import com.nocternal.playz.lyrics.LyricsOrigin
 import com.nocternal.playz.lyrics.LyricsSync
 
-/** Scrolling synced lyrics with karaoke word highlight, dual (Hinglish + native script) display and in-song search (spec §11.3, §45-50). */
+/** Scrolling synced lyrics with karaoke word highlight, dual (Hinglish + native script) display, in-song search
+ *  and per-line bookmarking (spec §11.3, §45-50, Phase 4D #15). */
 @Composable
-fun LyricsView(lyrics: Lyrics?, positionMs: Long, modifier: Modifier = Modifier, loading: Boolean = false, onLineClick: (Long) -> Unit = {}) {
+fun LyricsView(
+    lyrics: Lyrics?,
+    positionMs: Long,
+    modifier: Modifier = Modifier,
+    loading: Boolean = false,
+    onLineClick: (Long) -> Unit = {},
+    isBookmarked: (LyricsLine) -> Boolean = { false },
+    onToggleBookmark: (LyricsLine) -> Unit = {},
+) {
     val p = Neon.palette
     if (lyrics == null) {
         Text(if (loading) "Finding lyrics…" else "No lyrics for this track.", modifier.padding(24.dp), color = p.muted, textAlign = TextAlign.Center)
@@ -62,7 +75,7 @@ fun LyricsView(lyrics: Lyrics?, positionMs: Long, modifier: Modifier = Modifier,
             onToggleSearch = { searching = !searching; if (!searching) query = "" }, onQueryChange = { query = it },
             onToggleOriginal = { showOriginal = !showOriginal },
         )
-        SyncedLyrics(lyrics, positionMs, Modifier.weight(1f), query, showOriginal) { ms -> onLineClick(ms); searching = false; query = "" }
+        SyncedLyrics(lyrics, positionMs, Modifier.weight(1f), query, showOriginal, isBookmarked, onToggleBookmark) { ms -> onLineClick(ms); searching = false; query = "" }
     }
 }
 
@@ -89,7 +102,10 @@ private fun LyricsToolbar(
 }
 
 @Composable
-private fun SyncedLyrics(lyrics: Lyrics, positionMs: Long, modifier: Modifier, query: String, showOriginal: Boolean, onLineClick: (Long) -> Unit) {
+private fun SyncedLyrics(
+    lyrics: Lyrics, positionMs: Long, modifier: Modifier, query: String, showOriginal: Boolean,
+    isBookmarked: (LyricsLine) -> Boolean, onToggleBookmark: (LyricsLine) -> Unit, onLineClick: (Long) -> Unit,
+) {
     val p = Neon.palette
     val pos = LyricsSync.at(lyrics, positionMs)
     val state = rememberLazyListState()
@@ -124,6 +140,16 @@ private fun SyncedLyrics(lyrics: Lyrics, positionMs: Long, modifier: Modifier, q
                 val original = line.original
                 if (showOriginal && original != null) {
                     Text(original, color = color.copy(alpha = color.alpha * 0.75f), fontSize = if (active) 16.sp else 13.sp, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
+                }
+                if (active && line.text.isNotBlank()) {
+                    val bookmarked = isBookmarked(line)
+                    IconButton(onClick = { onToggleBookmark(line) }, modifier = Modifier.size(28.dp)) {
+                        Icon(
+                            if (bookmarked) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                            if (bookmarked) "Remove bookmark" else "Bookmark this line",
+                            tint = if (bookmarked) p.accent else p.muted,
+                        )
+                    }
                 }
             }
         }

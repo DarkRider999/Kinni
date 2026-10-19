@@ -1,6 +1,7 @@
 package com.nocternal.playz.library
 
 import android.content.Context
+import com.nocternal.playz.model.LyricBookmark
 import com.nocternal.playz.model.PlayEvent
 import com.nocternal.playz.model.Playlist
 import com.nocternal.playz.model.Track
@@ -31,6 +32,7 @@ data class LibraryData(
     val playlists: List<Playlist> = emptyList(),
     val analysis: Map<String, TrackAnalysis> = emptyMap(),
     val lyricsOffsetsMs: Map<String, Long> = emptyMap(),
+    val lyricBookmarks: List<LyricBookmark> = emptyList(),
 )
 
 enum class ScanPhase { IDLE, SCANNING, ANALYZING, DONE, NO_PERMISSION }
@@ -107,6 +109,17 @@ class LibraryRepository(
 
     fun savePlaylist(p: Playlist) = scope.launch { mutate { d -> d.copy(playlists = d.playlists.filterNot { it.id == p.id } + p) } }
     fun deletePlaylist(id: String) = scope.launch { mutate { d -> d.copy(playlists = d.playlists.filterNot { it.id == id }) } }
+
+    fun isLyricBookmarked(trackId: String, lineStartMs: Long): Boolean =
+        _data.value.lyricBookmarks.any { it.trackId == trackId && it.lineStartMs == lineStartMs }
+
+    fun addLyricBookmark(bookmark: LyricBookmark) = scope.launch {
+        mutate { d -> d.copy(lyricBookmarks = d.lyricBookmarks.filterNot { it.trackId == bookmark.trackId && it.lineStartMs == bookmark.lineStartMs } + bookmark) }
+    }
+
+    fun removeLyricBookmark(trackId: String, lineStartMs: Long) = scope.launch {
+        mutate { d -> d.copy(lyricBookmarks = d.lyricBookmarks.filterNot { it.trackId == trackId && it.lineStartMs == lineStartMs }) }
+    }
 
     /** Replaces user data after a backup restore (tracks stay as scanned). */
     fun replaceUserData(favorites: Set<String>, history: List<PlayEvent>, playlists: List<Playlist>, offsets: Map<String, Long>) =
