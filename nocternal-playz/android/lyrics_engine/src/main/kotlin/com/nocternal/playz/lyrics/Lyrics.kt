@@ -7,7 +7,13 @@ import kotlinx.serialization.Serializable
 data class KaraokeWord(val startMs: Long, val text: String)
 
 @Serializable
-data class LyricsLine(val startMs: Long, val text: String, val words: List<KaraokeWord> = emptyList())
+data class LyricsLine(
+    val startMs: Long,
+    val text: String,
+    val words: List<KaraokeWord> = emptyList(),
+    /** The line's text before Romanization (Devanagari/Gurmukhi), kept so the UI can show both. Null when the line was never in native script. */
+    val original: String? = null,
+)
 
 @Serializable
 enum class LyricsOrigin {

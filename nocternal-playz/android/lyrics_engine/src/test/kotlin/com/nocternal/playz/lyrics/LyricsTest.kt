@@ -90,6 +90,13 @@ class RomanizerTest {
         assertFalse(Romanizer.containsIndicScript(r.lines[0].text))
     }
 
+    @Test fun keepsOriginalScriptAlongsideTheRomanizedLine() {
+        val l = Lyrics(listOf(LyricsLine(0, "क्या हुआ"), LyricsLine(1000, "Hello world")), synced = true, origin = LyricsOrigin.ONLINE)
+        val r = Romanizer.romanize(l)
+        assertEquals("क्या हुआ", r.lines[0].original)
+        assertEquals(null, r.lines[1].original)
+    }
+
     @Test fun passesThroughWhenNoIndicScriptPresent() {
         val l = Lyrics(listOf(LyricsLine(0, "Just English words")), synced = true, origin = LyricsOrigin.ONLINE)
         assertEquals(l, Romanizer.romanize(l))

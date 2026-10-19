@@ -14,7 +14,11 @@ object Romanizer {
         if (lyrics.lines.none { containsIndicScript(it.text) }) return lyrics
         return lyrics.copy(lines = lyrics.lines.map { line ->
             if (!containsIndicScript(line.text)) line
-            else line.copy(text = toRoman(line.text), words = line.words.map { w -> if (containsIndicScript(w.text)) w.copy(text = toRoman(w.text)) else w })
+            else line.copy(
+                text = toRoman(line.text),
+                words = line.words.map { w -> if (containsIndicScript(w.text)) w.copy(text = toRoman(w.text)) else w },
+                original = line.text,
+            )
         })
     }
 
