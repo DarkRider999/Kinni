@@ -17,6 +17,22 @@ class PromptPlaylistParserTest {
         assertTrue(p.energyMin != null && p.energyMin!! >= 0.6f)
     }
 
+    @Test fun parsesMinuteDuration() {
+        val p = PromptPlaylistParser.parse("90 minute Progressive House Journey")
+        assertEquals(90, p.durationMinutes)
+        assertEquals("edm", p.genreId)
+    }
+
+    @Test fun parsesHourDuration() {
+        val p = PromptPlaylistParser.parse("2 hour deep house set")
+        assertEquals(120, p.durationMinutes)
+    }
+
+    @Test fun noDurationStatedIsNull() {
+        val p = PromptPlaylistParser.parse("late night techno drive")
+        assertEquals(null, p.durationMinutes)
+    }
+
     @Test fun unrecognizedPromptHasNoSignals() {
         val p = PromptPlaylistParser.parse("xyz123 nonsense")
         assertEquals(null, p.mood)

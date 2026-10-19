@@ -12,6 +12,8 @@ data class PlaylistPrompt(
     val genreId: String? = null,
     val energyMin: Float? = null,
     val energyMax: Float? = null,
+    /** Requested length in minutes, parsed from phrases like "90 minute" / "2 hour" — null when not stated. */
+    val durationMinutes: Int? = null,
     val label: String,
 )
 
@@ -40,14 +42,22 @@ object PromptPlaylistParser {
         "morning" to (0.3f to 0.75f), "late night" to (0f to 0.4f),
     )
 
+    private val durationRegex = Regex("""(\d+(?:\.\d+)?)\s*(minute|min|hour|hr)s?\b""")
+
     fun parse(prompt: String): PlaylistPrompt {
         val text = prompt.lowercase()
         val mood = moodWords.entries.firstOrNull { (w, _) -> w in text }?.value
         val genre = GenreCatalog.all.firstOrNull { g -> g.aliases.any { it in text } }
         val energyHit = energyWords.entries.firstOrNull { (w, _) -> w in text }
+        val duration = durationRegex.find(text)?.let { m ->
+            val value = m.groupValues[1].toFloatOrNull() ?: return@let null
+            val unit = m.groupValues[2]
+            (if (unit.startsWith("hour") || unit == "hr") value * 60f else value).toInt().takeIf { it > 0 }
+        }
         return PlaylistPrompt(
             raw = prompt, mood = mood, genreId = genre?.id,
             energyMin = energyHit?.value?.first, energyMax = energyHit?.value?.second,
+            durationMinutes = duration,
             label = prompt.trim().replaceFirstChar { it.uppercase() },
         )
     }
