@@ -9,9 +9,11 @@ import com.nocternal.playz.ai.RecommendationEngine
 import com.nocternal.playz.intelligence.CrowdEnergyBuilder
 import com.nocternal.playz.intelligence.DiscoveryRadar
 import com.nocternal.playz.intelligence.FutureCast
+import com.nocternal.playz.intelligence.JourneyPlanner
 import com.nocternal.playz.intelligence.ListeningMemories
 import com.nocternal.playz.intelligence.MusicDnaDashboard
 import com.nocternal.playz.intelligence.PromptPlaylistBuilder
+import com.nocternal.playz.intelligence.QueueIntelligence
 import com.nocternal.playz.intelligence.RecommendationEngine2
 import com.nocternal.playz.intelligence.RecommendationExplanation
 import com.nocternal.playz.intelligence.SmartCollections
@@ -93,6 +95,8 @@ class AppContainer(val context: Context) {
     val listeningMemories = ListeningMemories(genreDetector)
     val musicDnaDashboard = MusicDnaDashboard(genreDetector)
     val recommendationExplanation = RecommendationExplanation(genreDetector)
+    val journeyPlanner = JourneyPlanner(genreDetector)
+    val queueIntelligence = QueueIntelligence(genreDetector)
 
     val audio = AudioEngine(context, scope, autoMixPool = { library.data.value.tracks })
     val djSessionRecorder = DjSessionRecorder(audio, scope)

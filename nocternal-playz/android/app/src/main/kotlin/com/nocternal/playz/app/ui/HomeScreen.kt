@@ -75,7 +75,7 @@ import kotlinx.coroutines.launch
  * Radio Hub — with Continue Listening, AI ideas and genre tiles on the Local panel.
  */
 @Composable
-fun HomeScreen(c: AppContainer, actions: ActionExecutor, onOpenPlayer: () -> Unit, onOpenFree: () -> Unit, onOpenDiscover: () -> Unit, onOpenSmartCollections: () -> Unit) {
+fun HomeScreen(c: AppContainer, actions: ActionExecutor, onOpenPlayer: () -> Unit, onOpenFree: () -> Unit, onOpenDiscover: () -> Unit, onOpenSmartCollections: () -> Unit, onOpenJourney: () -> Unit) {
     val p = Neon.palette
     val pager = rememberPagerState { AudioSource.entries.size }
     val scope = rememberCoroutineScope()
@@ -105,7 +105,7 @@ fun HomeScreen(c: AppContainer, actions: ActionExecutor, onOpenPlayer: () -> Uni
             // Edge lighting between panels: a glow line that brightens while swiping.
             Box(Modifier.fillMaxSize()) {
                 when (AudioSource.entries[page]) {
-                    AudioSource.LOCAL -> LocalPanel(c, actions, onOpenPlayer, onOpenFree, onOpenDiscover, onOpenSmartCollections, onGenreRadio = { g -> radioGenre = g; scope.launch { pager.animateScrollToPage(AudioSource.RADIO.ordinal) } })
+                    AudioSource.LOCAL -> LocalPanel(c, actions, onOpenPlayer, onOpenFree, onOpenDiscover, onOpenSmartCollections, onOpenJourney, onGenreRadio = { g -> radioGenre = g; scope.launch { pager.animateScrollToPage(AudioSource.RADIO.ordinal) } })
                     AudioSource.YOUTUBE -> if (youtubeOpened) YouTubeMusicPanel(
                         online = online,
                         searchQuery = search?.takeIf { it.first == AudioSource.YOUTUBE }?.second,
@@ -149,7 +149,7 @@ private fun SourceTabs(position: Float, onSelect: (Int) -> Unit) {
 private enum class LibraryTab { SONGS, PLAYLISTS, FOLDERS, HISTORY }
 
 @Composable
-private fun LocalPanel(c: AppContainer, actions: ActionExecutor, onOpenPlayer: () -> Unit, onOpenFree: () -> Unit, onOpenDiscover: () -> Unit, onOpenSmartCollections: () -> Unit, onGenreRadio: (String) -> Unit) {
+private fun LocalPanel(c: AppContainer, actions: ActionExecutor, onOpenPlayer: () -> Unit, onOpenFree: () -> Unit, onOpenDiscover: () -> Unit, onOpenSmartCollections: () -> Unit, onOpenJourney: () -> Unit, onGenreRadio: (String) -> Unit) {
     val p = Neon.palette
     val lib by c.library.data.collectAsStateWithLifecycle()
     val scan by c.library.scan.collectAsStateWithLifecycle()
@@ -200,6 +200,19 @@ private fun LocalPanel(c: AppContainer, actions: ActionExecutor, onOpenPlayer: (
                         }
                     }
                     if (memory.frequentArtists.isNotEmpty()) Text("Often around this time: ${memory.frequentArtists.joinToString(", ")}", color = p.muted, style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        }
+
+        item {
+            GlowCard(Modifier.fillMaxWidth(), glowColor = p.accent.copy(alpha = 0.6f), onClick = onOpenJourney) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("🚀", color = p.accent, style = MaterialTheme.typography.headlineSmall)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("AI Journey Mode", color = p.onBackground, style = MaterialTheme.typography.titleMedium)
+                        Text("\"90 minute Progressive House Journey\" — a full planned set from one line", color = p.muted, style = MaterialTheme.typography.labelSmall)
+                    }
                 }
             }
         }

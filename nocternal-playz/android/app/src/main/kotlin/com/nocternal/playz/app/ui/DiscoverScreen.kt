@@ -75,11 +75,11 @@ fun DiscoverScreen(c: AppContainer, onOpenPlayer: () -> Unit, onBack: () -> Unit
         LazyColumn(contentPadding = PaddingValues(16.dp, 0.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             if (futureCast.isNotEmpty()) {
                 item { SectionTitle("What's next", action = { NeonChip("▶ Play all") { play(futureCast.map { it.track }) } }) }
-                items(futureCast, key = { "fc_" + it.track.id }) { RecommendationRow(c, it) { play(futureCast.map { r -> r.track }, futureCast.indexOf(it)) } }
+                items(futureCast, key = { "fc_" + it.track.id }) { RecommendationRow(c, it, playback.track) { play(futureCast.map { r -> r.track }, futureCast.indexOf(it)) } }
             }
             if (gems.isNotEmpty()) {
                 item { SectionTitle("Discovery Radar · forgotten gems") }
-                items(gems, key = { "dr_" + it.track.id }) { RecommendationRow(c, it) { play(gems.map { r -> r.track }, gems.indexOf(it)) } }
+                items(gems, key = { "dr_" + it.track.id }) { RecommendationRow(c, it, null) { play(gems.map { r -> r.track }, gems.indexOf(it)) } }
             }
 
             item { SectionTitle("Ask for a playlist") }
@@ -115,10 +115,13 @@ fun DiscoverScreen(c: AppContainer, onOpenPlayer: () -> Unit, onBack: () -> Unit
 }
 
 @Composable
-private fun RecommendationRow(c: AppContainer, rec: Recommendation, onClick: () -> Unit) {
+private fun RecommendationRow(c: AppContainer, rec: Recommendation, seed: Track?, onClick: () -> Unit) {
     val p = Neon.palette
+    val reasonText = remember(seed?.id, rec.track.id) {
+        if (seed != null) "Added because: " + c.recommendationExplanation.explain(seed, rec.track).reasons.joinToString(" · ") else rec.reason
+    }
     Column {
         TrackRow(c, rec.track, false, onClick)
-        Text(rec.reason, color = p.muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(start = 60.dp))
+        Text(reasonText, color = p.muted, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(start = 60.dp))
     }
 }

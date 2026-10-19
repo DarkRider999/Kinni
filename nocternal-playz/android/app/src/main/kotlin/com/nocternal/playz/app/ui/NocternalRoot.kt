@@ -105,11 +105,14 @@ fun NocternalRoot(c: AppContainer, actions: ActionExecutor) {
                             HomeScreen(
                                 c, actions, onOpenPlayer = { nav.navigate(Tab.PLAYER.route) }, onOpenFree = { nav.navigate("free") },
                                 onOpenDiscover = { nav.navigate("discover") }, onOpenSmartCollections = { nav.navigate("smart_collections") },
+                                onOpenJourney = { nav.navigate("journey") },
                             )
                         }
                         composable("free") { FreeMusicScreen(c, onOpenPlayer = { nav.navigate(Tab.PLAYER.route) }, onBack = { nav.popBackStack() }) }
                         composable("discover") { DiscoverScreen(c, onOpenPlayer = { nav.navigate(Tab.PLAYER.route) }, onBack = { nav.popBackStack() }) }
                         composable("smart_collections") { SmartCollectionsScreen(c, onOpenPlayer = { nav.navigate(Tab.PLAYER.route) }, onBack = { nav.popBackStack() }) }
+                        composable("journey") { JourneyScreen(c, onOpenPlayer = { nav.navigate(Tab.PLAYER.route) }, onBack = { nav.popBackStack() }) }
+                        composable("smart_queue") { SmartQueueScreen(c, onOpenPlayer = { nav.navigate(Tab.PLAYER.route) }, onBack = { nav.popBackStack() }) }
                         composable(Tab.PLAYER.route) {
                             val track = playback.track
                             PlayerScreen(
@@ -127,6 +130,7 @@ fun NocternalRoot(c: AppContainer, actions: ActionExecutor) {
                                     openAssistant = { assistantOpen = true },
                                     collapse = { nav.popBackStack() },
                                     openDjDeck = { nav.navigate("dj_deck") },
+                                    openSmartQueue = { nav.navigate("smart_queue") },
                                 ),
                             )
                         }

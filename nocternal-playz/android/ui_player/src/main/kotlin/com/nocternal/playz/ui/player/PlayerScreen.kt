@@ -80,6 +80,7 @@ class PlayerCallbacks(
     val toggleAutoMix: () -> Unit = {},
     val setAutoMixEnergyRise: (Boolean) -> Unit = {},
     val openDjDeck: () -> Unit = {},
+    val openSmartQueue: () -> Unit = {},
     val openAssistant: () -> Unit = {},
     val collapse: () -> Unit = {},
 )
@@ -205,6 +206,10 @@ fun PlayerScreen(
                         DropdownMenuItem(
                             text = { Text("Open DJ Deck") },
                             onClick = { callbacks.openDjDeck(); autoMixMenu = false },
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Smart Queue") },
+                            onClick = { callbacks.openSmartQueue(); autoMixMenu = false },
                         )
                         state.autoMixExplanation?.takeIf { state.autoMix }?.let { why ->
                             DropdownMenuItem(text = { Text("Mixing: $why", style = MaterialTheme.typography.labelSmall, color = p.accent) }, enabled = false, onClick = {})
