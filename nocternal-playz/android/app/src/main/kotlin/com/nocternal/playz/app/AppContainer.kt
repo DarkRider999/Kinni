@@ -6,6 +6,11 @@ import com.nocternal.playz.ai.AssistantEngine
 import com.nocternal.playz.ai.ClaudeAssistantLlm
 import com.nocternal.playz.ai.MoodDetector
 import com.nocternal.playz.ai.RecommendationEngine
+import com.nocternal.playz.intelligence.CrowdEnergyBuilder
+import com.nocternal.playz.intelligence.DiscoveryRadar
+import com.nocternal.playz.intelligence.FutureCast
+import com.nocternal.playz.intelligence.PromptPlaylistBuilder
+import com.nocternal.playz.intelligence.RecommendationEngine2
 import com.nocternal.playz.app.voice.MusicRecognizer
 import com.nocternal.playz.app.voice.VoiceInput
 import com.nocternal.playz.audio.AudioEngine
@@ -73,6 +78,12 @@ class AppContainer(val context: Context) {
     val smartPlaylists = SmartPlaylistEngine(genreDetector) { moodDetector.detect(it)?.mood }
     val recommender = RecommendationEngine(genreDetector, moodDetector)
     val artGenerator = AlbumArtGenerator(genreDetector)
+
+    val recommender2 = RecommendationEngine2()
+    val futureCast = FutureCast(recommender2)
+    val discoveryRadar = DiscoveryRadar(recommender2)
+    val promptPlaylistBuilder = PromptPlaylistBuilder(genreDetector)
+    val crowdEnergyBuilder = CrowdEnergyBuilder()
 
     val audio = AudioEngine(context, scope, autoMixPool = { library.data.value.tracks })
     val themeStore = ThemeStateStore()
