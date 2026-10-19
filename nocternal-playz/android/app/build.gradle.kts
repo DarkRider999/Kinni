@@ -43,6 +43,7 @@ dependencies {
     implementation(project(":theme_manager"))
     implementation(project(":playlists"))
     implementation(project(":ai_assistant"))
+    implementation(project(":ai_intelligence"))
     implementation(project(":auto_mix_engine"))
     implementation(project(":lyrics_engine"))
     implementation(project(":backup_manager"))

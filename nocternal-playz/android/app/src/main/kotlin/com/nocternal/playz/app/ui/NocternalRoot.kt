@@ -130,7 +130,13 @@ fun NocternalRoot(c: AppContainer, actions: ActionExecutor) {
                             )
                         }
                         composable(Tab.LIGHTING.route) { LightingScreen(c, spectrum, playback.isPlaying) }
-                        composable(Tab.SETTINGS.route) { SettingsScreen(c) }
+                        composable(Tab.SETTINGS.route) { SettingsScreen(c, onOpenAnalytics = { nav.navigate("analytics") }) }
+                        composable("analytics") {
+                            AnalyticsScreen(
+                                history = library.history, tracks = library.tracks, privateMode = settings.privateMode,
+                                onBack = { nav.popBackStack() },
+                            )
+                        }
                     }
                     // AI voice orb, always one tap away.
                     if (route != Tab.PLAYER.route && route != "eq") {
