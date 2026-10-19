@@ -47,6 +47,7 @@ enum class BackgroundStyle(val label: String) {
 enum class Mood(val label: String) {
     CALM("Calm"), ENERGETIC("Energetic"), HAPPY("Happy"), MELANCHOLIC("Melancholic"),
     ROMANTIC("Romantic"), FOCUSED("Focused"), SPIRITUAL("Spiritual"), SLEEPY("Sleepy"), PARTY("Party"),
+    AGGRESSIVE("Aggressive"), DARK("Dark"), UPLIFTING("Uplifting"),
 }
 
 @Serializable

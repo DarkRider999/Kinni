@@ -29,6 +29,7 @@ include(
     ":theme_manager",
     ":playlists",
     ":ai_assistant",
+    ":ai_intelligence",
     ":auto_mix_engine",
     ":lyrics_engine",
     ":backup_manager",

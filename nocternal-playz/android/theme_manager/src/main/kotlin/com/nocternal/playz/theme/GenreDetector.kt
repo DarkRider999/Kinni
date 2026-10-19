@@ -51,6 +51,9 @@ class GenreDetector(private val genres: List<GenreDefinition> = GenreCatalog.all
         Mood.SPIRITUAL -> GenreCatalog.DEVOTIONAL
         Mood.SLEEPY -> GenreCatalog.SLEEP
         Mood.PARTY -> GenreCatalog.PARTY_MIX
+        Mood.AGGRESSIVE -> GenreCatalog.TECHNO
+        Mood.DARK -> GenreCatalog.NIGHT_DRIVE
+        Mood.UPLIFTING -> GenreCatalog.WORKOUT
     }
 
     /** Maps broad store/ID3 genres onto the built-in genres. */
