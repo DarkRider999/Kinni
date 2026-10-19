@@ -125,9 +125,11 @@ fun NocternalRoot(c: AppContainer, actions: ActionExecutor) {
                                     toggleAutoMix = { c.audio.setAutoMix(!playback.autoMix) }, setAutoMixEnergyRise = c.audio::setAutoMixEnergyRise,
                                     openAssistant = { assistantOpen = true },
                                     collapse = { nav.popBackStack() },
+                                    openDjDeck = { nav.navigate("dj_deck") },
                                 ),
                             )
                         }
+                        composable("dj_deck") { DjDeckScreen(c, onOpenPlayer = { nav.navigate(Tab.PLAYER.route) }, onBack = { nav.popBackStack() }) }
                         composable("eq") {
                             EqFxScreen(
                                 fx = fx, presets = EqPresets.all, onChange = c.audio::updateFx, onPreset = c.audio::applyPreset,

@@ -15,6 +15,7 @@ import com.nocternal.playz.app.voice.MusicRecognizer
 import com.nocternal.playz.app.voice.VoiceInput
 import com.nocternal.playz.audio.AudioEngine
 import com.nocternal.playz.audio.PlaybackEvent
+import com.nocternal.playz.automix.AutoSetBuilder
 import com.nocternal.playz.backup.BackupManager
 import com.nocternal.playz.library.LibraryRepository
 import com.nocternal.playz.lighting.LightingEngineImpl
@@ -86,6 +87,8 @@ class AppContainer(val context: Context) {
     val crowdEnergyBuilder = CrowdEnergyBuilder()
 
     val audio = AudioEngine(context, scope, autoMixPool = { library.data.value.tracks })
+    val djSessionRecorder = DjSessionRecorder(audio, scope)
+    val autoSetBuilder = AutoSetBuilder()
     val themeStore = ThemeStateStore()
     val lighting = LightingEngineImpl()
     val themeSwitcher = ThemeSwitcher(ThemeApplier(themeStore, lighting, audio, themeStore), { settingsRepo.settings.value }, genreDetector)
