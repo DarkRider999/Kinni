@@ -1,8 +1,10 @@
 package com.nocternal.playz.app.ui
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,6 +44,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nocternal.playz.ai.RecommendationEngine
 import com.nocternal.playz.app.ActionExecutor
 import com.nocternal.playz.app.AppContainer
 import com.nocternal.playz.designsystem.GlowCard
@@ -54,6 +57,7 @@ import com.nocternal.playz.designsystem.toColor
 import com.nocternal.playz.library.ScanPhase
 import com.nocternal.playz.model.AudioSource
 import com.nocternal.playz.model.GenreDefinition
+import com.nocternal.playz.model.Mood
 import com.nocternal.playz.model.Track
 import com.nocternal.playz.playlists.FolderTree
 import com.nocternal.playz.playlists.HistoryTimeline
@@ -71,7 +75,7 @@ import kotlinx.coroutines.launch
  * Radio Hub — with Continue Listening, AI ideas and genre tiles on the Local panel.
  */
 @Composable
-fun HomeScreen(c: AppContainer, actions: ActionExecutor, onOpenPlayer: () -> Unit, onOpenFree: () -> Unit, onOpenDiscover: () -> Unit) {
+fun HomeScreen(c: AppContainer, actions: ActionExecutor, onOpenPlayer: () -> Unit, onOpenFree: () -> Unit, onOpenDiscover: () -> Unit, onOpenSmartCollections: () -> Unit) {
     val p = Neon.palette
     val pager = rememberPagerState { AudioSource.entries.size }
     val scope = rememberCoroutineScope()
@@ -101,7 +105,7 @@ fun HomeScreen(c: AppContainer, actions: ActionExecutor, onOpenPlayer: () -> Uni
             // Edge lighting between panels: a glow line that brightens while swiping.
             Box(Modifier.fillMaxSize()) {
                 when (AudioSource.entries[page]) {
-                    AudioSource.LOCAL -> LocalPanel(c, actions, onOpenPlayer, onOpenFree, onOpenDiscover, onGenreRadio = { g -> radioGenre = g; scope.launch { pager.animateScrollToPage(AudioSource.RADIO.ordinal) } })
+                    AudioSource.LOCAL -> LocalPanel(c, actions, onOpenPlayer, onOpenFree, onOpenDiscover, onOpenSmartCollections, onGenreRadio = { g -> radioGenre = g; scope.launch { pager.animateScrollToPage(AudioSource.RADIO.ordinal) } })
                     AudioSource.YOUTUBE -> if (youtubeOpened) YouTubeMusicPanel(
                         online = online,
                         searchQuery = search?.takeIf { it.first == AudioSource.YOUTUBE }?.second,
@@ -145,7 +149,7 @@ private fun SourceTabs(position: Float, onSelect: (Int) -> Unit) {
 private enum class LibraryTab { SONGS, PLAYLISTS, FOLDERS, HISTORY }
 
 @Composable
-private fun LocalPanel(c: AppContainer, actions: ActionExecutor, onOpenPlayer: () -> Unit, onOpenFree: () -> Unit, onOpenDiscover: () -> Unit, onGenreRadio: (String) -> Unit) {
+private fun LocalPanel(c: AppContainer, actions: ActionExecutor, onOpenPlayer: () -> Unit, onOpenFree: () -> Unit, onOpenDiscover: () -> Unit, onOpenSmartCollections: () -> Unit, onGenreRadio: (String) -> Unit) {
     val p = Neon.palette
     val lib by c.library.data.collectAsStateWithLifecycle()
     val scan by c.library.scan.collectAsStateWithLifecycle()
@@ -158,8 +162,14 @@ private fun LocalPanel(c: AppContainer, actions: ActionExecutor, onOpenPlayer: (
     val recent = remember(snapshot) { c.smartPlaylists.recentlyPlayed(snapshot, 15).trackIds.mapNotNull(c.library::track) }
     val genrePlaylists = remember(snapshot) { c.smartPlaylists.genrePlaylists(snapshot).associateBy { it.genreId } }
     val ideas = remember(playback.track?.id) { c.recommender.ideasFor(c.hour(), playback.track) }
+    val onThisDay = remember(lib.history) { if (lib.history.isEmpty()) null else c.listeningMemories.onThisDay(lib.tracks, lib.history) }
 
     fun play(list: List<Track>, index: Int) { c.audio.playQueue(list, index); onOpenPlayer() }
+    fun playMood(mood: Mood, bpmRange: ClosedFloatingPointRange<Float>? = null) {
+        val criteria = RecommendationEngine.Criteria(mood = mood, hourOfDay = c.hour(), bpmMin = bpmRange?.start, bpmMax = bpmRange?.endInclusive)
+        val pl = c.recommender.suggest(actions.context(), criteria)
+        if (pl.trackIds.isNotEmpty()) { actions.playPlaylist(pl); onOpenPlayer() }
+    }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (scan.phase == ScanPhase.SCANNING || scan.phase == ScanPhase.ANALYZING) item {
@@ -172,6 +182,37 @@ private fun LocalPanel(c: AppContainer, actions: ActionExecutor, onOpenPlayer: (
             item {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     items(recent, key = { it.id }) { t -> TrackCard(c, t) { play(recent, recent.indexOf(t)) } }
+                }
+            }
+        }
+
+        item { SectionTitle("Quick mood") }
+        item { QuickMoodLauncher(onTap = { m -> playMood(m) }, onCustomize = { m, bpm -> playMood(m, bpm) }) }
+
+        onThisDay?.takeIf { it.years.isNotEmpty() }?.let { memory ->
+            item { SectionTitle("On this day") }
+            item {
+                GlowCard(Modifier.fillMaxWidth()) {
+                    memory.years.take(3).forEach { y ->
+                        Text("${y.year} · ${y.tracks.size} songs", color = p.muted, style = MaterialTheme.typography.labelSmall)
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(y.tracks.take(8), key = { "otd_" + y.year + "_" + it.id }) { t -> TrackCard(c, t) { play(y.tracks, y.tracks.indexOf(t)) } }
+                        }
+                    }
+                    if (memory.frequentArtists.isNotEmpty()) Text("Often around this time: ${memory.frequentArtists.joinToString(", ")}", color = p.muted, style = MaterialTheme.typography.labelSmall)
+                }
+            }
+        }
+
+        item {
+            GlowCard(Modifier.fillMaxWidth(), glowColor = p.secondary.copy(alpha = 0.5f), onClick = onOpenSmartCollections) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("✨", color = p.accent, style = MaterialTheme.typography.headlineSmall)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Smart Collections", color = p.onBackground, style = MaterialTheme.typography.titleMedium)
+                        Text("Hidden Gems, Night Drive, Forgotten Favourites and more — built from your library", color = p.muted, style = MaterialTheme.typography.labelSmall)
+                    }
                 }
             }
         }
@@ -323,5 +364,45 @@ fun TrackRow(c: AppContainer, t: Track, favorite: Boolean, onClick: () -> Unit) 
             Text(listOfNotNull(t.artist, t.bpm?.let { "${it.toInt()} BPM" }, t.camelotKey).joinToString(" · "), color = p.muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
         }
         if (favorite) Text("♥", color = p.secondary)
+    }
+}
+
+private data class MoodButton(val mood: Mood, val label: String, val emoji: String)
+private val MOOD_BUTTONS = listOf(
+    MoodButton(Mood.HAPPY, "Happy", "😊"), MoodButton(Mood.CALM, "Chill", "😌"), MoodButton(Mood.FOCUSED, "Focus", "🎯"),
+    MoodButton(Mood.PARTY, "Party", "🎉"), MoodButton(Mood.DARK, "Dark", "🌑"), MoodButton(Mood.ROMANTIC, "Romantic", "💖"),
+)
+private val ENERGY_RANGES = listOf("Chill" to (60f..100f), "Balanced" to (100f..130f), "High energy" to (130f..180f))
+
+/** Quick Mood Launcher (spec: Home Screen Improvements): tap generates a mood queue instantly; long-press customizes the BPM range before generating. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun QuickMoodLauncher(onTap: (Mood) -> Unit, onCustomize: (Mood, ClosedFloatingPointRange<Float>) -> Unit) {
+    val p = Neon.palette
+    var customizing by remember { mutableStateOf<Mood?>(null) }
+    Column {
+        MOOD_BUTTONS.chunked(3).forEach { row ->
+            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { b ->
+                    Box(
+                        Modifier.weight(1f).aspectRatio(1.4f).neonGlow(p.accent, p.glow * 0.35f, corner = 16.dp)
+                            .clip(RoundedCornerShape(16.dp)).background(p.surface)
+                            .combinedClickable(onClick = { onTap(b.mood) }, onLongClick = { customizing = b.mood }),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(b.emoji, style = MaterialTheme.typography.headlineSmall)
+                            Text(b.label, color = p.onBackground, style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+        customizing?.let { mood ->
+            Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ENERGY_RANGES.forEach { (label, range) -> NeonChip(label) { onCustomize(mood, range); customizing = null } }
+            }
+        }
     }
 }

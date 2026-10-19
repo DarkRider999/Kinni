@@ -36,6 +36,8 @@ import com.nocternal.playz.designsystem.SectionTitle
 import com.nocternal.playz.intelligence.AnalyticsEngine
 import com.nocternal.playz.intelligence.ArtistTotal
 import com.nocternal.playz.intelligence.HeatmapCell
+import com.nocternal.playz.intelligence.MusicDna
+import com.nocternal.playz.intelligence.Share
 import com.nocternal.playz.model.PlayEvent
 import com.nocternal.playz.model.Track
 import com.nocternal.playz.theme.GenreCatalog
@@ -49,7 +51,7 @@ import java.util.concurrent.TimeUnit
  * plays are never recorded in the first place).
  */
 @Composable
-fun AnalyticsScreen(history: List<PlayEvent>, tracks: List<Track>, privateMode: Boolean, onBack: () -> Unit) {
+fun AnalyticsScreen(history: List<PlayEvent>, tracks: List<Track>, privateMode: Boolean, musicDna: MusicDna?, onBack: () -> Unit) {
     val p = Neon.palette
     Column(Modifier.fillMaxSize().statusBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(16.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -100,6 +102,46 @@ fun AnalyticsScreen(history: List<PlayEvent>, tracks: List<Track>, privateMode: 
             if (topArtists.isNotEmpty()) {
                 item { SectionTitle("Top artists") }
                 items(topArtists) { ArtistRow(it) }
+            }
+            if (musicDna != null) {
+                item { SectionTitle("Your Music DNA") }
+                item { PersonalityCard(musicDna.personality) }
+                if (musicDna.genreShares.isNotEmpty()) { item { Text("Genre DNA", color = p.muted, style = MaterialTheme.typography.labelSmall) }; item { ShareBars(musicDna.genreShares) } }
+                if (musicDna.moodShares.isNotEmpty()) { item { Text("Mood DNA", color = p.muted, style = MaterialTheme.typography.labelSmall) }; item { ShareBars(musicDna.moodShares) } }
+                item { Text("Energy by time of day", color = p.muted, style = MaterialTheme.typography.labelSmall) }
+                item {
+                    ShareBars(
+                        listOf(
+                            Share("Morning", musicDna.energyByPartOfDay.morning), Share("Afternoon", musicDna.energyByPartOfDay.afternoon),
+                            Share("Evening", musicDna.energyByPartOfDay.evening), Share("Late night", musicDna.energyByPartOfDay.lateNight),
+                        ),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PersonalityCard(personality: com.nocternal.playz.intelligence.ListeningPersonality) {
+    val p = Neon.palette
+    GlowCard(Modifier.fillMaxWidth()) {
+        Text(personality.label, style = MaterialTheme.typography.titleMedium, color = p.accent)
+        Text(personality.description, color = p.muted, style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+@Composable
+private fun ShareBars(shares: List<Share>) {
+    val p = Neon.palette
+    GlowCard(Modifier.fillMaxWidth()) {
+        shares.forEach { s ->
+            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(s.label, color = p.onBackground, style = MaterialTheme.typography.bodySmall, modifier = Modifier.width(96.dp), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Box(Modifier.weight(1f).height(10.dp).clip(RoundedCornerShape(5.dp)).background(p.muted.copy(alpha = 0.15f))) {
+                    Box(Modifier.fillMaxWidth(s.fraction.coerceIn(0.02f, 1f)).height(10.dp).clip(RoundedCornerShape(5.dp)).background(p.accent))
+                }
+                Text(" ${(s.fraction * 100).toInt()}%", color = p.muted, style = MaterialTheme.typography.labelSmall)
             }
         }
     }

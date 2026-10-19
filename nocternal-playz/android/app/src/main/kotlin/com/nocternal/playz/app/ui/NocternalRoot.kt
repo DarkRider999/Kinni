@@ -104,11 +104,12 @@ fun NocternalRoot(c: AppContainer, actions: ActionExecutor) {
                         composable(Tab.HOME.route) {
                             HomeScreen(
                                 c, actions, onOpenPlayer = { nav.navigate(Tab.PLAYER.route) }, onOpenFree = { nav.navigate("free") },
-                                onOpenDiscover = { nav.navigate("discover") },
+                                onOpenDiscover = { nav.navigate("discover") }, onOpenSmartCollections = { nav.navigate("smart_collections") },
                             )
                         }
                         composable("free") { FreeMusicScreen(c, onOpenPlayer = { nav.navigate(Tab.PLAYER.route) }, onBack = { nav.popBackStack() }) }
                         composable("discover") { DiscoverScreen(c, onOpenPlayer = { nav.navigate(Tab.PLAYER.route) }, onBack = { nav.popBackStack() }) }
+                        composable("smart_collections") { SmartCollectionsScreen(c, onOpenPlayer = { nav.navigate(Tab.PLAYER.route) }, onBack = { nav.popBackStack() }) }
                         composable(Tab.PLAYER.route) {
                             val track = playback.track
                             PlayerScreen(
@@ -140,9 +141,13 @@ fun NocternalRoot(c: AppContainer, actions: ActionExecutor) {
                         composable(Tab.LIGHTING.route) { LightingScreen(c, spectrum, playback.isPlaying) }
                         composable(Tab.SETTINGS.route) { SettingsScreen(c, onOpenAnalytics = { nav.navigate("analytics") }) }
                         composable("analytics") {
+                            val hasDjSessions = remember(library.playlists) { library.playlists.any { it.id.startsWith("dj_session_") } }
+                            val musicDna = remember(library.history, library.tracks, hasDjSessions) {
+                                if (library.history.isEmpty()) null else c.musicDnaDashboard.build(library.tracks, library.history, hasDjSessions)
+                            }
                             AnalyticsScreen(
                                 history = library.history, tracks = library.tracks, privateMode = settings.privateMode,
-                                onBack = { nav.popBackStack() },
+                                musicDna = musicDna, onBack = { nav.popBackStack() },
                             )
                         }
                     }
