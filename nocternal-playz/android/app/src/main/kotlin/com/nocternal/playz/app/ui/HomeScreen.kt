@@ -61,6 +61,7 @@ import com.nocternal.playz.model.Mood
 import com.nocternal.playz.model.Track
 import com.nocternal.playz.playlists.FolderTree
 import com.nocternal.playz.playlists.HistoryTimeline
+import com.nocternal.playz.playlists.VinylCollection
 import com.nocternal.playz.theme.GenreCatalog
 import com.nocternal.playz.theme.ThemeEvent
 import com.nocternal.playz.theme.ThemePresets
@@ -146,7 +147,7 @@ private fun SourceTabs(position: Float, onSelect: (Int) -> Unit) {
     }
 }
 
-private enum class LibraryTab { SONGS, PLAYLISTS, FOLDERS, HISTORY }
+private enum class LibraryTab { SONGS, PLAYLISTS, FOLDERS, HISTORY, VINYL }
 
 @Composable
 private fun LocalPanel(c: AppContainer, actions: ActionExecutor, onOpenPlayer: () -> Unit, onOpenFree: () -> Unit, onOpenDiscover: () -> Unit, onOpenSmartCollections: () -> Unit, onOpenJourney: () -> Unit, onGenreRadio: (String) -> Unit) {
@@ -334,7 +335,34 @@ private fun LocalPanel(c: AppContainer, actions: ActionExecutor, onOpenPlayer: (
                     }
                 }
             }
+            LibraryTab.VINYL -> {
+                val records = remember(lib.tracks) { VinylCollection.build(lib.tracks) }
+                if (records.isEmpty()) item { Text("Your collection builds up as songs are scanned.", color = p.muted) }
+                items(records.chunked(2), key = { it.joinToString { r -> r.key } }) { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        row.forEach { record ->
+                            VinylSleeveTile(c, record, Modifier.weight(1f)) {
+                                play(record.trackIds.mapNotNull(c.library::track), 0)
+                            }
+                        }
+                        repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
+                    }
+                }
+            }
         }
+    }
+}
+
+@Composable
+private fun VinylSleeveTile(c: AppContainer, record: com.nocternal.playz.playlists.VinylRecord, modifier: Modifier, onClick: () -> Unit) {
+    val p = Neon.palette
+    val fallback = remember(record.key) { record.trackIds.firstNotNullOfOrNull(c.library::track)?.let(c.artGenerator::generate) }
+    Column(modifier.clickable(onClick = onClick)) {
+        Box(Modifier.fillMaxWidth().aspectRatio(1f).neonGlow(p.accent, p.glow * 0.4f, corner = 12.dp).clip(RoundedCornerShape(12.dp))) {
+            AlbumArt(record.artworkUri, fallback, Modifier.fillMaxSize())
+        }
+        Text(record.album, color = p.onBackground, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
+        Text("${record.artist} · ${record.trackIds.size} songs", color = p.muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
