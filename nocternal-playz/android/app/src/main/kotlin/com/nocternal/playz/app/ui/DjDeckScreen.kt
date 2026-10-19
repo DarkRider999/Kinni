@@ -1,5 +1,7 @@
 package com.nocternal.playz.app.ui
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -11,12 +13,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.FiberManualRecord
@@ -26,6 +31,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -39,12 +45,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nocternal.playz.app.AppContainer
 import com.nocternal.playz.automix.AutoMixPlanner
+import com.nocternal.playz.automix.Crossfade
 import com.nocternal.playz.automix.SetStep
+import com.nocternal.playz.automix.TransitionPlan
 import com.nocternal.playz.designsystem.GlowCard
 import com.nocternal.playz.designsystem.Neon
 import com.nocternal.playz.designsystem.NeonButton
 import com.nocternal.playz.designsystem.NeonChip
 import com.nocternal.playz.designsystem.SectionTitle
+import com.nocternal.playz.intelligence.SongDnaAnalyzer
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -107,12 +116,20 @@ fun DjDeckScreen(c: AppContainer, onOpenPlayer: () -> Unit, onBack: () -> Unit) 
                     }
                     if (set.isNotEmpty()) {
                         NeonButton("▶ Play this set") { c.audio.playQueue(set.map { it.track }, 0); onOpenPlayer() }
-                        set.forEach { step ->
-                            Text(
-                                step.track.title + (step.transitionIn?.let { " — ${it.explanation}" } ?: " (start)"),
-                                color = p.onBackground, style = MaterialTheme.typography.bodySmall, maxLines = 1,
-                            )
-                        }
+                    }
+                }
+            }
+            if (set.isNotEmpty()) {
+                item { SectionTitle("Set energy curve") }
+                item { SetEnergyCurveChart(set) }
+                item { SectionTitle("Planned set") }
+                items(set, key = { "step_" + it.track.id }) { step ->
+                    GlowCard(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                        Text(
+                            step.track.title + (step.transitionIn?.let { " — ${it.explanation}" } ?: " (start)"),
+                            color = p.onBackground, style = MaterialTheme.typography.bodySmall, maxLines = 1,
+                        )
+                        step.transitionIn?.let { TransitionPreview(it) }
                     }
                 }
             }
@@ -157,4 +174,49 @@ private fun CamelotCell(label: String, isCurrent: Boolean, isNext: Boolean, modi
             .border(1.dp, color, CircleShape),
         contentAlignment = Alignment.Center,
     ) { Text(label, color = color, style = MaterialTheme.typography.labelSmall) }
+}
+
+/** Set Energy Curve Visualizer (spec #8): the whole planned set's energy, Warm Up → Peak → Cool Down. */
+@Composable
+private fun SetEnergyCurveChart(set: List<SetStep>, modifier: Modifier = Modifier) {
+    val p = Neon.palette
+    val dna = remember { SongDnaAnalyzer() }
+    val curve = remember(set) { set.map { dna.analyze(it.track).energy } }
+    GlowCard(modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth().height(70.dp), horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.Bottom) {
+            curve.forEach { e ->
+                Box(
+                    Modifier.weight(1f).fillMaxWidth().height((70 * e.coerceIn(0.04f, 1f)).dp)
+                        .clip(RoundedCornerShape(3.dp)).background(p.accent),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Transition Preview (spec #10): a purely visual simulation of the planned crossfade's gain curve
+ * (the same [Crossfade.gains] math the auto-mixer uses live) — no playback, no audio engine call.
+ */
+@Composable
+private fun TransitionPreview(plan: TransitionPlan) {
+    val p = Neon.palette
+    var trigger by remember { mutableStateOf(0) }
+    var running by remember { mutableStateOf(false) }
+    val t = remember { Animatable(0f) }
+    LaunchedEffect(trigger) {
+        if (trigger == 0) return@LaunchedEffect
+        running = true
+        t.snapTo(0f)
+        t.animateTo(1f, animationSpec = tween(durationMillis = 2200))
+        running = false
+    }
+    val gains = Crossfade.gains(t.value, plan.curve)
+    Column(Modifier.padding(top = 4.dp)) {
+        Row(Modifier.fillMaxWidth().height(14.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+            Box(Modifier.weight(1f).fillMaxSize().clip(RoundedCornerShape(3.dp)).background(p.accent.copy(alpha = 0.15f + 0.85f * gains.outgoing)))
+            Box(Modifier.weight(1f).fillMaxSize().clip(RoundedCornerShape(3.dp)).background(p.secondary.copy(alpha = 0.15f + 0.85f * gains.incoming)))
+        }
+        NeonChip(if (running) "Previewing…" else "▶ Preview transition") { if (!running) trigger++ }
+    }
 }
