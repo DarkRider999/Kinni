@@ -164,6 +164,7 @@ private fun LocalPanel(c: AppContainer, actions: ActionExecutor, onOpenPlayer: (
     val genrePlaylists = remember(snapshot) { c.smartPlaylists.genrePlaylists(snapshot).associateBy { it.genreId } }
     val ideas = remember(playback.track?.id) { c.recommender.ideasFor(c.hour(), playback.track) }
     val onThisDay = remember(lib.history) { if (lib.history.isEmpty()) null else c.listeningMemories.onThisDay(lib.tracks, lib.history) }
+    val vinylRecords = remember(lib.tracks) { VinylCollection.build(lib.tracks) }
 
     fun play(list: List<Track>, index: Int) { c.audio.playQueue(list, index); onOpenPlayer() }
     fun playMood(mood: Mood, bpmRange: ClosedFloatingPointRange<Float>? = null) {
@@ -336,9 +337,8 @@ private fun LocalPanel(c: AppContainer, actions: ActionExecutor, onOpenPlayer: (
                 }
             }
             LibraryTab.VINYL -> {
-                val records = remember(lib.tracks) { VinylCollection.build(lib.tracks) }
-                if (records.isEmpty()) item { Text("Your collection builds up as songs are scanned.", color = p.muted) }
-                items(records.chunked(2), key = { it.joinToString { r -> r.key } }) { row ->
+                if (vinylRecords.isEmpty()) item { Text("Your collection builds up as songs are scanned.", color = p.muted) }
+                items(vinylRecords.chunked(2), key = { it.joinToString { r -> r.key } }) { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         row.forEach { record ->
                             VinylSleeveTile(c, record, Modifier.weight(1f)) {
