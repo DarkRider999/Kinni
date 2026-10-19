@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -21,6 +22,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -38,6 +42,7 @@ fun LyricBookmarksScreen(c: AppContainer, onOpenPlayer: () -> Unit, onBack: () -
     val p = Neon.palette
     val lib by c.library.data.collectAsStateWithLifecycle()
     val bookmarks = lib.lyricBookmarks.sortedByDescending { it.createdAtEpochMs }
+    var sharing by remember { mutableStateOf<LyricBookmark?>(null) }
 
     fun play(b: LyricBookmark) {
         val track = c.library.track(b.trackId) ?: return
@@ -66,6 +71,7 @@ fun LyricBookmarksScreen(c: AppContainer, onOpenPlayer: () -> Unit, onBack: () -
                             Text("“${b.text}”", color = p.onBackground, style = MaterialTheme.typography.bodyMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                             Text("${b.trackTitle} — ${b.trackArtist}", color = p.muted, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
+                        IconButton(onClick = { sharing = b }) { Icon(Icons.Filled.Share, "Share this line", tint = p.muted) }
                         IconButton(onClick = { c.library.removeLyricBookmark(b.trackId, b.lineStartMs) }) {
                             Icon(Icons.Filled.Delete, "Remove bookmark", tint = p.muted)
                         }
@@ -73,5 +79,9 @@ fun LyricBookmarksScreen(c: AppContainer, onOpenPlayer: () -> Unit, onBack: () -
                 }
             }
         }
+    }
+
+    sharing?.let { b ->
+        c.library.track(b.trackId)?.let { track -> LyricShareDialog(track, b.text, onDismiss = { sharing = null }) }
     }
 }
