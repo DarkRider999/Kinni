@@ -338,9 +338,14 @@ class AudioEngine(
                 ghostFx.faderLevel = g.incoming * sleep
             }
             Xfade.HANDOFF -> {
+                // The ghost keeps playing (audible) for as long as it takes the main player to finish seeking
+                // into the handoff position, so cutting over only once it's actually ready never leaves a gap.
+                // A long crossfade can mean seeking the main player many seconds into the track it just
+                // auto-advanced to, which is not instant — only the generous backstop below forces a cutover
+                // before it's ready, as a last resort if something has gone wrong with the seek.
                 val ready = player.playbackState == Player.STATE_READY && player.isPlaying
                 val elapsed = System.currentTimeMillis() - handoffStartedAt
-                if ((ready && elapsed >= HANDOFF_LEAD_MS) || elapsed > 2000) {
+                if ((ready && elapsed >= HANDOFF_LEAD_MS) || elapsed > HANDOFF_TIMEOUT_MS) {
                     fx.faderLevel = sleep
                     stopGhost()
                 } else {
@@ -408,5 +413,9 @@ class AudioEngine(
     private companion object {
         /** How far ahead of the ghost the main player seeks, to cover its seek/buffer latency. */
         const val HANDOFF_LEAD_MS = 150L
+        /** Backstop only: forces the cutover even if the main player never reports ready, so a stuck seek
+         * can't leave the ghost playing forever. The ghost stays audible the whole time, so this being high
+         * costs nothing in the normal case — it only matters when something has actually gone wrong. */
+        const val HANDOFF_TIMEOUT_MS = 6000L
     }
 }
