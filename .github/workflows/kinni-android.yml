@@ -40,7 +40,12 @@ jobs:
           java-version: "21"
 
       # Provides $ANDROID_HOME + sdkmanager and accepts licenses.
+      # packages:'' disables the action's default install of the obsolete `tools`
+      # package, which no longer exists and makes the step fail; we install exactly
+      # what we need in the next step instead.
       - uses: android-actions/setup-android@v3
+        with:
+          packages: ""
 
       # compileSdk 36 (Android 16) + build-tools are not always preinstalled on the runner.
       - name: Install required Android SDK packages
