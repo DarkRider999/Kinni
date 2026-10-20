@@ -839,6 +839,16 @@ abstract interface class MemoryRepository {
   Future<void> add(String familyId, Memory memory);
   Future<void> delete(String familyId, String memoryId);
 }
+
+/// Domain-level failure so the data layer never leaks Firebase exception types
+/// into presentation. Every repository I/O method surfaces failures as this.
+class MemoryFailure implements Exception {
+  const MemoryFailure(this.message, [this.cause]);
+  final String message;
+  final Object? cause;
+  @override
+  String toString() => 'MemoryFailure: $message';
+}
 ```
 
 ### 14.12 `lib/features/scrapbook/data/firestore_memory_repository.dart`
@@ -858,7 +868,8 @@ class FirestoreMemoryRepository implements MemoryRepository {
   String newId(String familyId) => _col(familyId).doc().id;
 
   Memory _fromDoc(DocumentSnapshot<Map<String, dynamic>> d) {
-    final m = d.data()!;
+    final m = d.data();
+    if (m == null) throw MemoryFailure('Memory ${d.id} has no data');
     return Memory(
       id: d.id,
       type: MemoryType.values.byName(m['type'] as String),
@@ -892,7 +903,9 @@ class FirestoreMemoryRepository implements MemoryRepository {
       .map((s) => s.docs.map(_fromDoc).toList());
 
   @override
-  Future<void> add(String familyId, Memory m) => _col(familyId).doc(m.id).set({
+  Future<void> add(String familyId, Memory m) async {
+    try {
+      await _col(familyId).doc(m.id).set({
         'type': m.type.name,
         'title': m.title,
         'caption': m.caption,
@@ -907,9 +920,19 @@ class FirestoreMemoryRepository implements MemoryRepository {
         'tags': m.tags,
         // ageBucket set by the onMemoryCreated Function (§7)
       });
+    } on FirebaseException catch (e) {
+      throw MemoryFailure('Could not save memory: ${e.message}', e);
+    }
+  }
 
   @override
-  Future<void> delete(String familyId, String id) => _col(familyId).doc(id).delete();
+  Future<void> delete(String familyId, String id) async {
+    try {
+      await _col(familyId).doc(id).delete();
+    } on FirebaseException catch (e) {
+      throw MemoryFailure('Could not delete memory: ${e.message}', e);
+    }
+  }
 }
 ```
 
