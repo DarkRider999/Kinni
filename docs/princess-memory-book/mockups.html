@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Princess Memory Book — Screen Mockups</title>
+<style>
+  :root{
+    --primaryPink:#FF7EB9; --softPink:#FFE3EF; --royalPurple:#9B5DE5; --lilac:#E4C1F9;
+    --gold:#F6C453; --skyBlue:#8EC5FF; --mint:#A0E7C4; --inkPlum:#4A2E52;
+    --bg:#fff6fb; --card:#ffffff;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){ --bg:#160b26; --card:#241437; --inkPlum:#F3E8FF;
+      --softPink:#2a1840; --lilac:#3a2358; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--inkPlum);
+    font-family:"Nunito",ui-rounded,"Segoe UI",system-ui,sans-serif;padding:28px 16px}
+  h1{font-weight:800;text-align:center;margin:0 0 4px;
+    background:linear-gradient(90deg,var(--royalPurple),var(--primaryPink));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .sub{text-align:center;opacity:.75;margin:0 0 28px}
+  .row{display:flex;flex-wrap:wrap;gap:24px;justify-content:center;align-items:flex-start}
+  .phone{width:300px;background:var(--card);border-radius:34px;overflow:hidden;
+    box-shadow:0 18px 50px rgba(155,93,229,.28);border:3px solid rgba(255,255,255,.5)}
+  .screen{height:600px;position:relative;overflow:hidden;
+    background:linear-gradient(180deg,var(--lilac),var(--softPink))}
+  .label{text-align:center;font-weight:700;margin:10px 0 0;color:var(--royalPurple)}
+  .bar{display:flex;align-items:center;gap:10px;padding:16px 16px 8px}
+  .avatar{width:42px;height:42px;border-radius:50%;background:var(--lilac);
+    display:grid;place-items:center;font-size:20px;border:2px solid var(--gold)}
+  .crown{margin-left:auto;font-size:20px}
+  .h{font-family:"Fredoka",sans-serif;font-weight:700}
+  .pad{padding:0 16px}
+  .quick{display:flex;gap:10px;padding:8px 16px}
+  .tile{flex:1;height:84px;border-radius:22px;background:var(--card);
+    display:grid;place-items:center;gap:6px;color:var(--royalPurple);
+    box-shadow:-4px -4px 8px rgba(255,255,255,.7),4px 4px 10px rgba(155,93,229,.25);font-size:13px}
+  .tile span{font-size:24px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px 16px}
+  .cell{aspect-ratio:1;border-radius:16px;background:linear-gradient(135deg,var(--primaryPink),var(--lilac));
+    display:grid;place-items:center;font-size:22px;color:#fff}
+  .stats{display:flex;justify-content:space-around;padding:10px 16px;font-weight:800;color:var(--royalPurple)}
+  .stats small{display:block;font-weight:600;opacity:.7}
+  .nav{position:absolute;bottom:0;left:0;right:0;height:60px;background:var(--card);
+    display:flex;justify-content:space-around;align-items:center;font-size:22px;
+    border-top:1px solid rgba(155,93,229,.15)}
+  .fab{position:absolute;bottom:40px;left:50%;transform:translateX(-50%);
+    width:56px;height:56px;border-radius:50%;background:var(--primaryPink);color:#fff;
+    display:grid;place-items:center;font-size:28px;box-shadow:0 8px 20px rgba(255,126,185,.6)}
+  /* scrapbook page */
+  .page{margin:16px;background:var(--card);border-radius:22px;padding:14px;height:460px;
+    box-shadow:0 10px 24px rgba(155,93,229,.2);position:relative}
+  .page h3{text-align:center;margin:4px 0 12px}
+  .photo{height:150px;border-radius:14px;background:linear-gradient(135deg,var(--skyBlue),var(--lilac));
+    display:grid;place-items:center;font-size:40px;color:#fff;margin-bottom:10px}
+  .note{background:var(--softPink);border-radius:12px;padding:10px;font-size:13px;position:relative}
+  .note:before{content:"🎀";position:absolute;top:-10px;right:10px;font-size:18px}
+  .voice{margin-top:12px;background:var(--mint);border-radius:999px;padding:8px 14px;
+    display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--inkPlum)}
+  .pagenav{position:absolute;bottom:12px;left:0;right:0;text-align:center;opacity:.7;font-size:13px}
+  /* milestones */
+  .road{padding:18px;position:relative}
+  .node{display:flex;align-items:center;gap:12px;margin:14px 0;font-weight:700}
+  .dot{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;flex:none;
+    background:var(--card);box-shadow:0 4px 10px rgba(155,93,229,.25)}
+  .done .dot{background:var(--mint)}
+  .locked{opacity:.55}
+  /* letter */
+  .letter{margin:16px;background:var(--card);border-radius:20px;padding:18px;height:460px;
+    box-shadow:0 10px 24px rgba(155,93,229,.2);font-size:14px;line-height:1.6}
+  .letter h3{font-family:"Fredoka";color:var(--royalPurple);margin:0 0 4px}
+  .letter .from{margin-top:14px;text-align:right;font-style:italic;color:var(--primaryPink)}
+  .spark{position:absolute;font-size:16px;animation:float 5s ease-in-out infinite;opacity:.5;pointer-events:none}
+  @keyframes float{0%{transform:translateY(0)}50%{transform:translateY(-14px)}100%{transform:translateY(0)}}
+  @media (prefers-reduced-motion: reduce){.spark{animation:none}}
+  footer{text-align:center;opacity:.6;margin-top:28px;font-size:13px}
+</style>
+</head>
+<body>
+  <h1>Princess Memory Book</h1>
+  <p class="sub">Screen mockups — fairy-tale palette · Material 3 · glass &amp; neumorphism (see SPEC.md §5–§6)</p>
+
+  <div class="row">
+    <!-- DASHBOARD -->
+    <div>
+      <div class="phone"><div class="screen">
+        <span class="spark" style="left:30px;top:120px">✨</span>
+        <span class="spark" style="right:40px;top:200px">💖</span>
+        <div class="bar">
+          <div class="avatar">👶</div>
+          <div><div class="h">Good morning, Mummy</div><small>Aarohi · 7 months</small></div>
+          <div class="crown">👑</div>
+        </div>
+        <div class="pad"><div class="h" style="margin:4px 0">Quick add</div></div>
+        <div class="quick">
+          <div class="tile"><span>📷</span>Photo</div>
+          <div class="tile"><span>🎥</span>Video</div>
+          <div class="tile"><span>🎙️</span>Voice</div>
+        </div>
+        <div class="pad"><div class="h" style="margin:10px 0 0">Recent memories</div></div>
+        <div class="grid">
+          <div class="cell">🌸</div><div class="cell">🍼</div><div class="cell">😴</div>
+          <div class="cell">🛁</div><div class="cell">🎈</div><div class="cell">👣</div>
+        </div>
+        <div class="stats">
+          <div>128<small>photos</small></div><div>14<small>videos</small></div>
+          <div>9<small>letters</small></div><div>6<small>milestones</small></div>
+        </div>
+        <div class="fab">＋</div>
+        <div class="nav"><span>🏠</span><span>📖</span><span style="opacity:.3">＋</span><span>📅</span><span>👤</span></div>
+      </div></div>
+      <p class="label">Dashboard</p>
+    </div>
+
+    <!-- SCRAPBOOK PAGE -->
+    <div>
+      <div class="phone"><div class="screen">
+        <div class="page">
+          <h3 class="h">❀ My First Bath ❀</h3>
+          <div class="photo">🛁</div>
+          <div class="note">So many giggles and bubbles today — you splashed water everywhere and laughed! 💕</div>
+          <div class="voice">🎙️ Daddy's voice memory · 0:14 ▸</div>
+          <div class="pagenav">◁ &nbsp; page 3 of 12 &nbsp; ▷</div>
+        </div>
+        <div class="nav"><span>🏠</span><span style="color:var(--primaryPink)">📖</span><span style="opacity:.3">＋</span><span>📅</span><span>👤</span></div>
+      </div></div>
+      <p class="label">Scrapbook page (3D page-turn)</p>
+    </div>
+
+    <!-- MILESTONES -->
+    <div>
+      <div class="phone"><div class="screen">
+        <div class="bar"><div class="h">Magical Milestones</div><div class="crown">🌙</div></div>
+        <div class="road">
+          <div class="node done"><div class="dot">⭐</div>First Smile · ✓ Mar 3</div>
+          <div class="node done"><div class="dot">🦷</div>First Tooth · ✓ Jun 12</div>
+          <div class="node"><div class="dot">🗣️</div>First Word · tap to log</div>
+          <div class="node locked"><div class="dot">🧸</div>First Crawl</div>
+          <div class="node locked"><div class="dot">👣</div>First Walk</div>
+          <div class="node locked"><div class="dot">🎂</div>First Birthday</div>
+        </div>
+        <div class="nav"><span>🏠</span><span>📖</span><span style="opacity:.3">＋</span><span>📅</span><span>👤</span></div>
+      </div></div>
+      <p class="label">Milestones roadmap</p>
+    </div>
+
+    <!-- LOVE LETTER -->
+    <div>
+      <div class="phone"><div class="screen">
+        <span class="spark" style="right:30px;top:80px">✨</span>
+        <div class="letter">
+          <h3>Dear My Princess,</h3>
+          <small style="opacity:.6">Before you were born · from Daddy</small>
+          <p>We haven't met you yet, but we already love you more than all the stars in the sky.
+          Your mummy and I whisper to you every night, counting the days until we can hold you…</p>
+          <div class="from">— With all my heart, Daddy 💛</div>
+        </div>
+        <div class="nav"><span>🏠</span><span>📖</span><span style="opacity:.3">＋</span><span>💌</span><span>👤</span></div>
+      </div></div>
+      <p class="label">Love Notes — "Dear My Princess"</p>
+    </div>
+  </div>
+
+  <footer>Static design mockup for review · the shipped UI is built in Flutter per SPEC.md §14.</footer>
+</body>
+</html>
