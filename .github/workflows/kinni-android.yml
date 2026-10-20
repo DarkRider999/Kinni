@@ -53,6 +53,18 @@ jobs:
 
       # No Gradle wrapper jar is committed at the repo root, so pin Gradle here
       # (matches gradle/wrapper/gradle-wrapper.properties) instead of calling ./gradlew.
+      # The app's debug signing config points at a repo-root debug.keystore that
+      # is (correctly) gitignored, so generate the standard Android debug keystore
+      # here with the alias/passwords the config expects (androiddebugkey / android).
+      - name: Generate debug keystore
+        run: |
+          keytool -genkeypair -v \
+            -keystore debug.keystore \
+            -storepass android -keypass android \
+            -alias androiddebugkey \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "9.3.1"
