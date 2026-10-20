@@ -17,5 +17,6 @@ local.properties
 .env
 debug.keystore
 
-# HarnessKit session scratch (local tooling, never committed)
+# Local plugin/tooling scratch (never committed)
 .harnesskit/
+.cto-toolkit/
