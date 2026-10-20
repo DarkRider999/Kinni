@@ -1003,6 +1003,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/widgets/floating_hearts.dart';
 import '../../../core/theme/palette.dart';
+import '../domain/auth_repository.dart';
 import 'auth_providers.dart';
 
 class LoginScreen extends ConsumerWidget {
@@ -1061,7 +1062,7 @@ class LoginScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 12),
                     TextButton(
-                      onPressed: () => Navigator.of(context).pushNamed('/email'),
+                      onPressed: () => _showEmailDialog(context, repo),
                       child: const Text('Use email instead'),
                     ),
                   ],
@@ -1071,6 +1072,83 @@ class LoginScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  void _showEmailDialog(BuildContext context, AuthRepository repo) =>
+      showDialog(context: context, builder: (_) => _EmailAuthDialog(repo: repo));
+}
+
+/// Inline email sign-in / register — avoids a dangling named route and
+/// completes the third auth path from §14.8.
+class _EmailAuthDialog extends StatefulWidget {
+  const _EmailAuthDialog({required this.repo});
+  final AuthRepository repo;
+  @override
+  State<_EmailAuthDialog> createState() => _EmailAuthDialogState();
+}
+
+class _EmailAuthDialogState extends State<_EmailAuthDialog> {
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  bool _register = false;
+  bool _busy = false;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    setState(() => _busy = true);
+    try {
+      _register
+          ? await widget.repo.registerWithEmail(_email.text.trim(), _password.text)
+          : await widget.repo.signInWithEmail(_email.text.trim(), _password.text);
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not sign in: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(_register ? 'Create account' : 'Sign in with email'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _email,
+            keyboardType: TextInputType.emailAddress,
+            decoration: const InputDecoration(labelText: 'Email'),
+          ),
+          TextField(
+            controller: _password,
+            obscureText: true,
+            decoration: const InputDecoration(labelText: 'Password'),
+          ),
+          TextButton(
+            onPressed: () => setState(() => _register = !_register),
+            child: Text(_register ? 'Have an account? Sign in' : 'New here? Create an account'),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+        FilledButton(
+          onPressed: _busy ? null : _submit,
+          child: _busy
+              ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2))
+              : Text(_register ? 'Create' : 'Sign in'),
+        ),
+      ],
     );
   }
 }
@@ -1238,6 +1316,7 @@ class _EmptyState extends StatelessWidget {
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/utils/date_keys.dart';
@@ -1331,7 +1410,9 @@ class _AddMemorySheetState extends ConsumerState<_AddMemorySheet> {
     setState(() => _saving = true);
     try {
       final now = DateTime.now();
-      final id = FirebaseStorage.instance.ref().child('tmp').child(now.microsecondsSinceEpoch.toString()).name;
+      // Stable Firestore-generated id, reused for the Storage path so media and doc share one id.
+      final id = FirebaseFirestore.instance
+          .collection('families').doc(familyId).collection('memories').doc().id;
       final ext = _picked!.name.split('.').last;
       final ref0 = FirebaseStorage.instance.ref('families/$familyId/memories/$id/original.$ext');
       await ref0.putData(await _picked!.readAsBytes());
