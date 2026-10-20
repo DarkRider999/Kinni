@@ -199,7 +199,7 @@ families/{familyId}
 families/{familyId}/memories/{memoryId}
   type: "photo"|"video"|"voice"|"note"
   title, caption, note
-  mediaPath, thumbPath, durationMs                         // Storage paths
+  mediaPath, thumbPath, durationMs                         // Storage download URLs (raw path layout: §3.3)
   takenAt(ts), createdAt(ts), createdBy(uid)
   location: { lat, lng, label }                            // optional
   ageBucket: "newborn"|"1m"|"3m"|"6m"|"1y"|"2y"|"3y"       // computed from babyDob
@@ -832,6 +832,8 @@ class Memory with _$Memory {
 import 'memory.dart';
 
 abstract interface class MemoryRepository {
+  /// Mint a new memory id without a round-trip, so callers never touch Firestore directly.
+  String newId(String familyId);
   Stream<List<Memory>> watchRecent(String familyId, {int limit = 20});
   Stream<List<Memory>> watchByDate(String familyId, String dateKey);
   Future<void> add(String familyId, Memory memory);
@@ -851,6 +853,9 @@ class FirestoreMemoryRepository implements MemoryRepository {
 
   CollectionReference<Map<String, dynamic>> _col(String familyId) =>
       _db.collection('families').doc(familyId).collection('memories');
+
+  @override
+  String newId(String familyId) => _col(familyId).doc().id;
 
   Memory _fromDoc(DocumentSnapshot<Map<String, dynamic>> d) {
     final m = d.data()!;
@@ -1316,7 +1321,6 @@ class _EmptyState extends StatelessWidget {
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/utils/date_keys.dart';
@@ -1409,26 +1413,26 @@ class _AddMemorySheetState extends ConsumerState<_AddMemorySheet> {
     }
     setState(() => _saving = true);
     try {
+      final repo = ref.read(memoryRepositoryProvider);
       final now = DateTime.now();
-      // Stable Firestore-generated id, reused for the Storage path so media and doc share one id.
-      final id = FirebaseFirestore.instance
-          .collection('families').doc(familyId).collection('memories').doc().id;
+      // Id minted through the repository (Clean Architecture boundary, §2.1) and reused for the Storage path.
+      final id = repo.newId(familyId);
       final ext = _picked!.name.split('.').last;
-      final ref0 = FirebaseStorage.instance.ref('families/$familyId/memories/$id/original.$ext');
-      await ref0.putData(await _picked!.readAsBytes());
-      final url = await ref0.getDownloadURL();
+      final storageRef = FirebaseStorage.instance.ref('families/$familyId/memories/$id/original.$ext');
+      await storageRef.putData(await _picked!.readAsBytes());
+      final url = await storageRef.getDownloadURL();
       final memory = Memory(
         id: id,
         type: MemoryType.photo,
         caption: _caption.text.trim().isEmpty ? null : _caption.text.trim(),
-        mediaPath: url,
-        thumbPath: url, // Function replaces with thumb.webp (§7)
+        mediaPath: url,   // download URL (see §3 note); Storage path layout is §3.3
+        thumbPath: url,   // Function swaps in the thumb.webp URL (§7)
         takenAt: now,
         createdAt: now,
         createdBy: uid,
         dateKey: dateKey(now),
       );
-      await ref.read(memoryRepositoryProvider).add(familyId, memory);
+      await repo.add(familyId, memory);
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
       if (mounted) {
