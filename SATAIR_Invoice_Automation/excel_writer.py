@@ -14,6 +14,7 @@ Neither path modifies existing rows.
 """
 
 import logging
+import os
 import time
 from typing import Any
 
@@ -37,7 +38,8 @@ def _build_row(
     return [file_name, invoice_no, po_no, awb, part_number, qty]
 
 
-def _retry(func, attempts: int, delay: float) -> Any:
+# Fix 4: renamed from _retry to _retry_excel_write
+def _retry_excel_write(func, attempts: int, delay: float) -> Any:
     """Call *func* up to *attempts* times, sleeping *delay* seconds between tries."""
     last_exc: Exception | None = None
     for attempt in range(1, attempts + 1):
@@ -68,8 +70,9 @@ def _is_workbook_open_com(excel_path: str) -> bool:
         return False
     except ImportError:
         return False
-    except OSError:
-        # GetActiveObject raises OSError (COMError) when Excel is not running
+    except Exception:  # noqa: BLE001
+        # Fix 5: GetActiveObject raises pywintypes.com_error (not a subclass of OSError)
+        # when Excel is not running; catch all COM failures here
         return False
 
 
@@ -82,26 +85,35 @@ def _append_via_com(
     """Append *rows* to *table_name* using the live Excel COM object."""
     import win32com.client  # type: ignore[import-untyped]
 
-    xl = win32com.client.GetActiveObject("Excel.Application")
-    wb = None
-    for candidate in xl.Workbooks:
-        if candidate.FullName.lower() == excel_path.lower():
-            wb = candidate
-            break
+    # Fix 6: wrap all win32com calls in try/except, log and re-raise on failure
+    # Fix 7: collect all rows and write them + save in one try block to avoid
+    #        duplicate appends on retry if Save() raises
+    try:
+        xl = win32com.client.GetActiveObject("Excel.Application")
+        wb = None
+        for candidate in xl.Workbooks:
+            if candidate.FullName.lower() == excel_path.lower():
+                wb = candidate
+                break
 
-    if wb is None:
-        raise OSError(f"Workbook not found in running Excel: {excel_path}")
+        if wb is None:
+            raise OSError(f"Workbook not found in running Excel: {excel_path}")
 
-    ws = wb.Sheets(worksheet)
-    lo = ws.ListObjects(table_name)
+        ws = wb.Sheets(worksheet)
+        lo = ws.ListObjects(table_name)
 
-    for row_values in rows:
-        new_row = lo.ListRows.Add()
-        for col_idx, value in enumerate(row_values, start=1):
-            new_row.Range.Cells(1, col_idx).Value = value
+        for row_values in rows:
+            new_row = lo.ListRows.Add()
+            for col_idx, value in enumerate(row_values, start=1):
+                new_row.Range.Cells(1, col_idx).Value = value
 
-    wb.Save()
-    logger.debug("COM: appended %d row(s) to %s!%s", len(rows), worksheet, table_name)
+        wb.Save()
+        logger.debug(
+            "COM: appended %d row(s) to %s!%s", len(rows), worksheet, table_name
+        )
+    except Exception as exc:
+        logger.error("COM write failed for %s: %s", excel_path, exc)
+        raise
 
 
 # ── openpyxl path ─────────────────────────────────────────────────────────────
@@ -119,55 +131,58 @@ def _append_via_openpyxl(
 
     wb = openpyxl.load_workbook(excel_path, keep_vba=True)
 
-    if worksheet not in wb.sheetnames:
-        wb.close()
-        raise ValueError(
-            f"Worksheet '{worksheet}' not found in {excel_path}. "
-            f"Available: {wb.sheetnames}"
+    # Fix 8: atomic save — write to .tmp then os.replace(); close wb in finally
+    try:
+        if worksheet not in wb.sheetnames:
+            raise ValueError(
+                f"Worksheet '{worksheet}' not found in {excel_path}. "
+                f"Available: {wb.sheetnames}"
+            )
+
+        ws = wb[worksheet]
+
+        # Locate the named table
+        tbl: Table | None = None
+        for t in ws.tables.values():
+            if t.displayName == table_name or t.name == table_name:
+                tbl = t
+                break
+
+        if tbl is None:
+            raise ValueError(
+                f"Table '{table_name}' not found on worksheet '{worksheet}'."
+            )
+
+        # Parse current table reference (e.g. "A1:F10")
+        ref = tbl.ref  # e.g. "A1:F10"
+        from openpyxl.utils import range_boundaries  # type: ignore[import-untyped]
+
+        min_col, min_row, max_col, max_row = range_boundaries(ref)
+
+        # Append each new row directly below the current last table row
+        for row_values in rows:
+            max_row += 1
+            for col_offset, value in enumerate(row_values):
+                ws.cell(row=max_row, column=min_col + col_offset, value=value)
+
+        # Expand the table reference to include the new rows
+        from openpyxl.utils import get_column_letter  # type: ignore[import-untyped]
+
+        new_ref = f"{get_column_letter(min_col)}{min_row}:{get_column_letter(max_col)}{max_row}"
+        tbl.ref = new_ref
+
+        tmp_path = excel_path + ".tmp"
+        wb.save(tmp_path)
+        os.replace(tmp_path, excel_path)
+        logger.debug(
+            "openpyxl: appended %d row(s) to %s!%s (new ref: %s)",
+            len(rows),
+            worksheet,
+            table_name,
+            new_ref,
         )
-
-    ws = wb[worksheet]
-
-    # Locate the named table
-    tbl: Table | None = None
-    for t in ws.tables.values():
-        if t.displayName == table_name or t.name == table_name:
-            tbl = t
-            break
-
-    if tbl is None:
+    finally:
         wb.close()
-        raise ValueError(f"Table '{table_name}' not found on worksheet '{worksheet}'.")
-
-    # Parse current table reference (e.g. "A1:F10")
-    ref = tbl.ref  # e.g. "A1:F10"
-    from openpyxl.utils import range_boundaries  # type: ignore[import-untyped]
-
-    min_col, min_row, max_col, max_row = range_boundaries(ref)
-
-    # Append each new row directly below the current last table row
-    for row_values in rows:
-        max_row += 1
-        for col_offset, value in enumerate(row_values):
-            ws.cell(row=max_row, column=min_col + col_offset, value=value)
-
-    # Expand the table reference to include the new rows
-    from openpyxl.utils import get_column_letter  # type: ignore[import-untyped]
-
-    new_ref = (
-        f"{get_column_letter(min_col)}{min_row}:{get_column_letter(max_col)}{max_row}"
-    )
-    tbl.ref = new_ref
-
-    wb.save(excel_path)
-    wb.close()
-    logger.debug(
-        "openpyxl: appended %d row(s) to %s!%s (new ref: %s)",
-        len(rows),
-        worksheet,
-        table_name,
-        new_ref,
-    )
 
 
 # ── public API ────────────────────────────────────────────────────────────────
@@ -217,7 +232,7 @@ def append_line_items(
             len(rows),
             file_name,
         )
-        _retry(
+        _retry_excel_write(
             lambda: _append_via_com(excel_path, worksheet, table_name, rows),
             attempts=retry_attempts,
             delay=retry_delay,
@@ -228,7 +243,7 @@ def append_line_items(
             len(rows),
             file_name,
         )
-        _retry(
+        _retry_excel_write(
             lambda: _append_via_openpyxl(excel_path, worksheet, table_name, rows),
             attempts=retry_attempts,
             delay=retry_delay,

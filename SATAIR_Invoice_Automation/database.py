@@ -39,8 +39,18 @@ CREATE INDEX IF NOT EXISTS idx_dedup_key ON line_items(dedup_key);
 
 
 def _connect(db_path: str) -> sqlite3.Connection:
-    os.makedirs(os.path.dirname(db_path) or ".", exist_ok=True)
-    conn = sqlite3.connect(db_path, timeout=30, check_same_thread=False)
+    # Fix 9: wrap makedirs in try/except OSError, raise RuntimeError on failure
+    try:
+        os.makedirs(os.path.dirname(db_path) or ".", exist_ok=True)
+    except OSError as exc:
+        raise RuntimeError(
+            f"Cannot create database directory for {db_path}: {exc}"
+        ) from exc
+    # Fix 10: wrap sqlite3.connect in try/except OperationalError
+    try:
+        conn = sqlite3.connect(db_path, timeout=30, check_same_thread=False)
+    except sqlite3.OperationalError as exc:
+        raise RuntimeError(f"Cannot open database {db_path}: {exc}") from exc
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL")
     conn.execute("PRAGMA foreign_keys=ON")
@@ -48,8 +58,13 @@ def _connect(db_path: str) -> sqlite3.Connection:
 
 
 def init_db(db_path: str) -> None:
-    with _connect(db_path) as conn:
-        conn.executescript(SCHEMA)
+    # Fix 11: close connection in finally block
+    conn = _connect(db_path)
+    try:
+        with conn:
+            conn.executescript(SCHEMA)
+    finally:
+        conn.close()
     logger.debug("Database initialised at %s", db_path)
 
 
@@ -62,47 +77,66 @@ def compute_sha256(file_path: str) -> str:
 
 
 def is_file_processed(db_path: str, sha256: str) -> bool:
-    with _connect(db_path) as conn:
+    # Fix 11: close connection in finally block
+    conn = _connect(db_path)
+    try:
         row = conn.execute(
             "SELECT status FROM processed_files WHERE sha256 = ?", (sha256,)
         ).fetchone()
+    finally:
+        conn.close()
     return row is not None and row["status"] == "done"
 
 
 def register_file(db_path: str, file_path: str, sha256: str) -> None:
     file_name = os.path.basename(file_path)
-    with _connect(db_path) as conn:
-        conn.execute(
-            """
-            INSERT OR IGNORE INTO processed_files (file_name, file_path, sha256, status)
-            VALUES (?, ?, ?, 'pending')
-            """,
-            (file_name, file_path, sha256),
-        )
+    # Fix 11: close connection in finally block
+    conn = _connect(db_path)
+    try:
+        with conn:
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO processed_files (file_name, file_path, sha256, status)
+                VALUES (?, ?, ?, 'pending')
+                """,
+                (file_name, file_path, sha256),
+            )
+    finally:
+        conn.close()
 
 
 def mark_done(db_path: str, sha256: str, line_item_count: int) -> None:
-    with _connect(db_path) as conn:
-        conn.execute(
-            """
-            UPDATE processed_files
-            SET status='done', line_item_count=?, processed_at=datetime('now')
-            WHERE sha256=?
-            """,
-            (line_item_count, sha256),
-        )
+    # Fix 11: close connection in finally block
+    conn = _connect(db_path)
+    try:
+        with conn:
+            conn.execute(
+                """
+                UPDATE processed_files
+                SET status='done', line_item_count=?, processed_at=datetime('now')
+                WHERE sha256=?
+                """,
+                (line_item_count, sha256),
+            )
+    finally:
+        conn.close()
 
 
 def mark_error(db_path: str, sha256: str, error: str) -> None:
-    with _connect(db_path) as conn:
-        conn.execute(
-            """
-            UPDATE processed_files
-            SET status='error', error_message=?, processed_at=datetime('now')
-            WHERE sha256=?
-            """,
-            (error[:500], sha256),
-        )
+    # Fix 11: close connection in finally block
+    conn = _connect(db_path)
+    try:
+        with conn:
+            conn.execute(
+                """
+                UPDATE processed_files
+                SET status='error', error_message=?, processed_at=datetime('now')
+                WHERE sha256=?
+                """,
+                (error[:500], sha256),
+            )
+    finally:
+        conn.close()
 
 
 def build_dedup_key(
@@ -119,10 +153,14 @@ def build_dedup_key(
 
 
 def is_line_item_duplicate(db_path: str, dedup_key: str) -> bool:
-    with _connect(db_path) as conn:
+    # Fix 11: close connection in finally block
+    conn = _connect(db_path)
+    try:
         row = conn.execute(
             "SELECT id FROM line_items WHERE dedup_key=?", (dedup_key,)
         ).fetchone()
+    finally:
+        conn.close()
     return row is not None
 
 
@@ -136,8 +174,11 @@ def insert_line_item(
     qty: str,
     dedup_key: str,
 ) -> bool:
+    # Fix 11: close connection in finally block
+    # Fix 12: distinguish UNIQUE constraint from other IntegrityError types
+    conn = _connect(db_path)
     try:
-        with _connect(db_path) as conn:
+        with conn:
             conn.execute(
                 """
                 INSERT INTO line_items (file_sha256, invoice_no, po_no, awb, part_number, qty, dedup_key)
@@ -146,13 +187,21 @@ def insert_line_item(
                 (file_sha256, invoice_no, po_no, awb, part_number, qty, dedup_key),
             )
         return True
-    except sqlite3.IntegrityError:
-        return False
+    except sqlite3.IntegrityError as e:
+        if "UNIQUE" in str(e):
+            return False
+        raise
+    finally:
+        conn.close()
 
 
 def get_all_processed_paths(db_path: str) -> set:
-    with _connect(db_path) as conn:
+    # Fix 11: close connection in finally block
+    conn = _connect(db_path)
+    try:
         rows = conn.execute(
             "SELECT file_path FROM processed_files WHERE status='done'"
         ).fetchall()
+    finally:
+        conn.close()
     return {row["file_path"] for row in rows}

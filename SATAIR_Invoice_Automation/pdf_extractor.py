@@ -70,7 +70,8 @@ _RE_PART_NO = re.compile(r"^[A-Z0-9][A-Z0-9\-]{3,}$", re.IGNORECASE)
 _RE_QTY = re.compile(r"^\d+(\.\d+)?$")
 
 
-def _clean(s: str) -> str:
+# Fix 2: renamed from _clean to _sanitize_field
+def _sanitize_field(s: str) -> str:
     return s.strip() if s else ""
 
 
@@ -99,14 +100,15 @@ def extract_invoice_data(pdf_path: str) -> dict[str, Any] | None:
         }
         or None on failure.
     """
+    # Fix 3: catch all exceptions from PDF library, log type
     try:
         with pdfplumber.open(pdf_path) as pdf:
             pages_text: list[list[str]] = []
             for page in pdf.pages:
                 raw = page.extract_text() or ""
                 pages_text.append(raw.splitlines())
-    except (OSError, ValueError) as exc:
-        logger.error("Failed to open PDF %s: %s", pdf_path, exc)
+    except Exception as e:  # noqa: BLE001
+        logger.error("Failed to open PDF %s: %s: %s", pdf_path, type(e).__name__, e)
         return None
 
     all_lines: list[str] = []

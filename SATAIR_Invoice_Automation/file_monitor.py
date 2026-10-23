@@ -9,22 +9,24 @@ Processing pipeline per file:
     1. File stability check (configurable polls × delay)
     2. SHA-256 hash → duplicate detection
     3. PDF extraction
-    4. Excel append (via COM or openpyxl)
-    5. Per-line-item dedup-key insertion
+    4. Per-line-item dedup-key DB insertion  (Fix 16: DB before Excel)
+    5. Excel append (via COM or openpyxl)
     6. Database status update (done / error)
 """
 
 import logging
 import os
+import sqlite3
 import threading
 import time
 from typing import Any
 
+from watchdog.events import FileSystemEvent, FileSystemEventHandler
+from watchdog.observers.polling import PollingObserver
+
 import database
 import excel_writer
 import pdf_extractor
-from watchdog.events import FileSystemEvent, FileSystemEventHandler
-from watchdog.observers.polling import PollingObserver
 
 logger = logging.getLogger("satair.file_monitor")
 
@@ -94,11 +96,25 @@ def process_file(pdf_path: str, cfg: dict[str, Any]) -> bool:
         logger.info("Already processed (sha256 %s): %s", sha256[:8], pdf_path)
         return True
 
-    database.register_file(db_path, pdf_path, sha256)
+    # Fix 13: wrap register_file in try/except sqlite3.Error
+    try:
+        database.register_file(db_path, pdf_path, sha256)
+    except sqlite3.Error as exc:
+        logger.error("DB register failed for %s: %s", pdf_path, exc)
+        return False
+
     logger.info("Processing: %s  [sha256: %s…]", file_name, sha256[:8])
 
     # ── PDF extraction ────────────────────────────────────────────────────────
-    data = pdf_extractor.extract_invoice_data(pdf_path)
+    # Fix 14: wrap extract_invoice_data in try/except Exception
+    try:
+        data = pdf_extractor.extract_invoice_data(pdf_path)
+    except Exception as exc:  # noqa: BLE001
+        err = f"PDF extraction raised {type(exc).__name__}: {exc}"
+        logger.error("%s: %s", err, pdf_path)
+        database.mark_error(db_path, sha256, err)
+        return False
+
     if data is None:
         err = "PDF extraction returned None"
         logger.error("%s: %s", err, pdf_path)
@@ -133,10 +149,27 @@ def process_file(pdf_path: str, cfg: dict[str, Any]) -> bool:
         database.mark_done(db_path, sha256, 0)
         return True
 
+    # ── Fix 16 CRITICAL: DB insert FIRST, then Excel write ────────────────────
+    # Record line items in DB before touching Excel so that if DB fails we
+    # don't leave Excel dirty with rows that are not tracked.
+    for item in new_items:
+        database.insert_line_item(
+            db_path=db_path,
+            file_sha256=sha256,
+            invoice_no=invoice_no,
+            po_no=po_no,
+            awb=awb,
+            part_number=item.get("part_number", ""),
+            qty=item.get("qty", ""),
+            dedup_key=item["_dedup_key"],
+        )
+
     # ── Excel write ───────────────────────────────────────────────────────────
     retry_attempts: int = cfg.get("network_retry_attempts", 3)
     retry_delay: float = float(cfg.get("network_retry_delay_seconds", 10))
 
+    # Fix 15: catch Exception (not just OSError/PermissionError/ValueError) so
+    #         pywintypes.com_error is also handled
     try:
         written = excel_writer.append_line_items(
             excel_path=cfg["excel_tracker"],
@@ -152,24 +185,11 @@ def process_file(pdf_path: str, cfg: dict[str, Any]) -> bool:
             retry_attempts=retry_attempts,
             retry_delay=retry_delay,
         )
-    except (OSError, PermissionError, ValueError) as exc:
+    except Exception as exc:  # noqa: BLE001
         err = f"Excel write failed: {exc}"
         logger.error("%s for %s", err, pdf_path)
         database.mark_error(db_path, sha256, err)
         return False
-
-    # ── record line items in DB ───────────────────────────────────────────────
-    for item in new_items:
-        database.insert_line_item(
-            db_path=db_path,
-            file_sha256=sha256,
-            invoice_no=invoice_no,
-            po_no=po_no,
-            awb=awb,
-            part_number=item.get("part_number", ""),
-            qty=item.get("qty", ""),
-            dedup_key=item["_dedup_key"],
-        )
 
     database.mark_done(db_path, sha256, written)
     logger.info(
@@ -218,7 +238,13 @@ def reconciliation_scan(cfg: dict[str, Any]) -> int:
     folder: str = cfg["invoice_folder"]
     db_path: str = cfg["db_path"]
 
-    already_done = database.get_all_processed_paths(db_path)
+    # Fix 17: wrap get_all_processed_paths in try/except sqlite3.Error
+    try:
+        already_done = database.get_all_processed_paths(db_path)
+    except sqlite3.Error as exc:
+        logger.error("Reconciliation: cannot read processed paths from DB: %s", exc)
+        return 0
+
     count = 0
     try:
         for entry in os.scandir(folder):
@@ -305,7 +331,8 @@ class InvoiceMonitor:
         interval: float = float(self._cfg.get("reconciliation_interval_seconds", 300))
         while not self._stop_event.wait(timeout=interval):
             logger.debug("Periodic reconciliation triggered.")
+            # Fix 18: catch sqlite3.Error so the recon thread doesn't die silently
             try:
                 reconciliation_scan(self._cfg)
-            except (OSError, PermissionError, ValueError) as exc:
+            except (OSError, PermissionError, ValueError, sqlite3.Error) as exc:
                 logger.warning("Reconciliation loop error: %s", exc)

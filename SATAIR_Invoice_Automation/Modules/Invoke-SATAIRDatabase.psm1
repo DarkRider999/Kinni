@@ -19,22 +19,39 @@ function _EnsureCsv([string]$Path, [string[]]$Headers) {
     if (-not (Test-Path $Path)) {
         $dir = Split-Path $Path -Parent
         if ($dir -and -not (Test-Path $dir)) {
-            New-Item -ItemType Directory -Path $dir -Force | Out-Null
+            # Fix 21: -ErrorAction Stop so failures terminate loudly
+            try {
+                New-Item -ItemType Directory -Path $dir -Force -ErrorAction Stop | Out-Null
+            } catch {
+                throw "Failed to create directory '$dir': $_"
+            }
         }
-        $Headers -join ',' | Set-Content -Path $Path -Encoding UTF8
+        # Fix 21: -ErrorAction Stop so failures terminate loudly
+        try {
+            $Headers -join ',' | Set-Content -Path $Path -Encoding UTF8 -ErrorAction Stop
+        } catch {
+            throw "Failed to create CSV '$Path': $_"
+        }
     }
 }
 
 function _ReadCsv([string]$Path) {
     if (Test-Path $Path) {
-        return Import-Csv -Path $Path -Encoding UTF8
+        # Fix 22: wrap Import-Csv in try/catch; return empty array on error
+        try {
+            return Import-Csv -Path $Path -Encoding UTF8
+        } catch {
+            Write-Warning "Could not read CSV '$Path': $_"
+            return @()
+        }
     }
     return @()
 }
 
 # ── public functions ──────────────────────────────────────────────────────────
 
-function Initialize-Database {
+# Fix 20: renamed from Initialize-Database to Initialize-CsvTrackers
+function Initialize-CsvTrackers {
     <#
     .SYNOPSIS Creates the two tracking CSV files if they do not exist.
     #>
@@ -50,8 +67,14 @@ function Get-FileSha256 {
     #>
     param([Parameter(Mandatory)][string]$FilePath)
 
-    $hash = Get-FileHash -Path $FilePath -Algorithm SHA256
-    return $hash.Hash.ToLower()
+    # Fix 23: wrap Get-FileHash in try/catch; return $null and warn on error
+    try {
+        $hash = Get-FileHash -Path $FilePath -Algorithm SHA256
+        return $hash.Hash.ToLower()
+    } catch {
+        Write-Warning "Get-FileSha256: could not hash '$FilePath': $_"
+        return $null
+    }
 }
 
 function Test-FileProcessed {
@@ -95,7 +118,9 @@ function Register-File {
         error_msg     = ''
     }
     $rows += $newRow
-    $rows | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8
+    # Fix 24: atomic write — Export-Csv to .tmp then Move-Item to replace
+    $rows | Export-Csv -Path "$csvPath.tmp" -NoTypeInformation -Encoding UTF8
+    Move-Item -Path "$csvPath.tmp" -Destination $csvPath -Force
 }
 
 function Set-FileDone {
@@ -120,7 +145,9 @@ function Set-FileDone {
             $row.error_msg    = ''
         }
     }
-    $rows | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8
+    # Fix 24: atomic write — Export-Csv to .tmp then Move-Item to replace
+    $rows | Export-Csv -Path "$csvPath.tmp" -NoTypeInformation -Encoding UTF8
+    Move-Item -Path "$csvPath.tmp" -Destination $csvPath -Force
 }
 
 function Set-FileError {
@@ -144,7 +171,9 @@ function Set-FileError {
             $row.error_msg  = $ErrorMsg
         }
     }
-    $rows | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8
+    # Fix 24: atomic write — Export-Csv to .tmp then Move-Item to replace
+    $rows | Export-Csv -Path "$csvPath.tmp" -NoTypeInformation -Encoding UTF8
+    Move-Item -Path "$csvPath.tmp" -Destination $csvPath -Force
 }
 
 function Build-DedupKey {
@@ -207,7 +236,9 @@ function Add-LineItem {
         inserted_at = $now
     }
     $rows += $newRow
-    $rows | Export-Csv -Path $csvPath -NoTypeInformation -Encoding UTF8
+    # Fix 24: atomic write — Export-Csv to .tmp then Move-Item to replace
+    $rows | Export-Csv -Path "$csvPath.tmp" -NoTypeInformation -Encoding UTF8
+    Move-Item -Path "$csvPath.tmp" -Destination $csvPath -Force
 }
 
 function Get-AllProcessedPaths {
@@ -225,7 +256,7 @@ function Get-AllProcessedPaths {
 }
 
 Export-ModuleMember -Function @(
-    'Initialize-Database',
+    'Initialize-CsvTrackers',
     'Get-FileSha256',
     'Test-FileProcessed',
     'Register-File',
