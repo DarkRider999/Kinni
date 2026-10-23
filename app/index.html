@@ -1,0 +1,1523 @@
+<title>Jarvis AI</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap">
+
+<style>
+:root {
+  --bg: #04040f;
+  --bg-2: #080818;
+  --bg-card: #0f0f25;
+  --bg-hover: #14142e;
+  --fg: #e2e2ff;
+  --fg-muted: #7878a8;
+  --fg-dim: #40405a;
+  --accent: #5b8fff;
+  --accent-2: #a855f7;
+  --accent-3: #06d6a0;
+  --accent-glow: rgba(91,143,255,0.22);
+  --accent-glow-2: rgba(168,85,247,0.18);
+  --border: rgba(91,143,255,0.16);
+  --border-2: rgba(255,255,255,0.06);
+  --user-bubble: #162040;
+  --ai-bubble: #0d0d22;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f4f4ff;
+    --bg-2: #ebebff;
+    --bg-card: #ffffff;
+    --bg-hover: #f0f0ff;
+    --fg: #141430;
+    --fg-muted: #555588;
+    --fg-dim: #9090b0;
+    --accent: #3a6eee;
+    --accent-2: #8b2be2;
+    --accent-3: #059669;
+    --accent-glow: rgba(58,110,238,0.12);
+    --accent-glow-2: rgba(139,43,226,0.1);
+    --border: rgba(58,110,238,0.18);
+    --border-2: rgba(0,0,0,0.07);
+    --user-bubble: #e6edff;
+    --ai-bubble: #f8f8ff;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f4f4ff;
+  --bg-2: #ebebff;
+  --bg-card: #ffffff;
+  --bg-hover: #f0f0ff;
+  --fg: #141430;
+  --fg-muted: #555588;
+  --fg-dim: #9090b0;
+  --accent: #3a6eee;
+  --accent-2: #8b2be2;
+  --accent-3: #059669;
+  --accent-glow: rgba(58,110,238,0.12);
+  --accent-glow-2: rgba(139,43,226,0.1);
+  --border: rgba(58,110,238,0.18);
+  --border-2: rgba(0,0,0,0.07);
+  --user-bubble: #e6edff;
+  --ai-bubble: #f8f8ff;
+  color-scheme: light;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* ── Layout wrapper ── */
+.wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-left: max(20px, env(safe-area-inset-left, 0px));
+  padding-right: max(20px, env(safe-area-inset-right, 0px));
+}
+
+/* ── Canvas background ── */
+#canvas-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.55;
+}
+
+/* ── Navbar ── */
+nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(4,4,15,0.82);
+  backdrop-filter: blur(20px) saturate(1.6);
+  -webkit-backdrop-filter: blur(20px) saturate(1.6);
+  border-bottom: 1px solid var(--border-2);
+  padding-top: max(0px, env(safe-area-inset-top, 0px));
+}
+:root[data-theme="light"] nav { background: rgba(244,244,255,0.88); }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) nav { background: rgba(244,244,255,0.88); }
+}
+
+.nav-inner {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding-block: 14px;
+  padding-left: max(20px, env(safe-area-inset-left, 0px));
+  padding-right: max(20px, env(safe-area-inset-right, 0px));
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: var(--fg);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.logo-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 0 20px var(--accent-glow);
+}
+
+.nav-links {
+  display: flex;
+  gap: 4px;
+  list-style: none;
+  margin-left: auto;
+}
+.nav-links a {
+  color: var(--fg-muted);
+  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: color .18s, background .18s;
+}
+.nav-links a:hover {
+  color: var(--fg);
+  background: var(--bg-hover);
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.btn-sm {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  padding: 7px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all .18s;
+  font-family: inherit;
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--fg-muted);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { color: var(--fg); background: var(--bg-hover); }
+.btn-primary-sm {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff;
+  box-shadow: 0 4px 18px var(--accent-glow);
+}
+.btn-primary-sm:hover { opacity: 0.88; transform: translateY(-1px); }
+
+.theme-toggle {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .18s;
+}
+.theme-toggle:hover { color: var(--fg); background: var(--bg-hover); }
+
+@media (max-width: 600px) {
+  .nav-links { display: none; }
+}
+
+/* ── Hero ── */
+.hero {
+  position: relative;
+  z-index: 1;
+  padding-block: 80px 60px;
+  text-align: center;
+}
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 6px 16px;
+  font-size: 0.8125rem;
+  color: var(--accent);
+  font-weight: 500;
+  margin-bottom: 28px;
+}
+.badge-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-3);
+  animation: pulse-dot 2.5s infinite;
+}
+@keyframes pulse-dot {
+  0%,100% { box-shadow: 0 0 0 0 rgba(6,214,160,0.6); }
+  50% { box-shadow: 0 0 0 6px rgba(6,214,160,0); }
+}
+
+.hero h1 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(2.4rem, 7vw, 4.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+  margin-bottom: 20px;
+}
+.hero h1 .gradient-text {
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 60%, var(--accent-3) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.hero p {
+  font-size: clamp(1rem, 2.5vw, 1.2rem);
+  color: var(--fg-muted);
+  max-width: 580px;
+  margin: 0 auto 36px;
+  text-wrap: balance;
+}
+
+.hero-cta {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 60px;
+}
+
+.btn-lg {
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 14px 30px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff;
+  box-shadow: 0 8px 30px var(--accent-glow);
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 12px 40px var(--accent-glow); }
+.btn-outline {
+  background: var(--bg-card);
+  color: var(--fg);
+  border: 1px solid var(--border);
+}
+.btn-outline:hover { background: var(--bg-hover); transform: translateY(-2px); }
+
+/* ── Chat widget ── */
+.chat-container {
+  max-width: 700px;
+  margin: 0 auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.4), 0 0 0 1px var(--border-2);
+  position: relative;
+}
+.chat-container::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border-radius: 20px;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(91,143,255,0.3), rgba(168,85,247,0.2), transparent 60%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.chat-header {
+  background: linear-gradient(90deg, rgba(91,143,255,0.08), rgba(168,85,247,0.05));
+  border-bottom: 1px solid var(--border-2);
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.chat-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  box-shadow: 0 0 16px var(--accent-glow);
+}
+.chat-status { flex: 1; }
+.chat-status strong { display: block; font-size: 0.9rem; font-weight: 600; }
+.chat-status span {
+  font-size: 0.75rem;
+  color: var(--accent-3);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-3);
+  display: inline-block;
+  animation: pulse-dot 2s infinite;
+}
+
+.chat-messages {
+  height: 340px;
+  overflow-y: auto;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  scroll-behavior: smooth;
+}
+.chat-messages::-webkit-scrollbar { width: 4px; }
+.chat-messages::-webkit-scrollbar-track { background: transparent; }
+.chat-messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+.msg {
+  display: flex;
+  gap: 10px;
+  animation: msg-in .25s ease-out;
+}
+@keyframes msg-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.msg-user { flex-direction: row-reverse; }
+.msg-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  align-self: flex-end;
+}
+.msg-user .msg-avatar { background: linear-gradient(135deg, var(--accent), var(--accent-2)); }
+.msg-ai .msg-avatar { background: linear-gradient(135deg, var(--accent-2), var(--accent-3)); }
+
+.msg-bubble {
+  max-width: 80%;
+  padding: 10px 14px;
+  border-radius: 14px;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+.msg-user .msg-bubble {
+  background: var(--user-bubble);
+  border-bottom-right-radius: 4px;
+}
+.msg-ai .msg-bubble {
+  background: var(--ai-bubble);
+  border: 1px solid var(--border-2);
+  border-bottom-left-radius: 4px;
+}
+
+.typing-indicator {
+  display: flex;
+  gap: 5px;
+  padding: 12px 14px;
+  align-items: center;
+}
+.typing-indicator span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--fg-muted);
+  animation: bounce 1.2s infinite;
+}
+.typing-indicator span:nth-child(2) { animation-delay: .15s; }
+.typing-indicator span:nth-child(3) { animation-delay: .3s; }
+@keyframes bounce {
+  0%,80%,100% { transform: translateY(0); opacity: 0.4; }
+  40% { transform: translateY(-6px); opacity: 1; }
+}
+
+.chat-input-area {
+  border-top: 1px solid var(--border-2);
+  padding: 14px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.chat-input {
+  flex: 1;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 0.875rem;
+  padding: 10px 14px;
+  outline: none;
+  transition: border .2s, box-shadow .2s;
+}
+.chat-input::placeholder { color: var(--fg-dim); }
+.chat-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.send-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: all .18s;
+  flex-shrink: 0;
+  box-shadow: 0 4px 14px var(--accent-glow);
+}
+.send-btn:hover { transform: scale(1.08); }
+.send-btn:active { transform: scale(0.96); }
+
+.quick-prompts {
+  display: flex;
+  gap: 8px;
+  padding: 0 14px 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.quick-prompts::-webkit-scrollbar { display: none; }
+.quick-chip {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 100px;
+  padding: 5px 12px;
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: all .16s;
+  flex-shrink: 0;
+}
+.quick-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-glow); }
+
+/* ── Features ── */
+.section {
+  position: relative;
+  z-index: 1;
+  padding-block: 80px;
+}
+.section-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 12px;
+}
+.section-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(1.8rem, 4vw, 2.75rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-align: center;
+  text-wrap: balance;
+  margin-bottom: 14px;
+}
+.section-sub {
+  font-size: 1.05rem;
+  color: var(--fg-muted);
+  text-align: center;
+  max-width: 520px;
+  margin: 0 auto 52px;
+  text-wrap: balance;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+}
+.feature-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-2);
+  border-radius: 16px;
+  padding: 26px;
+  transition: border-color .2s, transform .2s, box-shadow .2s;
+  position: relative;
+  overflow: hidden;
+}
+.feature-card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0;
+  transition: opacity .2s;
+}
+.feature-card:hover {
+  border-color: var(--border);
+  transform: translateY(-3px);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.25);
+}
+.feature-card:hover::after { opacity: 1; }
+
+.feature-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  margin-bottom: 18px;
+}
+.icon-blue { background: rgba(91,143,255,0.15); }
+.icon-purple { background: rgba(168,85,247,0.15); }
+.icon-green { background: rgba(6,214,160,0.15); }
+.icon-orange { background: rgba(251,146,60,0.15); }
+.icon-pink { background: rgba(244,63,94,0.15); }
+.icon-teal { background: rgba(20,184,166,0.15); }
+
+.feature-card h3 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.feature-card p {
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+  line-height: 1.6;
+}
+
+/* ── Steps ── */
+.steps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 24px;
+  position: relative;
+}
+.step-card {
+  text-align: center;
+  padding: 32px 20px;
+  position: relative;
+}
+.step-num {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 auto 18px;
+  box-shadow: 0 8px 24px var(--accent-glow);
+}
+.step-card h3 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.step-card p { font-size: 0.875rem; color: var(--fg-muted); }
+
+/* ── Pricing ── */
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+  align-items: start;
+}
+.plan-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-2);
+  border-radius: 20px;
+  padding: 30px;
+  position: relative;
+}
+.plan-card.featured {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent), 0 16px 60px var(--accent-glow);
+}
+.plan-badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 4px 14px;
+  border-radius: 100px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.plan-name {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.plan-price {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.plan-price sup { font-size: 1.2rem; vertical-align: super; }
+.plan-price span { font-size: 1rem; font-weight: 400; color: var(--fg-muted); }
+.plan-desc { font-size: 0.85rem; color: var(--fg-muted); margin-bottom: 24px; }
+.plan-features { list-style: none; margin-bottom: 28px; display: flex; flex-direction: column; gap: 10px; }
+.plan-features li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.875rem;
+}
+.plan-features li::before {
+  content: '✓';
+  color: var(--accent-3);
+  font-weight: 700;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+.plan-features li.dim::before { content: '✗'; color: var(--fg-dim); }
+.plan-features li.dim { color: var(--fg-dim); }
+.btn-plan {
+  width: 100%;
+  padding: 13px;
+  border-radius: 12px;
+  border: none;
+  font-family: inherit;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .2s;
+}
+.btn-plan-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff;
+  box-shadow: 0 6px 20px var(--accent-glow);
+}
+.btn-plan-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+.btn-plan-outline {
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--border);
+}
+.btn-plan-outline:hover { background: var(--bg-hover); }
+
+/* ── Stats bar ── */
+.stats-bar {
+  background: var(--bg-card);
+  border-top: 1px solid var(--border-2);
+  border-bottom: 1px solid var(--border-2);
+  position: relative;
+  z-index: 1;
+}
+.stats-inner {
+  display: flex;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  gap: 0;
+  padding-block: 0;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-left: max(20px, env(safe-area-inset-left, 0px));
+  padding-right: max(20px, env(safe-area-inset-right, 0px));
+}
+.stat-item {
+  text-align: center;
+  padding: 28px 24px;
+  flex: 1;
+  min-width: 140px;
+}
+.stat-value {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.2;
+}
+.stat-label { font-size: 0.8rem; color: var(--fg-muted); margin-top: 4px; }
+
+/* ── Footer ── */
+footer {
+  position: relative;
+  z-index: 1;
+  background: var(--bg-2);
+  border-top: 1px solid var(--border-2);
+  padding-block: 48px 32px;
+  padding-left: max(20px, env(safe-area-inset-left, 0px));
+  padding-right: max(20px, env(safe-area-inset-right, 0px));
+  padding-bottom: max(32px, env(safe-area-inset-bottom, 0px));
+}
+.footer-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 40px;
+}
+@media (max-width: 768px) {
+  .footer-inner { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 480px) {
+  .footer-inner { grid-template-columns: 1fr; }
+}
+.footer-brand p {
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+  margin-top: 12px;
+  max-width: 280px;
+  line-height: 1.6;
+}
+.footer-col h4 {
+  font-size: 0.825rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  margin-bottom: 14px;
+}
+.footer-col ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.footer-col ul li a {
+  font-size: 0.875rem;
+  color: var(--fg-muted);
+  text-decoration: none;
+  transition: color .16s;
+}
+.footer-col ul li a:hover { color: var(--accent); }
+.footer-bottom {
+  max-width: 1200px;
+  margin: 32px auto 0;
+  padding-top: 24px;
+  border-top: 1px solid var(--border-2);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 0.8rem;
+  color: var(--fg-dim);
+}
+
+/* ── Modal ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(8px);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s;
+}
+.modal-overlay.open {
+  opacity: 1;
+  pointer-events: all;
+}
+.modal {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 32px;
+  width: 100%;
+  max-width: 480px;
+  transform: scale(0.95);
+  transition: transform .2s;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.5);
+}
+.modal-overlay.open .modal { transform: scale(1); }
+.modal h2 {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.modal p { font-size: 0.875rem; color: var(--fg-muted); margin-bottom: 22px; }
+.form-group { margin-bottom: 18px; }
+.form-label { font-size: 0.825rem; font-weight: 600; display: block; margin-bottom: 8px; }
+.form-input {
+  width: 100%;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--fg);
+  font-family: inherit;
+  font-size: 0.875rem;
+  padding: 11px 14px;
+  outline: none;
+  transition: border .2s, box-shadow .2s;
+}
+.form-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.form-input::placeholder { color: var(--fg-dim); }
+.modal-actions { display: flex; gap: 10px; margin-top: 24px; }
+.btn-modal {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .18s;
+}
+.btn-modal-cancel { background: var(--bg-2); color: var(--fg-muted); border: 1px solid var(--border); }
+.btn-modal-cancel:hover { color: var(--fg); }
+.btn-modal-save {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff;
+  box-shadow: 0 4px 16px var(--accent-glow);
+}
+.btn-modal-save:hover { opacity: 0.88; }
+
+/* ── Divider ── */
+.section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+  margin: 0 auto;
+  max-width: 800px;
+}
+
+/* ── Glow blobs ── */
+.blob {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 0;
+  animation: drift 20s infinite alternate ease-in-out;
+}
+.blob-1 {
+  width: 500px;
+  height: 500px;
+  background: var(--accent);
+  top: -100px;
+  right: -100px;
+}
+.blob-2 {
+  width: 400px;
+  height: 400px;
+  background: var(--accent-2);
+  bottom: 30%;
+  left: -80px;
+  animation-delay: -7s;
+}
+@keyframes drift {
+  from { transform: translate(0, 0) scale(1); }
+  to { transform: translate(40px, 60px) scale(1.15); }
+}
+</style>
+
+<!-- Ambient blobs -->
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+
+<!-- Canvas background -->
+<canvas id="canvas-bg"></canvas>
+
+<!-- ── Navbar ── -->
+<nav>
+  <div class="nav-inner">
+    <a href="#" class="logo">
+      <div class="logo-icon">🤖</div>
+      Jarvis AI
+    </a>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#how-it-works">How it works</a></li>
+      <li><a href="#pricing">Pricing</a></li>
+    </ul>
+    <div class="nav-actions">
+      <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌓</button>
+      <button class="btn-sm btn-ghost" onclick="openModal()">⚙️ API Key</button>
+      <button class="btn-sm btn-primary-sm" onclick="document.getElementById('chat-input').focus()">Try Free</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Hero ── -->
+<section class="hero">
+  <div class="wrap">
+    <div class="hero-badge">
+      <span class="badge-dot"></span>
+      Free • No Sign-up Required
+    </div>
+    <h1>
+      Your Personal<br>
+      <span class="gradient-text">AI Assistant</span><br>
+      Powered by Jarvis
+    </h1>
+    <p>Chat, code, create, and learn — Jarvis AI handles it all. Smart, fast, and completely free to start.</p>
+    <div class="hero-cta">
+      <button class="btn-lg btn-primary" onclick="document.getElementById('chat-input').focus()">
+        💬 Start Chatting Free
+      </button>
+      <button class="btn-lg btn-outline" onclick="document.getElementById('features').scrollIntoView({behavior:'smooth'})">
+        Explore Features
+      </button>
+    </div>
+
+    <!-- Chat Demo -->
+    <div class="chat-container" id="chat-demo">
+      <div class="chat-header">
+        <div class="chat-avatar">🤖</div>
+        <div class="chat-status">
+          <strong>Jarvis AI</strong>
+          <span><span class="status-dot"></span> Online — ready to help</span>
+        </div>
+        <button class="btn-sm btn-ghost" onclick="clearChat()" title="Clear chat" style="margin-left:auto;font-size:0.75rem;padding:5px 10px">🗑 Clear</button>
+      </div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="quick-prompts">
+        <button class="quick-chip" onclick="sendQuick(this)">Write a poem 🖊️</button>
+        <button class="quick-chip" onclick="sendQuick(this)">Explain AI briefly</button>
+        <button class="quick-chip" onclick="sendQuick(this)">Python hello world</button>
+        <button class="quick-chip" onclick="sendQuick(this)">Plan my day</button>
+        <button class="quick-chip" onclick="sendQuick(this)">Translate to Hindi</button>
+        <button class="quick-chip" onclick="sendQuick(this)">Motivate me 💪</button>
+      </div>
+      <div class="chat-input-area">
+        <input
+          class="chat-input"
+          id="chat-input"
+          type="text"
+          placeholder="Ask Jarvis anything…"
+          autocomplete="off"
+          onkeydown="if(event.key==='Enter')sendMessage()"
+        >
+        <button class="send-btn" onclick="sendMessage()" title="Send">↑</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Stats bar ── -->
+<div class="stats-bar">
+  <div class="stats-inner">
+    <div class="stat-item">
+      <div class="stat-value">5M+</div>
+      <div class="stat-label">Messages sent</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">150+</div>
+      <div class="stat-label">Languages supported</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">99.9%</div>
+      <div class="stat-label">Uptime</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-value">Free</div>
+      <div class="stat-label">To get started</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Features ── -->
+<section class="section" id="features">
+  <div class="wrap">
+    <div class="section-label">Capabilities</div>
+    <h2 class="section-title">Everything you need, in one AI</h2>
+    <p class="section-sub">Jarvis combines the power of advanced language models with a seamless, beautiful interface.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon icon-blue">💬</div>
+        <h3>Natural Conversations</h3>
+        <p>Chat naturally in any language. Jarvis understands context, follows up intelligently, and remembers what you discussed.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon icon-purple">💻</div>
+        <h3>Code Assistant</h3>
+        <p>Write, debug, and explain code in Python, JavaScript, Java, C++, and 30+ languages. From snippets to full applications.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon icon-green">🌍</div>
+        <h3>Language Translation</h3>
+        <p>Instant, accurate translation across 150+ languages including Hindi, Tamil, Telugu, Bengali, and all major Indian languages.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon icon-orange">✍️</div>
+        <h3>Content Creation</h3>
+        <p>Draft emails, essays, stories, social media posts, product descriptions, and marketing copy in seconds.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon icon-pink">📚</div>
+        <h3>Research & Learning</h3>
+        <p>Get in-depth explanations of complex topics, summarize documents, and learn anything from science to history.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon icon-teal">🔢</div>
+        <h3>Math & Analysis</h3>
+        <p>Solve equations, analyze data, create formulas, and understand statistical concepts step by step.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ── How it works ── -->
+<section class="section" id="how-it-works">
+  <div class="wrap">
+    <div class="section-label">Getting Started</div>
+    <h2 class="section-title">Up and running in seconds</h2>
+    <p class="section-sub">No account needed. No credit card. Just open and start chatting.</p>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">1</div>
+        <h3>Open Jarvis</h3>
+        <p>No sign-up, no installation. Jarvis runs entirely in your browser, available on any device.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">2</div>
+        <h3>Ask Anything</h3>
+        <p>Type your question, task, or idea. Use quick prompts or free-form text — Jarvis understands both.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">3</div>
+        <h3>Get Results</h3>
+        <p>Receive instant, intelligent responses. Copy, share, or continue the conversation to go deeper.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ── Pricing ── -->
+<section class="section" id="pricing">
+  <div class="wrap">
+    <div class="section-label">Pricing</div>
+    <h2 class="section-title">Start free, upgrade when ready</h2>
+    <p class="section-sub">Jarvis is free forever for everyday use. Upgrade to Pro for unlimited power.</p>
+    <div class="pricing-grid">
+      <div class="plan-card">
+        <div class="plan-name">🆓 Free</div>
+        <div class="plan-price">₹0<span>/month</span></div>
+        <div class="plan-desc">Perfect for personal use and exploring AI</div>
+        <ul class="plan-features">
+          <li>50 messages per day</li>
+          <li>All 6 core features</li>
+          <li>150+ language support</li>
+          <li>No account required</li>
+          <li class="dim">Image generation</li>
+          <li class="dim">Priority speed</li>
+          <li class="dim">Advanced models</li>
+        </ul>
+        <button class="btn-plan btn-plan-outline" onclick="document.getElementById('chat-input').focus()">Get Started Free</button>
+      </div>
+      <div class="plan-card featured">
+        <div class="plan-badge">⚡ MOST POPULAR</div>
+        <div class="plan-name">🚀 Pro</div>
+        <div class="plan-price"><sup>₹</sup>299<span>/month</span></div>
+        <div class="plan-desc">For power users who need unlimited AI</div>
+        <ul class="plan-features">
+          <li>Unlimited messages</li>
+          <li>All 6 core features</li>
+          <li>150+ language support</li>
+          <li>Image generation</li>
+          <li>Priority speed (3× faster)</li>
+          <li>Advanced GPT-4 / Claude models</li>
+          <li>API access included</li>
+        </ul>
+        <button class="btn-plan btn-plan-primary">Upgrade to Pro</button>
+      </div>
+      <div class="plan-card">
+        <div class="plan-name">🏢 Team</div>
+        <div class="plan-price"><sup>₹</sup>799<span>/month</span></div>
+        <div class="plan-desc">For teams collaborating with AI</div>
+        <ul class="plan-features">
+          <li>Everything in Pro</li>
+          <li>5 team members</li>
+          <li>Shared conversation history</li>
+          <li>Team admin dashboard</li>
+          <li>Custom API key</li>
+          <li>Priority support</li>
+          <li>Usage analytics</li>
+        </ul>
+        <button class="btn-plan btn-plan-outline">Contact Sales</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Footer ── -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <a href="#" class="logo">
+        <div class="logo-icon">🤖</div>
+        Jarvis AI
+      </a>
+      <p>Your intelligent AI assistant, available free for everyone. Built for the future, accessible today.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Product</h4>
+      <ul>
+        <li><a href="#features">Features</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#">API Docs</a></li>
+        <li><a href="#">Changelog</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Company</h4>
+      <ul>
+        <li><a href="#">About</a></li>
+        <li><a href="#">Blog</a></li>
+        <li><a href="#">Careers</a></li>
+        <li><a href="#">Contact</a></li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Legal</h4>
+      <ul>
+        <li><a href="#">Privacy Policy</a></li>
+        <li><a href="#">Terms of Service</a></li>
+        <li><a href="#">Cookie Policy</a></li>
+        <li><a href="#">Refund Policy</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2024 Jarvis AI. All rights reserved.</span>
+    <span>Made with ❤️ in India 🇮🇳</span>
+  </div>
+</footer>
+
+<!-- ── Settings Modal ── -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <h2>⚙️ AI Settings</h2>
+    <p>Add your own API key to power Jarvis with Claude or OpenAI. Your key is stored only in your browser — never sent to our servers.</p>
+    <div class="form-group">
+      <label class="form-label">AI Provider</label>
+      <select class="form-input" id="ai-provider" style="cursor:pointer;">
+        <option value="demo">🤖 Built-in Demo (Free, No Key Needed)</option>
+        <option value="claude">🟠 Anthropic Claude (Your Key)</option>
+        <option value="openai">🟢 OpenAI GPT (Your Key)</option>
+      </select>
+    </div>
+    <div class="form-group" id="api-key-group" style="display:none">
+      <label class="form-label">API Key</label>
+      <input class="form-input" id="api-key-input" type="password" placeholder="sk-ant-… or sk-…">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal btn-modal-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-modal btn-modal-save" onclick="saveSettings()">Save Settings</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Canvas starfield ──
+(function() {
+  const canvas = document.getElementById('canvas-bg');
+  const ctx = canvas.getContext('2d');
+  let W, H, stars = [];
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  for (let i = 0; i < 120; i++) {
+    stars.push({
+      x: Math.random() * 1920,
+      y: Math.random() * 1080,
+      r: Math.random() * 1.4,
+      a: Math.random(),
+      s: 0.002 + Math.random() * 0.004
+    });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    stars.forEach(s => {
+      s.a += s.s;
+      if (s.a > 1 || s.a < 0) s.s = -s.s;
+      ctx.beginPath();
+      ctx.arc(s.x % W, s.y % H, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(180,200,255,${s.a * 0.6})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+})();
+
+// ── Theme ──
+function toggleTheme() {
+  const r = document.documentElement;
+  const cur = r.getAttribute('data-theme');
+  r.setAttribute('data-theme', cur === 'light' ? 'dark' : 'light');
+  try { localStorage.setItem('jarvis-theme', r.getAttribute('data-theme')); } catch(e) {}
+}
+try {
+  const t = localStorage.getItem('jarvis-theme');
+  if (t) document.documentElement.setAttribute('data-theme', t);
+} catch(e) {}
+
+// ── Settings modal ──
+function openModal() {
+  document.getElementById('modal').classList.add('open');
+  try {
+    const p = localStorage.getItem('jarvis-provider') || 'demo';
+    document.getElementById('ai-provider').value = p;
+    toggleKeyGroup();
+  } catch(e) {}
+}
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+
+document.getElementById('ai-provider').addEventListener('change', toggleKeyGroup);
+function toggleKeyGroup() {
+  const p = document.getElementById('ai-provider').value;
+  document.getElementById('api-key-group').style.display = p === 'demo' ? 'none' : 'block';
+}
+
+function saveSettings() {
+  try {
+    const p = document.getElementById('ai-provider').value;
+    const k = document.getElementById('api-key-input').value;
+    localStorage.setItem('jarvis-provider', p);
+    if (k) localStorage.setItem('jarvis-api-key', k);
+  } catch(e) {}
+  closeModal();
+  addMsg('ai', '✅ Settings saved! I\'m ready to assist you with ' +
+    (document.getElementById('ai-provider').value === 'demo' ? 'built-in AI' : 'your custom API key') + '.');
+}
+
+// ── Chat ──
+const RESPONSES = {
+  greet: [
+    "Hello! I'm Jarvis, your personal AI assistant. How can I help you today? 🤖",
+    "Hi there! Great to meet you. I'm Jarvis — what can I do for you?",
+    "Hey! Jarvis here. Ask me anything — I'm ready to help!"
+  ],
+  whoami: [
+    "I'm Jarvis AI — a powerful personal assistant built to help you chat, code, translate, write, learn, and more. Think of me as your always-available smart companion. 🚀",
+    "I'm Jarvis, an AI assistant capable of natural conversation, coding help, translation across 150+ languages, content creation, and much more. What would you like to explore?"
+  ],
+  capabilities: [
+    "Here's what I can do for you:\n\n💬 **Natural conversations** in any language\n💻 **Code** — write, debug, explain (30+ languages)\n🌍 **Translation** — 150+ languages including all major Indian languages\n✍️ **Writing** — emails, essays, stories, posts\n📚 **Research** — explanations, summaries, learning\n🔢 **Math & analysis** — equations, data, formulas\n\nWhat would you like to try?",
+  ],
+  code: [
+    "Here's a Python Hello World:\n\n```python\nprint(\"Hello, World!\")\n```\n\nSimple and clean! Want me to add more functionality or explain it?",
+    "I'd be happy to help with code! What language and what are you trying to build? I can write functions, debug errors, explain concepts, or review your existing code.",
+  ],
+  python: [
+    "Python is fantastic! Here's a quick example:\n\n```python\n# Fibonacci sequence\ndef fib(n):\n    if n <= 1:\n        return n\n    return fib(n-1) + fib(n-2)\n\nprint([fib(i) for i in range(10)])\n# Output: [0, 1, 1, 2, 3, 5, 8, 13, 21, 34]\n```\n\nNeed help with something specific?",
+  ],
+  javascript: [
+    "Here's a useful JavaScript snippet:\n\n```javascript\n// Fetch data from an API\nconst fetchData = async (url) => {\n  const res = await fetch(url);\n  const data = await res.json();\n  return data;\n};\n\n// Usage\nfetchData('https://api.example.com/data')\n  .then(data => console.log(data));\n```\n\nWhat are you building? I can help with React, Node.js, or vanilla JS!",
+  ],
+  poem: [
+    "Here's a poem for you:\n\n*In circuits deep and data streams,*\n*Where knowledge flows like silver dreams,*\n*I am Jarvis, built to aid,*\n*A mind of code, a digital blade.*\n\n*Ask me questions, set me free,*\n*From morning's light to evening's lee,*\n*Together we'll explore and learn,*\n*The answers you most deeply yearn.* ✨",
+    "Here's a short poem:\n\n*The stars above blink like LEDs,*\n*Knowledge dances in the breeze,*\n*Type your wonder, I'll reply,*\n*Intelligence that learns to fly.* 🌟",
+  ],
+  translate: [
+    "I can translate text into Hindi, Tamil, Telugu, Bengali, Marathi, and 150+ other languages. Just share the text and tell me the target language!",
+    "Translation request noted! Tell me what text you'd like translated and into which language. I support all major Indian languages: Hindi (हिंदी), Tamil (தமிழ்), Telugu (తెలుగు), Bengali (বাংলা), Marathi (मराठी), Gujarati (ગુજરાતી), and many more."
+  ],
+  hindi: [
+    "नमस्ते! मैं जार्विस हूँ। आप मुझसे किसी भी विषय पर हिंदी में बात कर सकते हैं। मैं हिंदी में लिखना, अनुवाद करना और समझाना सब कुछ कर सकता हूँ। 🙏",
+  ],
+  motivate: [
+    "You've got this! 💪 Every expert was once a beginner. Every great achievement started with a single step. Today's effort is tomorrow's result. Keep going — Jarvis believes in you! 🚀",
+    "Remember: the only person you need to be better than is the person you were yesterday. Progress, not perfection. You're already here, learning and growing — that's everything. Let's go! 🔥",
+  ],
+  plan: [
+    "Here's a simple framework for planning your day:\n\n**Morning (6–9 AM)**\n- 🏃 Exercise or walk (30 min)\n- 📰 Review priorities for the day\n- 🥗 Healthy breakfast\n\n**Work Block 1 (9 AM–12 PM)**\n- 🎯 Tackle your #1 most important task first\n- Focus mode: no distractions\n\n**Lunch Break (12–1 PM)**\n- Take a real break, step away from screens\n\n**Work Block 2 (1–5 PM)**\n- Meetings, collaboration, secondary tasks\n\n**Evening (5–8 PM)**\n- 📚 Learning or side project\n- Family / social time\n\n**Night (8–10 PM)**\n- Wind down, reflection, plan tomorrow\n\nWant me to customize this for your specific goals?",
+  ],
+  ai: [
+    "AI (Artificial Intelligence) is technology that enables machines to perform tasks that typically require human intelligence — things like understanding language, recognizing images, making decisions, and learning from experience.\n\n**Types of AI:**\n- 🧠 **Machine Learning** — learns from data\n- 💬 **Natural Language Processing** — understands text\n- 👁️ **Computer Vision** — understands images\n- 🤖 **Generative AI** — creates content (like me!)\n\nWant to dive deeper into any of these?",
+  ],
+  thanks: [
+    "You're very welcome! Happy to help anytime. Is there anything else you'd like to explore? 😊",
+    "Glad I could help! Feel free to ask me anything else — I'm always here. 🤖",
+    "Anytime! That's what I'm here for. What else can I do for you? ✨",
+  ],
+  default: [
+    "That's an interesting question! Let me think... Based on what you've shared, I'd say there are a few angles worth exploring. Could you give me a bit more context so I can give you the most helpful response?",
+    "Great question! I'm processing that now. To give you the best answer possible, it would help to know a bit more about what you're looking for — the more specific, the better my response.",
+    "I'd love to help with that! Tell me a bit more and I'll give you a thorough, useful response. Jarvis is at your service! 🤖",
+    "Interesting! That touches on several things I know about. To make sure I address exactly what you need, could you tell me more about your context or goal?",
+    "On it! Here's my take: the best approach depends on your specific situation. Share a few more details and I'll tailor my response perfectly for you.",
+  ]
+};
+
+function pickResponse(key) {
+  const arr = RESPONSES[key] || RESPONSES.default;
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function classify(text) {
+  const t = text.toLowerCase();
+  if (/\b(hello|hi|hey|howdy|greetings|namaste|hola)\b/.test(t)) return 'greet';
+  if (/who are you|what are you|introduce yourself/.test(t)) return 'whoami';
+  if (/what can you do|capabilities|features|help me with/.test(t)) return 'capabilities';
+  if (/python hello world|print hello/.test(t)) return 'python';
+  if (/\bpython\b/.test(t) && /code|write|script|function/.test(t)) return 'python';
+  if (/javascript|react|node\.?js/.test(t)) return 'javascript';
+  if (/\bcode\b|coding|program|snippet|debug/.test(t)) return 'code';
+  if (/poem|poetry|rhyme|verse/.test(t)) return 'poem';
+  if (/translate|translation/.test(t)) return 'translate';
+  if (/hindi|हिंदी|namaste/.test(t)) return 'hindi';
+  if (/motivat|inspire|encourage|cheer/.test(t)) return 'motivate';
+  if (/plan my day|daily plan|schedule|routine/.test(t)) return 'plan';
+  if (/\bai\b|artificial intelligence|machine learning/.test(t)) return 'ai';
+  if (/thank|thanks|thx|ty\b|appreciate/.test(t)) return 'thanks';
+  return 'default';
+}
+
+function addMsg(role, text) {
+  const msgs = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = `msg msg-${role}`;
+
+  const avatar = document.createElement('div');
+  avatar.className = 'msg-avatar';
+  avatar.textContent = role === 'user' ? '👤' : '🤖';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble';
+  // simple markdown-ish rendering
+  bubble.innerHTML = text
+    .replace(/```(\w+)?\n([\s\S]*?)```/g, (_, lang, code) =>
+      `<pre style="background:rgba(0,0,0,0.3);padding:10px;border-radius:8px;overflow-x:auto;font-family:monospace;font-size:0.8rem;margin-top:6px">${code.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</pre>`)
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+    .replace(/\n/g, '<br>');
+
+  div.appendChild(avatar);
+  div.appendChild(bubble);
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function showTyping() {
+  const msgs = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'msg msg-ai';
+  div.id = 'typing-msg';
+
+  const avatar = document.createElement('div');
+  avatar.className = 'msg-avatar';
+  avatar.textContent = '🤖';
+
+  const bubble = document.createElement('div');
+  bubble.className = 'msg-bubble typing-indicator';
+  bubble.innerHTML = '<span></span><span></span><span></span>';
+
+  div.appendChild(avatar);
+  div.appendChild(bubble);
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function removeTyping() {
+  const el = document.getElementById('typing-msg');
+  if (el) el.remove();
+}
+
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  addMsg('user', text);
+  showTyping();
+
+  const delay = 600 + Math.random() * 900;
+  await new Promise(r => setTimeout(r, delay));
+  removeTyping();
+
+  // Check for custom API key
+  let response;
+  try {
+    const provider = localStorage.getItem('jarvis-provider');
+    const apiKey = localStorage.getItem('jarvis-api-key');
+
+    if (provider === 'claude' && apiKey) {
+      response = await callClaude(apiKey, text);
+    } else {
+      response = pickResponse(classify(text));
+    }
+  } catch(e) {
+    response = pickResponse(classify(text));
+  }
+
+  addMsg('ai', response);
+}
+
+function sendQuick(btn) {
+  document.getElementById('chat-input').value = btn.textContent.replace(/[🖊️💪✍️]/g, '').trim();
+  sendMessage();
+}
+
+function clearChat() {
+  const msgs = document.getElementById('chat-messages');
+  msgs.innerHTML = '';
+  addMsg('ai', "Chat cleared! I'm ready for a fresh start. What would you like to talk about? 🤖");
+}
+
+async function callClaude(apiKey, userMessage) {
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 1024,
+        system: 'You are Jarvis, a helpful and friendly AI assistant. Be concise, clear, and helpful. You can help with coding, writing, translation, analysis, and more.',
+        messages: [{ role: 'user', content: userMessage }]
+      })
+    });
+    const data = await res.json();
+    if (data.content && data.content[0]) return data.content[0].text;
+    return pickResponse('default');
+  } catch(e) {
+    return pickResponse('default');
+  }
+}
+
+// Initial greeting
+setTimeout(() => {
+  addMsg('ai', "Hello! 👋 I'm **Jarvis**, your personal AI assistant. I can help you with coding, writing, translation, research, math, and much more. What would you like to explore today?");
+}, 400);
+</script>
