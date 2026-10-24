@@ -1,0 +1,16 @@
+{
+  "invoice_folder": "X:\\Stores\\Stores 1 Files\\27. Stores Data Analysis and Tracking\\05-SATAIR INV Automation\\Invoices",
+  "excel_tracker": "X:\\Stores\\Stores 1 Files\\27. Stores Data Analysis and Tracking\\05-SATAIR INV Automation\\SATAIR_Invoice_Tracker.xlsm",
+  "excel_worksheet": "Data",
+  "excel_table_name": "InvoiceData",
+  "db_path": "data/satair_tracker.db",
+  "log_dir": "logs",
+  "log_max_bytes": 5242880,
+  "log_backup_count": 5,
+  "file_stability_seconds": 3,
+  "file_stability_polls": 5,
+  "reconciliation_interval_seconds": 300,
+  "network_retry_attempts": 3,
+  "network_retry_delay_seconds": 10,
+  "columns": ["File Name", "Invoice No", "PO No", "Airway Bill", "Part Number", "Qty"]
+}
