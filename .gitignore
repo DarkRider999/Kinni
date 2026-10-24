@@ -20,3 +20,4 @@ debug.keystore
 # Local plugin/tooling scratch (never committed)
 .harnesskit/
 .cto-toolkit/
+.claude/
