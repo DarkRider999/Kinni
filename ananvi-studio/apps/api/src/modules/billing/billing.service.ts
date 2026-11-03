@@ -183,34 +183,42 @@ export class BillingService {
     }
 
     if (payload.event === 'payment.completed') {
-      let payment: any;
       try {
-        payment = await this.paymentRepo.findOne({
-          where: { dodo_payment_id: payload.data.id },
+        await this.dataSource.transaction(async manager => {
+          // Pessimistic write lock prevents concurrent webhook retries from
+          // double-granting credits for the same payment.
+          const payment = await manager.findOne(Payment, {
+            where: { dodo_payment_id: payload.data.id },
+            lock: { mode: 'pessimistic_write' },
+          });
+          if (!payment || payment.status !== PaymentStatus.PENDING) return;
+
+          // Credit grant and status update are atomic: either both commit or
+          // neither does, so a retry always finds the payment still PENDING.
+          let credit = await manager.findOne(Credit, { where: { user_id: payment.user_id } });
+          if (!credit) {
+            credit = manager.create(Credit, { user_id: payment.user_id, balance: 0 });
+          }
+          credit.balance += payment.credits_granted;
+          credit.lifetime_purchased += payment.credits_granted;
+          await manager.save(credit);
+
+          const tx = manager.create(CreditTransaction, {
+            user_id: payment.user_id,
+            type: CreditTransactionType.PURCHASE,
+            amount: payment.credits_granted,
+            balance_after: credit.balance,
+            description: `Purchased ${payment.credits_granted} credits`,
+            reference_id: payment.id,
+          });
+          await manager.save(tx);
+
+          payment.status = PaymentStatus.COMPLETED;
+          await manager.save(payment);
         });
       } catch (err) {
-        throw new InternalServerErrorException(`Failed to look up payment: ${(err as Error).message}`);
-      }
-
-      if (!payment || payment.status !== PaymentStatus.PENDING) return;
-
-      // Grant credits first so that if this fails, payment stays PENDING and
-      // the webhook can be retried without losing credits.
-      try {
-        await this.addCredits(payment.user_id, payment.credits_granted, {
-          type: CreditTransactionType.PURCHASE,
-          description: `Purchased ${payment.credits_granted} credits`,
-          reference_id: payment.id,
-        });
-      } catch (err) {
-        throw new InternalServerErrorException(`Failed to grant credits for payment ${payment.id}: ${(err as Error).message}`);
-      }
-
-      payment.status = PaymentStatus.COMPLETED;
-      try {
-        await this.paymentRepo.save(payment);
-      } catch (err) {
-        throw new InternalServerErrorException(`Failed to update payment status: ${(err as Error).message}`);
+        if (err instanceof BadRequestException) throw err;
+        throw new InternalServerErrorException(`Webhook processing failed: ${(err as Error).message}`);
       }
     }
   }

@@ -30,7 +30,12 @@ export class JobsService {
     const creditsRequired = Math.ceil(estimatedMinutes);
 
     // 2. Check & deduct credits
-    const balance = await this.billing.getBalance(userId);
+    let balance: number;
+    try {
+      balance = await this.billing.getBalance(userId);
+    } catch (err) {
+      throw new BadRequestException(`Failed to fetch credit balance: ${(err as Error).message}`);
+    }
     if (balance < creditsRequired) {
       throw new BadRequestException(
         `Insufficient credits. Need ${creditsRequired}, have ${balance}.`
@@ -50,7 +55,12 @@ export class JobsService {
       status: JobStatus.QUEUED,
     });
 
-    const saved = await this.jobRepo.save(job);
+    let saved: Job;
+    try {
+      saved = await this.jobRepo.save(job);
+    } catch (err) {
+      throw new BadRequestException(`Failed to create job record: ${(err as Error).message}`);
+    }
 
     // 4. Deduct credits
     await this.billing.deductCredits(userId, creditsRequired, {
