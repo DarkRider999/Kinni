@@ -158,7 +158,21 @@ export class JobsService {
     }
 
     job.status = JobStatus.CANCELLED;
-    return this.jobRepo.save(job);
+    try {
+      return await this.jobRepo.save(job);
+    } catch (saveErr) {
+      // Save failed after refund already issued — deduct credits back to prevent double-refund on retry
+      if (job.credits_charged > 0) {
+        await this.billing.deductCredits(userId, job.credits_charged, {
+          type: CreditTransactionType.USAGE,
+          description: `Reverse refund for failed cancel of job ${id}`,
+          reference_id: id,
+        }).catch((e: Error) => {
+          this.logger.error(`Failed to reverse refund for job ${id} after save failure: ${e.message}`);
+        });
+      }
+      throw new BadRequestException(`Failed to persist cancellation: ${(saveErr as Error).message}`);
+    }
   }
 
   async updateProgress(id: string, progress: number): Promise<void> {
