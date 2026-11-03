@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { InjectQueue } from '@nestjs/bullmq';
@@ -9,6 +9,8 @@ import { JobStatus, CreditTransactionType, UserRole } from '@ananvi/shared';
 
 @Injectable()
 export class JobsService {
+  private readonly logger = new Logger(JobsService.name);
+
   constructor(
     @InjectRepository(Job) private readonly jobRepo: Repository<Job>,
     @InjectQueue('video-processing') private readonly videoQueue: Queue,
@@ -72,16 +74,28 @@ export class JobsService {
         removeOnComplete: 100,
         removeOnFail: 50,
       });
-    } catch (err) {
-      // Roll back: delete the job row and refund credits
-      await this.jobRepo.delete(saved.id).catch(() => null);
+    } catch (enqueueErr) {
+      const rollbackErrors: string[] = [];
+      await this.jobRepo.delete(saved.id).catch((e: Error) => {
+        rollbackErrors.push(`job delete: ${e.message}`);
+      });
       await this.billing.addCredits(userId, creditsRequired, {
         type: CreditTransactionType.REFUND,
         description: `Refund for failed enqueue of job ${saved.id}`,
         reference_id: saved.id,
-      }).catch(() => null);
+      }).catch((e: Error) => {
+        rollbackErrors.push(`credit refund: ${e.message}`);
+      });
+      if (rollbackErrors.length > 0) {
+        this.logger.error(
+          `Enqueue rollback partial failures for job ${saved.id}: ${rollbackErrors.join('; ')}`
+        );
+      }
+      const refundMsg = rollbackErrors.some(e => e.startsWith('credit refund'))
+        ? 'Credits may not have been refunded — please contact support.'
+        : 'Credits have been refunded.';
       throw new BadRequestException(
-        `Failed to enqueue job. Credits have been refunded. (${(err as Error).message})`
+        `Failed to enqueue job. ${refundMsg} (${(enqueueErr as Error).message})`
       );
     }
 

@@ -148,23 +148,30 @@ export class BillingService {
       throw new InternalServerErrorException(`Dodo Payments API returned ${response.status}`);
     }
 
-    const data = await response.json() as any;
+    let data: any;
+    try {
+      data = await response.json();
+    } catch (err) {
+      throw new InternalServerErrorException(`Dodo Payments API returned invalid JSON: ${(err as Error).message}`);
+    }
 
-    // Record pending payment
-    await this.paymentRepo.save(this.paymentRepo.create({
-      user_id: userId,
-      dodo_payment_id: data.id,
-      amount_cents: pkg.price_cents,
-      credits_granted: pkg.credits,
-      status: PaymentStatus.PENDING,
-      metadata: { package_id: pkg.id },
-    }));
+    try {
+      await this.paymentRepo.save(this.paymentRepo.create({
+        user_id: userId,
+        dodo_payment_id: data.id,
+        amount_cents: pkg.price_cents,
+        credits_granted: pkg.credits,
+        status: PaymentStatus.PENDING,
+        metadata: { package_id: pkg.id },
+      }));
+    } catch (err) {
+      throw new InternalServerErrorException(`Failed to record pending payment: ${(err as Error).message}`);
+    }
 
     return data.checkout_url;
   }
 
   async handleWebhook(payload: any, signature: string): Promise<void> {
-    // Verify webhook signature
     const crypto = await import('crypto');
     const expected = crypto
       .createHmac('sha256', this.dodoWebhookSecret)
@@ -176,13 +183,23 @@ export class BillingService {
     }
 
     if (payload.event === 'payment.completed') {
-      const payment = await this.paymentRepo.findOne({
-        where: { dodo_payment_id: payload.data.id },
-      });
+      let payment: any;
+      try {
+        payment = await this.paymentRepo.findOne({
+          where: { dodo_payment_id: payload.data.id },
+        });
+      } catch (err) {
+        throw new InternalServerErrorException(`Failed to look up payment: ${(err as Error).message}`);
+      }
+
       if (!payment || payment.status !== PaymentStatus.PENDING) return;
 
       payment.status = PaymentStatus.COMPLETED;
-      await this.paymentRepo.save(payment);
+      try {
+        await this.paymentRepo.save(payment);
+      } catch (err) {
+        throw new InternalServerErrorException(`Failed to update payment status: ${(err as Error).message}`);
+      }
 
       await this.addCredits(payment.user_id, payment.credits_granted, {
         type: CreditTransactionType.PURCHASE,

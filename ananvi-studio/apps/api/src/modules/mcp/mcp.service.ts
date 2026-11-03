@@ -1,17 +1,56 @@
-import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, Logger, InternalServerErrorException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { createS3Client } from '../../config/s3.config';
-import { exec } from 'child_process';
-import { promisify } from 'util';
+import { spawn } from 'child_process';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
 
-const execAsync = promisify(exec);
+/** Run a command with args as an array — never interpreted by a shell. */
+function runProcess(
+  cmd: string,
+  args: string[],
+  opts: { timeout?: number } = {},
+): Promise<{ stdout: string; stderr: string }> {
+  return new Promise((resolve, reject) => {
+    const proc = spawn(cmd, args, { stdio: ['ignore', 'pipe', 'pipe'] });
+    let stdout = '';
+    let stderr = '';
+    proc.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
+    proc.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    if (opts.timeout) {
+      timer = setTimeout(() => {
+        proc.kill();
+        reject(new Error(`Process timed out after ${opts.timeout}ms`));
+      }, opts.timeout);
+    }
+
+    proc.on('error', (err) => { clearTimeout(timer); reject(err); });
+    proc.on('close', (code) => {
+      clearTimeout(timer);
+      if (code === 0) resolve({ stdout, stderr });
+      else reject(new Error(`${cmd} exited with code ${code}: ${stderr.slice(0, 500)}`));
+    });
+  });
+}
+
+/** Validate that a string is an http(s) URL — rejects before it reaches any shell. */
+function validateHttpUrl(raw: string): URL {
+  let parsed: URL;
+  try { parsed = new URL(raw); } catch {
+    throw new BadRequestException('Invalid URL');
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new BadRequestException('Only http(s) URLs are accepted');
+  }
+  return parsed;
+}
 
 interface VideoSegment {
   start: number;
@@ -35,7 +74,8 @@ export class McpService {
   }
 
   // ── Download Source Video ────────────────────────────
-  async downloadSource(url: string): Promise<string> {
+  async downloadSource(rawUrl: string): Promise<string> {
+    const { href: validatedUrl } = validateHttpUrl(rawUrl);
     const dir = path.join(this.tmpDir, `src-${Date.now()}`);
     try {
       await fs.mkdir(dir, { recursive: true });
@@ -45,11 +85,12 @@ export class McpService {
     const output = path.join(dir, 'source.mp4');
 
     try {
-      await execAsync(
-        `yt-dlp -f "bestvideo[height<=1080]+bestaudio/best[height<=1080]" ` +
-        `--merge-output-format mp4 -o "${output}" "${url}"`,
-        { timeout: 600_000 }, // 10 min
-      );
+      await runProcess('yt-dlp', [
+        '-f', 'bestvideo[height<=1080]+bestaudio/best[height<=1080]',
+        '--merge-output-format', 'mp4',
+        '-o', output,
+        '--', validatedUrl,
+      ], { timeout: 600_000 });
     } catch (err) {
       throw new InternalServerErrorException(`yt-dlp download failed: ${(err as Error).message}`);
     }
@@ -62,9 +103,9 @@ export class McpService {
     // Get duration
     let durationOut: string;
     try {
-      ({ stdout: durationOut } = await execAsync(
-        `ffprobe -v quiet -show_entries format=duration -of csv=p=0 "${sourcePath}"`,
-      ));
+      ({ stdout: durationOut } = await runProcess('ffprobe', [
+        '-v', 'quiet', '-show_entries', 'format=duration', '-of', 'csv=p=0', sourcePath,
+      ]));
     } catch (err) {
       throw new InternalServerErrorException(`ffprobe duration failed: ${(err as Error).message}`);
     }
@@ -73,11 +114,10 @@ export class McpService {
     // Scene detection via FFmpeg
     let sceneOut: string;
     try {
-      ({ stdout: sceneOut } = await execAsync(
-        `ffprobe -v quiet -show_entries frame=pts_time -of csv=p=0 ` +
-        `-f lavfi "movie='${sourcePath}',select='gt(scene,0.3)'"`,
-        { timeout: 300_000 },
-      ));
+      ({ stdout: sceneOut } = await runProcess('ffprobe', [
+        '-v', 'quiet', '-show_entries', 'frame=pts_time', '-of', 'csv=p=0',
+        '-f', 'lavfi', `movie='${sourcePath.replace(/'/g, "'\\''")}',select='gt(scene,0.3)'`,
+      ], { timeout: 300_000 }));
     } catch (err) {
       throw new InternalServerErrorException(`ffprobe scene detection failed: ${(err as Error).message}`);
     }
@@ -127,12 +167,11 @@ export class McpService {
     const output = path.join(dir, `clip-${start.toFixed(0)}-${end.toFixed(0)}.mp4`);
 
     try {
-      await execAsync(
-        `ffmpeg -y -ss ${start} -to ${end} -i "${sourcePath}" ` +
-        `-c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k ` +
-        `-movflags +faststart "${output}"`,
-        { timeout: 120_000 },
-      );
+      await runProcess('ffmpeg', [
+        '-y', '-ss', String(start), '-to', String(end), '-i', sourcePath,
+        '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
+        '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', output,
+      ], { timeout: 120_000 });
     } catch (err) {
       throw new InternalServerErrorException(`ffmpeg clip extraction failed: ${(err as Error).message}`);
     }
@@ -153,11 +192,10 @@ export class McpService {
       const base = path.basename(clipPath, '.mp4');
 
       try {
-        await execAsync(
-          `whisper "${clipPath}" --language ${language} --model small ` +
-          `--output_dir "${dir}" --output_format srt`,
-          { timeout: 180_000 },
-        );
+        await runProcess('whisper', [
+          clipPath, '--language', language, '--model', 'small',
+          '--output_dir', dir, '--output_format', 'srt',
+        ], { timeout: 180_000 });
       } catch (err) {
         throw new InternalServerErrorException(`whisper transcription failed: ${(err as Error).message}`);
       }
@@ -212,9 +250,9 @@ export class McpService {
     // Generate + upload thumbnail
     const thumbPath = clipPath.replace('.mp4', '-thumb.jpg');
     try {
-      await execAsync(
-        `ffmpeg -y -i "${clipPath}" -ss 1 -vframes 1 -q:v 2 "${thumbPath}"`,
-      );
+      await runProcess('ffmpeg', [
+        '-y', '-i', clipPath, '-ss', '1', '-vframes', '1', '-q:v', '2', thumbPath,
+      ]);
     } catch (err) {
       throw new InternalServerErrorException(`ffmpeg thumbnail generation failed: ${(err as Error).message}`);
     }
