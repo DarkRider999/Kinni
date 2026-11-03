@@ -57,20 +57,33 @@ export class JobsService {
       reference_id: saved.id,
     });
 
-    // 5. Enqueue processing
-    await this.videoQueue.add('process-video', {
-      jobId: saved.id,
-      sourceUrl: data.source_url,
-      clipCount: saved.clip_count,
-      captionStyle: saved.caption_style,
-      captionLanguage: saved.caption_language,
-      aiVideoStyle: saved.ai_video_style,
-    }, {
-      attempts: 3,
-      backoff: { type: 'exponential', delay: 5000 },
-      removeOnComplete: 100,
-      removeOnFail: 50,
-    });
+    // 5. Enqueue processing — compensate on failure to avoid orphaned job + deducted credits
+    try {
+      await this.videoQueue.add('process-video', {
+        jobId: saved.id,
+        sourceUrl: data.source_url,
+        clipCount: saved.clip_count,
+        captionStyle: saved.caption_style,
+        captionLanguage: saved.caption_language,
+        aiVideoStyle: saved.ai_video_style,
+      }, {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+        removeOnComplete: 100,
+        removeOnFail: 50,
+      });
+    } catch (err) {
+      // Roll back: delete the job row and refund credits
+      await this.jobRepo.delete(saved.id).catch(() => null);
+      await this.billing.addCredits(userId, creditsRequired, {
+        type: CreditTransactionType.REFUND,
+        description: `Refund for failed enqueue of job ${saved.id}`,
+        reference_id: saved.id,
+      }).catch(() => null);
+      throw new BadRequestException(
+        `Failed to enqueue job. Credits have been refunded. (${(err as Error).message})`
+      );
+    }
 
     return saved;
   }

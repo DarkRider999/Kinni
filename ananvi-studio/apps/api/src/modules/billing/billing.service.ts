@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
@@ -120,24 +120,33 @@ export class BillingService {
     if (!pkg) throw new BadRequestException('Invalid package');
 
     // Call Dodo Payments API to create a checkout session
-    const response = await fetch('https://api.dodopayments.com/v1/payments', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${this.dodoApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        amount: pkg.price_cents,
-        currency: 'USD',
-        metadata: {
-          user_id: userId,
-          package_id: pkg.id,
-          credits: pkg.credits,
+    let response: Response;
+    try {
+      response = await fetch('https://api.dodopayments.com/v1/payments', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.dodoApiKey}`,
+          'Content-Type': 'application/json',
         },
-        success_url: `${this.config.get('APP_URL')}/billing?success=true`,
-        cancel_url: `${this.config.get('APP_URL')}/billing?cancelled=true`,
-      }),
-    });
+        body: JSON.stringify({
+          amount: pkg.price_cents,
+          currency: 'USD',
+          metadata: {
+            user_id: userId,
+            package_id: pkg.id,
+            credits: pkg.credits,
+          },
+          success_url: `${this.config.get('APP_URL')}/billing?success=true`,
+          cancel_url: `${this.config.get('APP_URL')}/billing?cancelled=true`,
+        }),
+      });
+    } catch (err) {
+      throw new InternalServerErrorException(`Dodo Payments API unreachable: ${(err as Error).message}`);
+    }
+
+    if (!response.ok) {
+      throw new InternalServerErrorException(`Dodo Payments API returned ${response.status}`);
+    }
 
     const data = await response.json() as any;
 

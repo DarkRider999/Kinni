@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand,
@@ -37,14 +37,22 @@ export class McpService {
   // ── Download Source Video ────────────────────────────
   async downloadSource(url: string): Promise<string> {
     const dir = path.join(this.tmpDir, `src-${Date.now()}`);
-    await fs.mkdir(dir, { recursive: true });
+    try {
+      await fs.mkdir(dir, { recursive: true });
+    } catch (err) {
+      throw new InternalServerErrorException(`Failed to create temp dir: ${(err as Error).message}`);
+    }
     const output = path.join(dir, 'source.mp4');
 
-    await execAsync(
-      `yt-dlp -f "bestvideo[height<=1080]+bestaudio/best[height<=1080]" ` +
-      `--merge-output-format mp4 -o "${output}" "${url}"`,
-      { timeout: 600_000 }, // 10 min
-    );
+    try {
+      await execAsync(
+        `yt-dlp -f "bestvideo[height<=1080]+bestaudio/best[height<=1080]" ` +
+        `--merge-output-format mp4 -o "${output}" "${url}"`,
+        { timeout: 600_000 }, // 10 min
+      );
+    } catch (err) {
+      throw new InternalServerErrorException(`yt-dlp download failed: ${(err as Error).message}`);
+    }
 
     return output;
   }
@@ -52,17 +60,27 @@ export class McpService {
   // ── Analyze for Clip Segments ────────────────────────
   async analyzeVideo(sourcePath: string, clipCount: number): Promise<VideoSegment[]> {
     // Get duration
-    const { stdout: durationOut } = await execAsync(
-      `ffprobe -v quiet -show_entries format=duration -of csv=p=0 "${sourcePath}"`,
-    );
+    let durationOut: string;
+    try {
+      ({ stdout: durationOut } = await execAsync(
+        `ffprobe -v quiet -show_entries format=duration -of csv=p=0 "${sourcePath}"`,
+      ));
+    } catch (err) {
+      throw new InternalServerErrorException(`ffprobe duration failed: ${(err as Error).message}`);
+    }
     const duration = parseFloat(durationOut.trim());
 
     // Scene detection via FFmpeg
-    const { stdout: sceneOut } = await execAsync(
-      `ffprobe -v quiet -show_entries frame=pts_time -of csv=p=0 ` +
-      `-f lavfi "movie='${sourcePath}',select='gt(scene,0.3)'"`,
-      { timeout: 300_000 },
-    );
+    let sceneOut: string;
+    try {
+      ({ stdout: sceneOut } = await execAsync(
+        `ffprobe -v quiet -show_entries frame=pts_time -of csv=p=0 ` +
+        `-f lavfi "movie='${sourcePath}',select='gt(scene,0.3)'"`,
+        { timeout: 300_000 },
+      ));
+    } catch (err) {
+      throw new InternalServerErrorException(`ffprobe scene detection failed: ${(err as Error).message}`);
+    }
 
     const sceneChanges = sceneOut.trim().split('\n')
       .map(Number)
@@ -108,12 +126,16 @@ export class McpService {
     const dir = path.dirname(sourcePath);
     const output = path.join(dir, `clip-${start.toFixed(0)}-${end.toFixed(0)}.mp4`);
 
-    await execAsync(
-      `ffmpeg -y -ss ${start} -to ${end} -i "${sourcePath}" ` +
-      `-c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k ` +
-      `-movflags +faststart "${output}"`,
-      { timeout: 120_000 },
-    );
+    try {
+      await execAsync(
+        `ffmpeg -y -ss ${start} -to ${end} -i "${sourcePath}" ` +
+        `-c:v libx264 -preset fast -crf 23 -c:a aac -b:a 128k ` +
+        `-movflags +faststart "${output}"`,
+        { timeout: 120_000 },
+      );
+    } catch (err) {
+      throw new InternalServerErrorException(`ffmpeg clip extraction failed: ${(err as Error).message}`);
+    }
 
     return output;
   }
@@ -130,11 +152,15 @@ export class McpService {
       const dir = path.dirname(clipPath);
       const base = path.basename(clipPath, '.mp4');
 
-      await execAsync(
-        `whisper "${clipPath}" --language ${language} --model small ` +
-        `--output_dir "${dir}" --output_format srt`,
-        { timeout: 180_000 },
-      );
+      try {
+        await execAsync(
+          `whisper "${clipPath}" --language ${language} --model small ` +
+          `--output_dir "${dir}" --output_format srt`,
+          { timeout: 180_000 },
+        );
+      } catch (err) {
+        throw new InternalServerErrorException(`whisper transcription failed: ${(err as Error).message}`);
+      }
 
       const srtPath = path.join(dir, `${base}.srt`);
       let srtContent = '';
@@ -166,39 +192,69 @@ export class McpService {
     const thumbnailKey = `clips/${jobId}/thumb-${index}.jpg`;
 
     // Upload video
-    const videoData = await fs.readFile(clipPath);
-    await this.s3.send(new PutObjectCommand({
-      Bucket: this.bucket,
-      Key: videoKey,
-      Body: videoData,
-      ContentType: 'video/mp4',
-    }));
+    let videoData: Buffer;
+    try {
+      videoData = await fs.readFile(clipPath);
+    } catch (err) {
+      throw new InternalServerErrorException(`Failed to read clip file: ${(err as Error).message}`);
+    }
+    try {
+      await this.s3.send(new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: videoKey,
+        Body: videoData,
+        ContentType: 'video/mp4',
+      }));
+    } catch (err) {
+      throw new InternalServerErrorException(`S3 video upload failed: ${(err as Error).message}`);
+    }
 
     // Generate + upload thumbnail
     const thumbPath = clipPath.replace('.mp4', '-thumb.jpg');
-    await execAsync(
-      `ffmpeg -y -i "${clipPath}" -ss 1 -vframes 1 -q:v 2 "${thumbPath}"`,
-    );
-    const thumbData = await fs.readFile(thumbPath);
-    await this.s3.send(new PutObjectCommand({
-      Bucket: this.bucket,
-      Key: thumbnailKey,
-      Body: thumbData,
-      ContentType: 'image/jpeg',
-    }));
+    try {
+      await execAsync(
+        `ffmpeg -y -i "${clipPath}" -ss 1 -vframes 1 -q:v 2 "${thumbPath}"`,
+      );
+    } catch (err) {
+      throw new InternalServerErrorException(`ffmpeg thumbnail generation failed: ${(err as Error).message}`);
+    }
+    let thumbData: Buffer;
+    try {
+      thumbData = await fs.readFile(thumbPath);
+    } catch (err) {
+      throw new InternalServerErrorException(`Failed to read thumbnail file: ${(err as Error).message}`);
+    }
+    try {
+      await this.s3.send(new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: thumbnailKey,
+        Body: thumbData,
+        ContentType: 'image/jpeg',
+      }));
+    } catch (err) {
+      throw new InternalServerErrorException(`S3 thumbnail upload failed: ${(err as Error).message}`);
+    }
 
     return { videoKey, thumbnailKey };
   }
 
   // ── Pre-signed URL ───────────────────────────────────
   async getPresignedUrl(key: string, expiresIn = 900): Promise<string> {
-    const command = new GetObjectCommand({ Bucket: this.bucket, Key: key });
-    return getSignedUrl(this.s3, command, { expiresIn });
+    try {
+      const command = new GetObjectCommand({ Bucket: this.bucket, Key: key });
+      return await getSignedUrl(this.s3, command, { expiresIn });
+    } catch (err) {
+      throw new InternalServerErrorException(`Failed to generate presigned URL: ${(err as Error).message}`);
+    }
   }
 
   // ── Delete Object ────────────────────────────────────
   async deleteObject(key: string): Promise<void> {
-    await this.s3.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+    try {
+      await this.s3.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+    } catch (err) {
+      throw new InternalServerErrorException(`S3 delete failed: ${(err as Error).message}`);
+    }
   }
 
   // ── Cleanup Temp ─────────────────────────────────────
