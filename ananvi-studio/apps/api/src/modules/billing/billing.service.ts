@@ -194,18 +194,24 @@ export class BillingService {
 
       if (!payment || payment.status !== PaymentStatus.PENDING) return;
 
+      // Grant credits first so that if this fails, payment stays PENDING and
+      // the webhook can be retried without losing credits.
+      try {
+        await this.addCredits(payment.user_id, payment.credits_granted, {
+          type: CreditTransactionType.PURCHASE,
+          description: `Purchased ${payment.credits_granted} credits`,
+          reference_id: payment.id,
+        });
+      } catch (err) {
+        throw new InternalServerErrorException(`Failed to grant credits for payment ${payment.id}: ${(err as Error).message}`);
+      }
+
       payment.status = PaymentStatus.COMPLETED;
       try {
         await this.paymentRepo.save(payment);
       } catch (err) {
         throw new InternalServerErrorException(`Failed to update payment status: ${(err as Error).message}`);
       }
-
-      await this.addCredits(payment.user_id, payment.credits_granted, {
-        type: CreditTransactionType.PURCHASE,
-        description: `Purchased ${payment.credits_granted} credits`,
-        reference_id: payment.id,
-      });
     }
   }
 }
