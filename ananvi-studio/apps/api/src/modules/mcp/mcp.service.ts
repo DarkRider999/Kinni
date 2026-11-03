@@ -204,7 +204,11 @@ export class McpService {
       let srtContent = '';
       try {
         srtContent = await fs.readFile(srtPath, 'utf-8');
-      } catch { srtContent = ''; }
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+          throw new InternalServerErrorException(`Failed to read captions file: ${(err as Error).message}`);
+        }
+      }
 
       // Convert SRT to VTT
       const vttContent = 'WEBVTT\n\n' + srtContent

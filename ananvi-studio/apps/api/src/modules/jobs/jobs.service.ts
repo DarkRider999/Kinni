@@ -62,12 +62,19 @@ export class JobsService {
       throw new BadRequestException(`Failed to create job record: ${(err as Error).message}`);
     }
 
-    // 4. Deduct credits
-    await this.billing.deductCredits(userId, creditsRequired, {
-      type: CreditTransactionType.USAGE,
-      description: `Job ${saved.id} — ${creditsRequired} credits`,
-      reference_id: saved.id,
-    });
+    // 4. Deduct credits — compensate with job delete if this fails to avoid orphaned QUEUED row
+    try {
+      await this.billing.deductCredits(userId, creditsRequired, {
+        type: CreditTransactionType.USAGE,
+        description: `Job ${saved.id} — ${creditsRequired} credits`,
+        reference_id: saved.id,
+      });
+    } catch (err) {
+      await this.jobRepo.delete(saved.id).catch((e: Error) => {
+        this.logger.error(`Failed to delete orphaned job ${saved.id} after deduction failure: ${e.message}`);
+      });
+      throw new BadRequestException(`Failed to deduct credits: ${(err as Error).message}`);
+    }
 
     // 5. Enqueue processing — compensate on failure to avoid orphaned job + deducted credits
     try {
@@ -137,19 +144,21 @@ export class JobsService {
       throw new BadRequestException('Job cannot be cancelled in current state');
     }
 
-    job.status = JobStatus.CANCELLED;
-    const saved = await this.jobRepo.save(job);
-
-    // Refund credits
+    // Refund before persisting CANCELLED — if refund fails, job stays in current state
     if (job.credits_charged > 0) {
-      await this.billing.addCredits(userId, job.credits_charged, {
-        type: CreditTransactionType.REFUND,
-        description: `Refund for cancelled job ${id}`,
-        reference_id: id,
-      });
+      try {
+        await this.billing.addCredits(userId, job.credits_charged, {
+          type: CreditTransactionType.REFUND,
+          description: `Refund for cancelled job ${id}`,
+          reference_id: id,
+        });
+      } catch (err) {
+        throw new BadRequestException(`Failed to refund credits for cancellation: ${(err as Error).message}`);
+      }
     }
 
-    return saved;
+    job.status = JobStatus.CANCELLED;
+    return this.jobRepo.save(job);
   }
 
   async updateProgress(id: string, progress: number): Promise<void> {
