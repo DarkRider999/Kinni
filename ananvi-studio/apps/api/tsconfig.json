@@ -14,8 +14,7 @@
     "incremental": true,
     "skipLibCheck": true,
     "strictNullChecks": false,
-    "noImplicitAny": false,
-    "paths": { "@ananvi/shared": ["../../packages/shared/src/types.ts"] }
+    "noImplicitAny": false
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist", "test", "**/*.spec.ts"]
