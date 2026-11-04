@@ -112,6 +112,17 @@ export class AdminController {
     return { success: true, data: setting };
   }
 
+  // ── Billing ──────────────────────────────────────────
+  @Get('billing')
+  @Roles(UserRole.SUPER_ADMIN, UserRole.ADMIN)
+  async getBillingOverview(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('per_page', new DefaultValuePipe(20), ParseIntPipe) perPage: number,
+  ) {
+    const result = await this.admin.getBillingOverview(page, perPage);
+    return { success: true, data: result };
+  }
+
   // ── Jobs (admin view) ────────────────────────────────
   @Get('jobs')
   async getAllJobs(

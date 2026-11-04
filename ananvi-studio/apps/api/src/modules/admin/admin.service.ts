@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
 import { Repository, Between, DataSource, ILike, In } from 'typeorm';
 import { UsersService } from '../users/users.service';
@@ -8,7 +8,7 @@ import { Payment } from '../billing/entities/payment.entity';
 import { Credit } from '../billing/entities/credit.entity';
 import { CreditTransaction } from '../billing/entities/credit-transaction.entity';
 import { AuditLog } from './entities/audit-log.entity';
-import { IAdminStats, UserRole, CreditTransactionType } from '@ananvi/shared';
+import { IAdminStats, UserRole, CreditTransactionType, PaymentStatus } from '@ananvi/shared';
 
 // Imported inline to avoid circular dep — entity file shown below
 import { Setting } from './entities/setting.entity';
@@ -191,5 +191,63 @@ export class AdminService {
     if (status) qb.where('j.status = :status', { status });
     const [jobs, total] = await qb.getManyAndCount();
     return { jobs, total };
+  }
+
+  // ── Billing Overview ─────────────────────────────────
+  // Revenue comes from completed payments; credits sold and purchase count come
+  // from the PURCHASE ledger entries the payment webhook writes, so the average
+  // is computed from a single source.
+  async getBillingOverview(page: number, perPage: number) {
+    try {
+      const [payments, total] = await this.paymentRepo.findAndCount({
+        order: { created_at: 'DESC' },
+        skip: (page - 1) * perPage,
+        take: perPage,
+      });
+
+      const revenue = await this.paymentRepo
+        .createQueryBuilder('p')
+        .select('COALESCE(SUM(p.amount_cents), 0)', 'total')
+        .where('p.status = :s', { s: PaymentStatus.COMPLETED })
+        .getRawOne();
+
+      const purchases = await this.txRepo
+        .createQueryBuilder('t')
+        .select('COALESCE(SUM(t.amount), 0)', 'credits')
+        .addSelect('COUNT(t.id)', 'count')
+        .where('t.type = :type', { type: CreditTransactionType.PURCHASE })
+        .getRawOne();
+
+      const revenueCents = parseInt(revenue?.total || '0', 10);
+      const creditsSold = parseInt(purchases?.credits || '0', 10);
+      const purchaseCount = parseInt(purchases?.count || '0', 10);
+
+      return {
+        stats: {
+          total_revenue_usd: revenueCents / 100,
+          total_credits_sold: creditsSold,
+          total_transactions: total,
+          avg_credits_per_purchase: purchaseCount ? Math.round(creditsSold / purchaseCount) : 0,
+        },
+        payments: payments.map(p => ({
+          id: p.id,
+          user_id: p.user_id,
+          amount_usd: p.amount_cents / 100,
+          credits_granted: p.credits_granted,
+          provider: 'dodo',
+          provider_payment_id: p.dodo_payment_id,
+          status: p.status,
+          created_at: p.created_at,
+        })),
+        total,
+        page,
+        per_page: perPage,
+        total_pages: Math.ceil(total / perPage),
+      };
+    } catch (err) {
+      throw new InternalServerErrorException(
+        `Failed to load billing overview: ${(err as Error).message}`,
+      );
+    }
   }
 }
