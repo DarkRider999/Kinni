@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import api from '@/lib/api';
 
 interface Payment {
@@ -19,7 +19,7 @@ function useAdminPayments(page: number) {
     queryKey: ['admin-payments', page],
     queryFn: () =>
       api.get('/admin/payments', { params: { page, limit: 20 } }).then(r => r.data),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 }
 

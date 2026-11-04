@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 
 interface AuditEntry {
@@ -35,7 +35,7 @@ function useAuditLog(page: number, action: string) {
       api
         .get('/admin/audit', { params: { page, limit: 25, action: action || undefined } })
         .then(r => r.data),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 }
 

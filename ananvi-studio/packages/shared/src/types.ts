@@ -70,6 +70,7 @@ export interface IUserPublic {
   display_name: string | null;
   avatar_url: string | null;
   is_active: boolean;
+  totp_enabled: boolean;
   roles: UserRole[];
   credits_balance: number;
   created_at: Date;

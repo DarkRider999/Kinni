@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useStudioStore } from '@/stores/studio.store';
 import { useCreateJob, useJobs } from '@/hooks/useJobs';
 import { useCredits } from '@/hooks/useCredits';
-import { CaptionStyle, AIVideoStyle } from '@ananvi/shared';
+import { CaptionStyle } from '@ananvi/shared';
 
 const CAPTION_STYLES: { value: CaptionStyle; label: string }[] = [
   { value: CaptionStyle.WAVY, label: 'Wavy' },

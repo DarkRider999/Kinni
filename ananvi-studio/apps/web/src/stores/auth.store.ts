@@ -37,9 +37,18 @@ export const useAuthStore = create<AuthState>()(
           isAuthenticated: false,
         }),
     }),
-    { name: 'ananvi-auth', partialize: (s) => ({
-      accessToken: s.accessToken,
-      refreshToken: s.refreshToken,
-    }) },
+    {
+      name: 'ananvi-auth',
+      partialize: (s) => ({
+        accessToken: s.accessToken,
+        refreshToken: s.refreshToken,
+        user: s.user,
+      }),
+      onRehydrateStorage: () => (state) => {
+        if (state) {
+          state.isAuthenticated = !!state.accessToken;
+        }
+      },
+    },
   ),
 );
