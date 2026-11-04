@@ -1,0 +1,26 @@
+.board { display: grid; grid-template-columns: repeat(5, minmax(170px, 1fr)); gap: 12px; overflow-x: auto; padding-bottom: 6px; align-items: start; }
+.lane { background: var(--bg-sidebar); border: 1px dashed transparent; border-radius: var(--radius-lg); padding: 10px; min-height: 420px; transition: border-color .15s, background-color .15s; }
+.laneHot { border-color: var(--blue); background: var(--blue-dim); }
+.laneHead { display: flex; align-items: center; gap: 7px; padding: 2px 4px 10px; font-size: 12.5px; }
+.laneHead strong { font-weight: 600; flex: 1; }
+.laneCount { font-size: 11px; color: var(--text-secondary); background: var(--bg-card-hover); border-radius: 999px; padding: 0 7px; }
+.laneDot { width: 8px; height: 8px; border-radius: 50%; }
+.dot_new { background: var(--blue); }
+.dot_in_pack { background: var(--orange); }
+.dot_packed { background: var(--green); }
+.dot_sent { background: var(--teal); }
+.dot_cancelled { background: var(--red); }
+.laneBody { display: flex; flex-direction: column; gap: 8px; }
+.empty { border: 1px dashed var(--border); border-radius: 10px; padding: 18px 8px; text-align: center; font-size: 11.5px; color: var(--text-muted); }
+.ocard { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 10px; cursor: grab; touch-action: none; user-select: none; display: flex; flex-direction: column; gap: 4px; transition: border-color .15s, background-color .15s, opacity .15s; }
+.ocard:hover { border-color: var(--border-strong); background: var(--bg-card-hover); }
+.placeholder { opacity: .35; border-style: dashed; }
+.cardTop { display: flex; justify-content: space-between; align-items: center; }
+.oid { font-size: 11px; font-weight: 600; color: var(--blue-light); font-variant-numeric: tabular-nums; }
+.grip { color: var(--text-muted); }
+.customer { font-size: 12.5px; font-weight: 600; }
+.meta { font-size: 11px; color: var(--text-muted); }
+.cardFoot { display: flex; justify-content: space-between; align-items: center; margin-top: 4px; }
+.cardFoot strong { font-size: 12.5px; }
+.tracking { display: flex; align-items: center; gap: 5px; font-size: 10.5px; color: var(--teal); }
+.action { margin-top: 6px; width: 100%; }
