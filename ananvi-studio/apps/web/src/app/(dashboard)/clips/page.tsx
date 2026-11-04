@@ -1,15 +1,26 @@
 'use client';
 
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import { IClip } from '@ananvi/shared';
 
-function useClips(page = 1) {
+function useClips(page = 1, favoritesOnly = false) {
   return useQuery({
-    queryKey: ['clips', page],
+    queryKey: ['clips', page, favoritesOnly],
     queryFn: () =>
-      api.get('/clips', { params: { page, limit: 12 } }).then(r => r.data),
+      api.get('/clips', { params: { page, limit: 12, favorites: favoritesOnly || undefined } }).then(r => r.data),
+  });
+}
+
+function useToggleFavorite() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, is_favorite }: { id: string; is_favorite: boolean }) =>
+      api.patch(`/clips/${id}/favorite`, { is_favorite }).then(r => r.data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['clips'] });
+    },
   });
 }
 
@@ -26,16 +37,40 @@ function formatDate(d: Date | string) {
 
 export default function ClipsPage() {
   const [page, setPage] = useState(1);
-  const { data, isLoading, error } = useClips(page);
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const { data, isLoading, error } = useClips(page, favoritesOnly);
+  const toggleFavorite = useToggleFavorite();
 
   const clips: IClip[] = data?.data ?? [];
   const totalPages = Math.ceil((data?.total ?? 0) / 12);
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-white">My Clips</h1>
-        <p className="text-gray-400 mt-1">All generated clips from your jobs</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">My Clips</h1>
+          <p className="text-gray-400 mt-1">All generated clips from your jobs</p>
+        </div>
+        <button
+          onClick={() => { setFavoritesOnly(f => !f); setPage(1); }}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border transition ${
+            favoritesOnly
+              ? 'bg-red-500/10 border-red-500/30 text-red-400'
+              : 'bg-[#111] border-[#2a2a2a] text-gray-400 hover:text-white'
+          }`}
+        >
+          <svg
+            className={`w-4 h-4 ${favoritesOnly ? 'fill-red-400 text-red-400' : 'fill-transparent text-gray-400'}`}
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
+          Favorites
+        </button>
       </div>
 
       {isLoading && (
@@ -84,6 +119,24 @@ export default function ClipsPage() {
                               px-2 py-0.5 rounded font-mono">
                 {formatDuration(clip.duration)}
               </div>
+              <button
+                onClick={() => toggleFavorite.mutate({ id: clip.id, is_favorite: !clip.is_favorite })}
+                disabled={toggleFavorite.isPending}
+                className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60
+                           hover:bg-black/80 transition disabled:opacity-50"
+                title={clip.is_favorite ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                <svg
+                  className={`w-4 h-4 transition ${clip.is_favorite ? 'text-red-400 fill-red-400' : 'text-gray-400 fill-transparent'}`}
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+                </svg>
+              </button>
             </div>
 
             {/* Info */}
@@ -91,9 +144,14 @@ export default function ClipsPage() {
               <p className="text-white font-medium truncate text-sm">{clip.title}</p>
               <div className="flex items-center justify-between mt-2">
                 <span className="text-xs text-gray-500">{formatDate(clip.created_at)}</span>
-                <span className="text-xs text-gray-500 font-mono">
-                  {clip.overall_score.toFixed(1)} / 10
-                </span>
+                <div className="flex items-center gap-2">
+                  {clip.export_count > 0 && (
+                    <span className="text-xs text-gray-600">{clip.export_count}↓</span>
+                  )}
+                  <span className="text-xs text-gray-500 font-mono">
+                    {clip.overall_score.toFixed(1)} / 10
+                  </span>
+                </div>
               </div>
               <a
                 href={clip.video_url}
