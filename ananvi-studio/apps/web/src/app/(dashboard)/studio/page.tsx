@@ -102,7 +102,7 @@ function JobRow({ job }: { job: IJob }) {
 export default function StudioPage() {
   const router = useRouter();
   const [page, setPage] = useState(1);
-  const { data, isLoading: jobsLoading } = useJobs(page);
+  const { data, isLoading: jobsLoading, isError: jobsError } = useJobs(page);
   const createJob = useCreateJob();
 
   const [url, setUrl] = useState('');
@@ -300,6 +300,10 @@ export default function StudioPage() {
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="bg-[#111] border border-[#2a2a2a] rounded-xl h-16 animate-pulse" />
             ))}
+          </div>
+        ) : jobsError ? (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-6 text-center text-red-400 text-sm">
+            Failed to load jobs. Please refresh the page.
           </div>
         ) : jobs.length === 0 ? (
           <div className="bg-[#111] border border-[#2a2a2a] rounded-xl p-10 text-center">
