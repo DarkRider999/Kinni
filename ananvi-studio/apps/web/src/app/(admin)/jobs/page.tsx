@@ -16,10 +16,10 @@ interface AdminJob {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  pending: 'bg-yellow-500/10 text-yellow-400',
+  queued: 'bg-yellow-500/10 text-yellow-400',
   processing: 'bg-blue-500/10 text-blue-400',
-  completed: 'bg-green-500/10 text-green-400',
-  failed: 'bg-red-500/10 text-red-400',
+  complete: 'bg-green-500/10 text-green-400',
+  error: 'bg-red-500/10 text-red-400',
   cancelled: 'bg-gray-500/10 text-gray-400',
 };
 
@@ -60,7 +60,7 @@ export default function AdminJobsPage() {
 
       {/* Filter */}
       <div className="flex gap-2 flex-wrap">
-        {['', 'pending', 'processing', 'completed', 'failed', 'cancelled'].map(s => (
+        {['', 'queued', 'processing', 'complete', 'error', 'cancelled'].map(s => (
           <button
             key={s}
             onClick={() => { setStatus(s); setPage(1); }}

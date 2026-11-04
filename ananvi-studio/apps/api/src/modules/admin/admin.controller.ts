@@ -25,12 +25,19 @@ export class AdminController {
   @Get('users')
   async listUsers(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('per_page', new DefaultValuePipe(20), ParseIntPipe) perPage: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) perPage: number,
+    @Query('search') search?: string,
   ) {
-    const { users, total } = await this.admin.listUsers(page, perPage);
+    const { users, total } = await this.admin.listUsers(page, perPage, search);
     const safeUsers = users.map(u => {
-      const { password_hash, totp_secret, reset_token, reset_token_expires, ...safe } = u as any;
-      return { ...safe, roles: u.roles.map(r => r.name) };
+      const { password_hash, totp_secret, reset_token, reset_token_expires, roles, credit_balance, ...safe } = u as any;
+      const roleNames: string[] = (roles ?? []).map((r: any) => r.name ?? r);
+      return {
+        ...safe,
+        role: roleNames[0] ?? 'user',
+        roles: roleNames,
+        credit_balance: credit_balance ?? 0,
+      };
     });
     return {
       success: true, data: safeUsers,
@@ -63,6 +70,16 @@ export class AdminController {
   ) {
     await this.admin.toggleUserActive(id, isActive);
     return { success: true, message: isActive ? 'User enabled' : 'User disabled' };
+  }
+
+  @Post('users/:id/credits')
+  @Roles(UserRole.SUPER_ADMIN)
+  async adjustCredits(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body('amount', ParseIntPipe) amount: number,
+  ) {
+    await this.admin.adjustCredits(id, amount);
+    return { success: true, message: `Credits adjusted by ${amount}` };
   }
 
   // ── Audit ────────────────────────────────────────────
@@ -99,11 +116,22 @@ export class AdminController {
   @Get('jobs')
   async getAllJobs(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('per_page', new DefaultValuePipe(20), ParseIntPipe) perPage: number,
+    @Query('limit', new DefaultValuePipe(20), ParseIntPipe) perPage: number,
+    @Query('status') status?: string,
   ) {
-    const { jobs, total } = await this.admin.getAllJobs(page, perPage);
+    const { jobs, total } = await this.admin.getAllJobs(page, perPage, status);
+    const mapped = jobs.map(j => ({
+      id: j.id,
+      user_email: (j as any).user?.email ?? '',
+      status: j.status,
+      caption_style: j.caption_style,
+      clips_count: j.clip_count,
+      credits_used: j.credits_charged,
+      created_at: j.created_at,
+      error_message: j.error_message ?? null,
+    }));
     return {
-      success: true, data: jobs,
+      success: true, data: mapped,
       meta: { total, page, per_page: perPage, total_pages: Math.ceil(total / perPage) },
     };
   }

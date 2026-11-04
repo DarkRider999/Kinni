@@ -119,9 +119,9 @@ export default function AdminUsersPage() {
                   <td className="px-4 py-3">
                     <span
                       className={`text-xs px-2 py-0.5 rounded font-medium ${
-                        u.role === 'SUPER_ADMIN'
+                        u.role === 'super_admin'
                           ? 'bg-red-500/10 text-red-400'
-                          : u.role === 'ADMIN'
+                          : u.role === 'admin'
                           ? 'bg-yellow-500/10 text-yellow-400'
                           : 'bg-gray-500/10 text-gray-400'
                       }`}

@@ -1,14 +1,14 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
+import { Repository, Between, DataSource, ILike, In } from 'typeorm';
 import { UsersService } from '../users/users.service';
-import { JobsService } from '../jobs/jobs.service';
-import { BillingService } from '../billing/billing.service';
 import { User } from '../users/entities/user.entity';
 import { Job } from '../jobs/entities/job.entity';
 import { Payment } from '../billing/entities/payment.entity';
+import { Credit } from '../billing/entities/credit.entity';
+import { CreditTransaction } from '../billing/entities/credit-transaction.entity';
 import { AuditLog } from './entities/audit-log.entity';
-import { IAdminStats, UserRole } from '@ananvi/shared';
+import { IAdminStats, UserRole, CreditTransactionType } from '@ananvi/shared';
 
 // Imported inline to avoid circular dep — entity file shown below
 import { Setting } from './entities/setting.entity';
@@ -17,10 +17,14 @@ import { Setting } from './entities/setting.entity';
 export class AdminService {
   constructor(
     private readonly users: UsersService,
+    @InjectDataSource() private readonly ds: DataSource,
     @InjectRepository(Job) private readonly jobRepo: Repository<Job>,
     @InjectRepository(Payment) private readonly paymentRepo: Repository<Payment>,
     @InjectRepository(AuditLog) private readonly auditRepo: Repository<AuditLog>,
     @InjectRepository(Setting) private readonly settingRepo: Repository<Setting>,
+    @InjectRepository(User) private readonly userRepo: Repository<User>,
+    @InjectRepository(Credit) private readonly creditRepo: Repository<Credit>,
+    @InjectRepository(CreditTransaction) private readonly txRepo: Repository<CreditTransaction>,
   ) {}
 
   // ── Dashboard Stats ──────────────────────────────────
@@ -72,8 +76,26 @@ export class AdminService {
   }
 
   // ── User Management ──────────────────────────────────
-  async listUsers(page: number, perPage: number) {
-    return this.users.findAll(page, perPage);
+  async listUsers(page: number, perPage: number, search?: string) {
+    const where = search
+      ? [{ email: ILike(`%${search}%`) }, { username: ILike(`%${search}%`) }]
+      : undefined;
+    const [users, total] = await this.userRepo.findAndCount({
+      relations: ['roles'],
+      where,
+      order: { created_at: 'DESC' },
+      skip: (page - 1) * perPage,
+      take: perPage,
+    });
+    const userIds = users.map(u => u.id);
+    const credits = userIds.length
+      ? await this.creditRepo.findBy({ user_id: In(userIds) })
+      : [];
+    const creditMap = new Map(credits.map(c => [c.user_id, c.balance]));
+    return {
+      users: users.map(u => ({ ...u, credit_balance: creditMap.get(u.id) ?? 0 })),
+      total,
+    };
   }
 
   async createUser(data: {
@@ -95,6 +117,23 @@ export class AdminService {
 
   async toggleUserActive(userId: string, isActive: boolean): Promise<void> {
     await this.users.toggleActive(userId, isActive);
+  }
+
+  async adjustCredits(userId: string, amount: number): Promise<void> {
+    await this.ds.transaction(async em => {
+      const credit = await em.findOne(Credit, { where: { user_id: userId } });
+      if (!credit) throw new NotFoundException('User credit account not found');
+      credit.balance = Math.max(0, credit.balance + amount);
+      if (amount > 0) credit.lifetime_purchased += amount;
+      await em.save(Credit, credit);
+      const tx = em.create(CreditTransaction, {
+        user_id: userId,
+        amount,
+        type: CreditTransactionType.ADMIN,
+        description: `Admin adjustment: ${amount > 0 ? '+' : ''}${amount}`,
+      });
+      await em.save(CreditTransaction, tx);
+    });
   }
 
   // ── Audit Log ────────────────────────────────────────
@@ -138,12 +177,15 @@ export class AdminService {
   }
 
   // ── Admin Jobs View ──────────────────────────────────
-  async getAllJobs(page: number, perPage: number) {
-    const [jobs, total] = await this.jobRepo.findAndCount({
-      order: { created_at: 'DESC' },
-      skip: (page - 1) * perPage,
-      take: perPage,
-    });
+  async getAllJobs(page: number, perPage: number, status?: string) {
+    const qb = this.jobRepo
+      .createQueryBuilder('j')
+      .leftJoinAndSelect('j.user', 'u')
+      .orderBy('j.created_at', 'DESC')
+      .skip((page - 1) * perPage)
+      .take(perPage);
+    if (status) qb.where('j.status = :status', { status });
+    const [jobs, total] = await qb.getManyAndCount();
     return { jobs, total };
   }
 }
