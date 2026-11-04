@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, BadRequestException, ForbiddenException, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { InjectQueue } from '@nestjs/bullmq';
@@ -202,19 +202,31 @@ export class JobsService {
     credits_used: number;
     credits_remaining: number;
   }> {
-    const [total, completed, failed, aggregates, balance] = await Promise.all([
-      this.jobRepo.count({ where: { user_id: userId } }),
-      this.jobRepo.count({ where: { user_id: userId, status: JobStatus.COMPLETE } }),
-      this.jobRepo.count({ where: { user_id: userId, status: JobStatus.ERROR } }),
-      this.jobRepo
-        .createQueryBuilder('j')
-        .select('COALESCE(SUM(j.clip_count), 0)', 'total_clips')
-        .addSelect('COALESCE(SUM(j.credits_charged), 0)', 'credits_used')
-        .where('j.user_id = :userId', { userId })
-        .andWhere('j.status = :status', { status: JobStatus.COMPLETE })
-        .getRawOne<{ total_clips: string; credits_used: string }>(),
-      this.billing.getBalance(userId),
-    ]);
+    let total: number;
+    let completed: number;
+    let failed: number;
+    let aggregates: { total_clips: string; credits_used: string } | undefined;
+    let balance: number;
+
+    try {
+      [total, completed, failed, aggregates, balance] = await Promise.all([
+        this.jobRepo.count({ where: { user_id: userId } }),
+        this.jobRepo.count({ where: { user_id: userId, status: JobStatus.COMPLETE } }),
+        this.jobRepo.count({ where: { user_id: userId, status: JobStatus.ERROR } }),
+        this.jobRepo
+          .createQueryBuilder('j')
+          .select('COALESCE(SUM(j.clip_count), 0)', 'total_clips')
+          .addSelect('COALESCE(SUM(j.credits_charged), 0)', 'credits_used')
+          .where('j.user_id = :userId', { userId })
+          .andWhere('j.status = :status', { status: JobStatus.COMPLETE })
+          .getRawOne<{ total_clips: string; credits_used: string }>(),
+        this.billing.getBalance(userId),
+      ]);
+    } catch (err) {
+      throw new InternalServerErrorException(
+        `Failed to fetch stats: ${(err as Error).message}`,
+      );
+    }
 
     return {
       total_jobs: total,
