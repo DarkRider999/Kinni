@@ -44,6 +44,7 @@ export default function JobDetailPage() {
   const cancelJob = useCancelJob();
 
   const [activeClip, setActiveClip] = useState<IClip | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
 
   const job = jobData?.data;
   const clips = clipsData?.data ?? [];
@@ -53,7 +54,10 @@ export default function JobDetailPage() {
   const handleCancel = () => {
     if (!id) return;
     if (window.confirm('Cancel this job? This cannot be undone.')) {
-      cancelJob.mutate(id, { onSuccess: () => router.push('/studio') });
+      cancelJob.mutate(id, {
+        onSuccess: () => router.push('/studio'),
+        onError: (err: any) => setCancelError(err.response?.data?.message ?? 'Failed to cancel job'),
+      });
     }
   };
 
@@ -107,6 +111,14 @@ export default function JobDetailPage() {
         <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400">
           <p className="font-semibold mb-1">Error</p>
           <p className="text-sm">{job.error_message}</p>
+        </div>
+      )}
+
+      {/* Cancel error banner */}
+      {cancelError && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 flex items-center justify-between">
+          <p className="text-sm">{cancelError}</p>
+          <button onClick={() => setCancelError(null)} className="text-red-400 hover:text-white ml-4 text-xs">Dismiss</button>
         </div>
       )}
 

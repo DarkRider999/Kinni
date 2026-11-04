@@ -1,11 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
 import { useStudioStore } from '@/stores/studio.store';
 import { useCreateJob, useJobs } from '@/hooks/useJobs';
 import { useCredits } from '@/hooks/useCredits';
-import { CaptionStyle, AIVideoStyle } from '@ananvi/shared';
+import { CaptionStyle } from '@ananvi/shared';
 
 const CAPTION_STYLES: { value: CaptionStyle; label: string }[] = [
   { value: CaptionStyle.WAVY, label: 'Wavy' },
@@ -127,25 +126,6 @@ export default function StudioPage() {
               <option value="zh">Chinese</option>
             </select>
           </div>
-
-          <div>
-            <label className="text-xs text-gray-500">
-              AI Video Style <span className="text-gray-600">(optional)</span>
-            </label>
-            <select
-              value={store.aiVideoStyle ?? ''}
-              onChange={e => store.setAiVideoStyle((e.target.value as AIVideoStyle) || null)}
-              className="block mt-1 bg-[#1a1a1a] border border-[#2a2a2a] rounded px-3 py-2
-                         text-white text-sm"
-            >
-              <option value="">None — use original video</option>
-              <option value={AIVideoStyle.FOUND_FOOTAGE}>Found Footage</option>
-              <option value={AIVideoStyle.ANIMAL_CLIPS}>Animal Clips</option>
-              <option value={AIVideoStyle.SECURITY_CAM}>Security Cam</option>
-              <option value={AIVideoStyle.COURT_COMEDY}>Court Comedy</option>
-              <option value={AIVideoStyle.CARTOON_3D}>3D Cartoon</option>
-            </select>
-          </div>
         </div>
       </div>
 
@@ -154,10 +134,9 @@ export default function StudioPage() {
         <h2 className="text-lg font-semibold text-white mb-4">Recent Jobs</h2>
         <div className="space-y-3">
           {jobsData?.data?.map((job: any) => (
-            <Link
+            <div
               key={job.id}
-              href={`/jobs/${job.id}`}
-              className="bg-[#111] border border-[#2a2a2a] rounded-xl p-4 flex items-center justify-between hover:bg-[#1a1a1a] transition"
+              className="bg-[#111] border border-[#2a2a2a] rounded-xl p-4 flex items-center justify-between"
             >
               <div>
                 <p className="text-white font-medium truncate max-w-md">{job.source_url}</p>
@@ -176,15 +155,15 @@ export default function StudioPage() {
                 )}
                 <span className={`text-sm font-medium px-3 py-1 rounded-full ${
                   job.status === 'complete' ? 'bg-green-500/10 text-green-400' :
-                  job.status === 'processing' ? 'bg-blue-500/10 text-blue-400' :
+                  job.status === 'processing' ? 'bg-yellow-500/10 text-yellow-400' :
                   job.status === 'error' ? 'bg-red-500/10 text-red-400' :
                   job.status === 'cancelled' ? 'bg-gray-500/10 text-gray-400' :
-                  'bg-gray-500/10 text-gray-400'
+                  'bg-blue-500/10 text-blue-400'
                 }`}>
                   {job.status}
                 </span>
               </div>
-            </Link>
+            </div>
           ))}
         </div>
       </div>
