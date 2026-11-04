@@ -3,17 +3,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
-
-interface Clip {
-  id: string;
-  job_id: string;
-  title: string;
-  duration_ms: number;
-  output_url: string;
-  thumbnail_url?: string;
-  created_at: string;
-  caption_style: string;
-}
+import { IClip } from '@ananvi/shared';
 
 function useClips(page = 1) {
   return useQuery({
@@ -23,14 +13,13 @@ function useClips(page = 1) {
   });
 }
 
-function formatDuration(ms: number) {
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  return `${m}:${String(s % 60).padStart(2, '0')}`;
+function formatDuration(seconds: number) {
+  const m = Math.floor(seconds / 60);
+  return `${m}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
 }
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString('en-US', {
+function formatDate(d: Date | string) {
+  return new Date(d).toLocaleDateString('en-US', {
     month: 'short', day: 'numeric', year: 'numeric',
   });
 }
@@ -39,7 +28,7 @@ export default function ClipsPage() {
   const [page, setPage] = useState(1);
   const { data, isLoading, error } = useClips(page);
 
-  const clips: Clip[] = data?.data ?? [];
+  const clips: IClip[] = data?.data ?? [];
   const totalPages = Math.ceil((data?.total ?? 0) / 12);
 
   return (
@@ -93,7 +82,7 @@ export default function ClipsPage() {
               )}
               <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs
                               px-2 py-0.5 rounded font-mono">
-                {formatDuration(clip.duration_ms)}
+                {formatDuration(clip.duration)}
               </div>
             </div>
 
@@ -102,14 +91,13 @@ export default function ClipsPage() {
               <p className="text-white font-medium truncate text-sm">{clip.title}</p>
               <div className="flex items-center justify-between mt-2">
                 <span className="text-xs text-gray-500">{formatDate(clip.created_at)}</span>
-                <span className="text-xs bg-[#f5c518]/10 text-[#f5c518] px-2 py-0.5 rounded">
-                  {clip.caption_style}
+                <span className="text-xs text-gray-500 font-mono">
+                  {clip.overall_score.toFixed(1)} / 10
                 </span>
               </div>
               <a
-                href={clip.output_url}
-                target="_blank"
-                rel="noopener noreferrer"
+                href={clip.video_url}
+                download
                 className="mt-3 w-full flex items-center justify-center gap-2 py-2 text-sm
                            bg-[#1a1a1a] hover:bg-[#f5c518] hover:text-black text-gray-300
                            rounded-lg transition font-medium"
