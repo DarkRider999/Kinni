@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../lib/api';
-import { IJob, IPaginatedResponse, IApiResponse, CaptionStyle, AIVideoStyle } from '@ananvi/shared';
+import { IJob, IClip, IPaginatedResponse, IApiResponse, CaptionStyle, AIVideoStyle } from '@ananvi/shared';
 
 export function useJobs(page = 1) {
   return useQuery<IPaginatedResponse<IJob>>({
@@ -40,5 +40,13 @@ export function useCancelJob() {
   return useMutation({
     mutationFn: (id: string) => api.patch(`/jobs/${id}/cancel`).then(r => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['jobs'] }),
+  });
+}
+
+export function useJobClips(jobId: string | undefined) {
+  return useQuery<IApiResponse<IClip[]>>({
+    queryKey: ['job-clips', jobId],
+    queryFn: () => api.get(`/jobs/${jobId}/clips`).then(r => r.data),
+    enabled: !!jobId,
   });
 }
