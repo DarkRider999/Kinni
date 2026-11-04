@@ -40,7 +40,7 @@ export default function JobDetailPage() {
   const id = typeof params.id === 'string' ? params.id : undefined;
 
   const { data: jobData, isLoading: jobLoading } = useJob(id ?? '');
-  const { data: clipsData } = useJobClips(id);
+  const { data: clipsData, isError: clipsError } = useJobClips(id);
   const cancelJob = useCancelJob();
 
   const [activeClip, setActiveClip] = useState<IClip | null>(null);
@@ -143,8 +143,15 @@ export default function JobDetailPage() {
         </div>
       )}
 
+      {/* Clips fetch error */}
+      {job.status === JobStatus.COMPLETE && clipsError && (
+        <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-sm">
+          Could not load clips. Please refresh the page.
+        </div>
+      )}
+
       {/* Clips grid */}
-      {job.status === JobStatus.COMPLETE && clips.length > 0 && (
+      {job.status === JobStatus.COMPLETE && !clipsError && clips.length > 0 && (
         <div>
           <h2 className="text-lg font-semibold text-white mb-4">Clips ({clips.length})</h2>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">

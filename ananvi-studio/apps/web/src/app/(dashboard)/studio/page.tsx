@@ -19,7 +19,7 @@ export default function StudioPage() {
   const store = useStudioStore();
   const createJob = useCreateJob();
   const { data: credits } = useCredits();
-  const { data: jobsData } = useJobs();
+  const { data: jobsData, isError: jobsError } = useJobs();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
@@ -132,6 +132,11 @@ export default function StudioPage() {
       {/* Active Jobs */}
       <div>
         <h2 className="text-lg font-semibold text-white mb-4">Recent Jobs</h2>
+        {jobsError && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-xl p-4 text-red-400 text-sm mb-3">
+            Could not load recent jobs. Please refresh the page.
+          </div>
+        )}
         <div className="space-y-3">
           {jobsData?.data?.map((job: any) => (
             <div
