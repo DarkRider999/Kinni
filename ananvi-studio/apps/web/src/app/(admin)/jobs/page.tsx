@@ -46,7 +46,7 @@ export default function AdminJobsPage() {
   const [page, setPage] = useState(1);
   const [status, setStatus] = useState('');
 
-  const { data, isLoading } = useAdminJobs(page, status);
+  const { data, isLoading, isError } = useAdminJobs(page, status);
   const jobs: AdminJob[] = data?.data ?? [];
   const total: number = data?.total ?? 0;
   const totalPages = Math.ceil(total / 20);
@@ -78,6 +78,8 @@ export default function AdminJobsPage() {
       <div className="bg-[#111] border border-[#2a2a2a] rounded-xl overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center text-gray-500 animate-pulse">Loading…</div>
+        ) : isError ? (
+          <div className="p-8 text-center text-red-400 text-sm">Failed to load jobs</div>
         ) : jobs.length === 0 ? (
           <div className="p-8 text-center text-gray-500">No jobs found</div>
         ) : (

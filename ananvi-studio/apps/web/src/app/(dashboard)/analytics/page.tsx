@@ -88,8 +88,8 @@ function formatDate(iso: string) {
 }
 
 export default function AnalyticsPage() {
-  const { data: statsRaw, isLoading: statsLoading } = useAnalytics();
-  const { data: txRaw, isLoading: txLoading } = useCreditsHistory();
+  const { data: statsRaw, isLoading: statsLoading, isError: statsError } = useAnalytics();
+  const { data: txRaw, isLoading: txLoading, isError: txError } = useCreditsHistory();
 
   const stats: AnalyticsSummary | null = statsRaw?.data ?? null;
   const transactions: { type: string; amount: number; created_at: string }[] =
@@ -127,6 +127,10 @@ export default function AnalyticsPage() {
           Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="bg-[#111] border border-[#2a2a2a] rounded-xl h-24 animate-pulse" />
           ))
+        ) : statsError ? (
+          <div className="col-span-3 text-red-400 text-sm text-center py-8">
+            Failed to load stats
+          </div>
         ) : stats ? (
           <>
             <StatCard label="Total Jobs" value={stats.total_jobs} />
@@ -213,6 +217,8 @@ export default function AnalyticsPage() {
         </h2>
         {txLoading ? (
           <div className="h-32 animate-pulse bg-[#1a1a1a] rounded-lg" />
+        ) : txError ? (
+          <p className="text-red-400 text-sm">Failed to load credit history</p>
         ) : days.length === 0 ? (
           <p className="text-gray-500 text-sm">No credit usage recorded yet.</p>
         ) : (
@@ -240,6 +246,10 @@ export default function AnalyticsPage() {
         <h2 className="text-lg font-semibold text-white mb-4">Recent Credit Activity</h2>
         {txLoading ? (
           <div className="bg-[#111] border border-[#2a2a2a] rounded-xl h-40 animate-pulse" />
+        ) : txError ? (
+          <div className="bg-[#111] border border-[#2a2a2a] rounded-xl p-8 text-center text-red-400 text-sm">
+            Failed to load credit activity
+          </div>
         ) : transactions.length === 0 ? (
           <div className="bg-[#111] border border-[#2a2a2a] rounded-xl p-8 text-center text-gray-500">
             No credit activity yet

@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 
@@ -41,8 +41,9 @@ export default function AdminUsersPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [actionMsg, setActionMsg] = useState('');
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => { if (searchTimer.current) clearTimeout(searchTimer.current); }, []);
 
-  const { data, isLoading } = useAdminUsers(page, debouncedSearch);
+  const { data, isLoading, isError } = useAdminUsers(page, debouncedSearch);
   const users: AdminUser[] = data?.data ?? [];
   const total: number = data?.total ?? 0;
   const totalPages = Math.ceil(total / 20);
@@ -88,6 +89,8 @@ export default function AdminUsersPage() {
       <div className="bg-[#111] border border-[#2a2a2a] rounded-xl overflow-hidden">
         {isLoading ? (
           <div className="p-8 text-center text-gray-500 animate-pulse">Loading…</div>
+        ) : isError ? (
+          <div className="p-8 text-center text-red-400 text-sm">Failed to load users</div>
         ) : users.length === 0 ? (
           <div className="p-8 text-center text-gray-500">No users found</div>
         ) : (
