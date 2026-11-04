@@ -123,14 +123,18 @@ export class AdminService {
     await this.ds.transaction(async em => {
       const credit = await em.findOne(Credit, { where: { user_id: userId } });
       if (!credit) throw new NotFoundException('User credit account not found');
+      const previous = credit.balance;
       credit.balance = Math.max(0, credit.balance + amount);
-      if (amount > 0) credit.lifetime_purchased += amount;
+      const applied = credit.balance - previous;
+      if (applied > 0) credit.lifetime_purchased += applied;
+      if (applied < 0) credit.lifetime_used += Math.abs(applied);
       await em.save(Credit, credit);
+      const clampNote = applied !== amount ? ` (clamped from ${amount > 0 ? '+' : ''}${amount})` : '';
       const tx = em.create(CreditTransaction, {
         user_id: userId,
-        amount,
+        amount: applied,
         type: CreditTransactionType.ADMIN,
-        description: `Admin adjustment: ${amount > 0 ? '+' : ''}${amount}`,
+        description: `Admin adjustment: ${applied > 0 ? '+' : ''}${applied}${clampNote}`,
       });
       await em.save(CreditTransaction, tx);
     });

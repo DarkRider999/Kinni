@@ -40,6 +40,7 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [actionMsg, setActionMsg] = useState('');
+  const [actionIsError, setActionIsError] = useState(false);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => () => { if (searchTimer.current) clearTimeout(searchTimer.current); }, []);
 
@@ -60,10 +61,13 @@ export default function AdminUsersPage() {
   const adjustCredits = async (userId: string, amount: number) => {
     try {
       await api.post(`/admin/users/${userId}/credits`, { amount });
-      setActionMsg(`Credits adjusted`);
+      setActionIsError(false);
+      setActionMsg('Credits adjusted');
       setTimeout(() => setActionMsg(''), 3000);
-    } catch {
-      setActionMsg('Failed');
+    } catch (err: any) {
+      setActionIsError(true);
+      setActionMsg(err?.response?.data?.message ?? 'Failed to adjust credits');
+      setTimeout(() => setActionMsg(''), 4000);
     }
   };
 
@@ -74,7 +78,11 @@ export default function AdminUsersPage() {
           <h1 className="text-2xl font-bold text-white">Users</h1>
           <p className="text-gray-400 mt-1">{total.toLocaleString()} total users</p>
         </div>
-        {actionMsg && <span className="text-sm text-green-400">{actionMsg}</span>}
+        {actionMsg && (
+          <span className={`text-sm ${actionIsError ? 'text-red-400' : 'text-green-400'}`}>
+            {actionMsg}
+          </span>
+        )}
       </div>
 
       <input
