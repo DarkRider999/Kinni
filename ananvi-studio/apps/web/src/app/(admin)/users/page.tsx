@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useRef, useState } from 'react';
+import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 
 interface AdminUser {
@@ -23,7 +23,7 @@ function useAdminUsers(page: number, search: string) {
       api
         .get('/admin/users', { params: { page, limit: 20, search: search || undefined } })
         .then(r => r.data),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 }
 
@@ -40,6 +40,7 @@ export default function AdminUsersPage() {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [actionMsg, setActionMsg] = useState('');
+  const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data, isLoading } = useAdminUsers(page, debouncedSearch);
   const users: AdminUser[] = data?.data ?? [];
@@ -48,8 +49,8 @@ export default function AdminUsersPage() {
 
   const handleSearch = (v: string) => {
     setSearch(v);
-    clearTimeout((window as any).__searchTimeout);
-    (window as any).__searchTimeout = setTimeout(() => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
       setDebouncedSearch(v);
       setPage(1);
     }, 400);

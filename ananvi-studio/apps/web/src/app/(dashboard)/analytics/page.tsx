@@ -36,6 +36,13 @@ function useCreditsHistory() {
   });
 }
 
+const VALUE_COLOR_CLASS: Record<string, string> = {
+  white: 'text-white',
+  'green-400': 'text-green-400',
+  'red-400': 'text-red-400',
+  '[#f5c518]': 'text-[#f5c518]',
+};
+
 function StatCard({
   label,
   value,
@@ -50,7 +57,7 @@ function StatCard({
   return (
     <div className="bg-[#111] border border-[#2a2a2a] rounded-xl p-5">
       <p className="text-sm text-gray-400">{label}</p>
-      <p className={`text-3xl font-bold mt-1 text-${color}`}>{value}</p>
+      <p className={`text-3xl font-bold mt-1 ${VALUE_COLOR_CLASS[color] ?? 'text-white'}`}>{value}</p>
       {sub && <p className="text-xs text-gray-500 mt-1">{sub}</p>}
     </div>
   );
