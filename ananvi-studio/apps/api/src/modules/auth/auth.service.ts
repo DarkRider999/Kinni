@@ -167,6 +167,7 @@ export class AuthService {
 
     const refresh_token = this.jwt.sign(payload, {
       secret: this.REFRESH_SECRET,
+      algorithm: 'HS256',
       expiresIn: this.REFRESH_EXPIRY,
     });
 

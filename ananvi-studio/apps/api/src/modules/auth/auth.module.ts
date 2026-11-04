@@ -16,8 +16,10 @@ import { UsersModule } from '../users/users.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (cfg: ConfigService) => ({
-        secret: cfg.get<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '15m' },
+        privateKey: cfg.getOrThrow<string>('JWT_PRIVATE_KEY').replace(/\\n/g, '\n'),
+        publicKey: cfg.getOrThrow<string>('JWT_PUBLIC_KEY').replace(/\\n/g, '\n'),
+        signOptions: { algorithm: 'RS256', expiresIn: '15m' },
+        verifyOptions: { algorithms: ['RS256'] },
       }),
     }),
   ],
