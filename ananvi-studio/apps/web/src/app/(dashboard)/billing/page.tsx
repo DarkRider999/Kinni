@@ -31,9 +31,9 @@ function formatDate(iso: string) {
 
 export default function BillingPage() {
   const [txPage, setTxPage] = useState(1);
-  const { data: credits, isLoading: creditsLoading } = useCredits();
-  const { data: txData } = useTransactions(txPage);
-  const { data: packages } = usePackages();
+  const { data: credits, isLoading: creditsLoading, isError: creditsError } = useCredits();
+  const { data: txData, isLoading: txLoading, isError: txError } = useTransactions(txPage);
+  const { data: packages, isLoading: packagesLoading, isError: packagesError } = usePackages();
   const checkout = useCheckout();
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
 
@@ -63,6 +63,8 @@ export default function BillingPage() {
         <p className="text-sm text-gray-400">Current Balance</p>
         {creditsLoading ? (
           <div className="h-12 w-32 bg-[#1a1a1a] rounded animate-pulse mt-2" />
+        ) : creditsError ? (
+          <p className="text-sm text-red-400 mt-2">Failed to load balance</p>
         ) : (
           <p className="text-5xl font-bold text-[#f5c518] mt-2">
             {credits?.balance ?? 0}
@@ -75,9 +77,19 @@ export default function BillingPage() {
       </div>
 
       {/* Packages */}
-      {packages && packages.length > 0 && (
-        <div>
-          <h2 className="text-lg font-semibold text-white mb-4">Top Up Credits</h2>
+      <div>
+        <h2 className="text-lg font-semibold text-white mb-4">Top Up Credits</h2>
+        {packagesLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="bg-[#111] border border-[#2a2a2a] rounded-xl h-40 animate-pulse" />
+            ))}
+          </div>
+        ) : packagesError ? (
+          <div className="bg-[#111] border border-[#2a2a2a] rounded-xl p-8 text-center text-red-400 text-sm">
+            Failed to load packages
+          </div>
+        ) : packages && packages.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {packages.map((pkg: Package) => (
               <div
@@ -106,13 +118,23 @@ export default function BillingPage() {
               </div>
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="bg-[#111] border border-[#2a2a2a] rounded-xl p-8 text-center text-gray-500 text-sm">
+            No packages available
+          </div>
+        )}
+      </div>
 
       {/* Transaction history */}
       <div>
         <h2 className="text-lg font-semibold text-white mb-4">Transaction History</h2>
-        {transactions.length === 0 ? (
+        {txLoading ? (
+          <div className="bg-[#111] border border-[#2a2a2a] rounded-xl h-40 animate-pulse" />
+        ) : txError ? (
+          <div className="bg-[#111] border border-[#2a2a2a] rounded-xl p-8 text-center text-red-400 text-sm">
+            Failed to load transactions
+          </div>
+        ) : transactions.length === 0 ? (
           <div className="bg-[#111] border border-[#2a2a2a] rounded-xl p-8 text-center text-gray-500">
             No transactions yet
           </div>
