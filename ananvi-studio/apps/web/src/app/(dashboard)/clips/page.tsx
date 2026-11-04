@@ -13,13 +13,16 @@ function useClips(page = 1, favoritesOnly = false) {
   });
 }
 
-function useToggleFavorite() {
+function useToggleFavorite(onError: (msg: string) => void) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, is_favorite }: { id: string; is_favorite: boolean }) =>
       api.patch(`/clips/${id}/favorite`, { is_favorite }).then(r => r.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['clips'] });
+    },
+    onError: (err: any) => {
+      onError(err?.response?.data?.message ?? 'Failed to update favorite');
     },
   });
 }
@@ -38,8 +41,12 @@ function formatDate(d: Date | string) {
 export default function ClipsPage() {
   const [page, setPage] = useState(1);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const [favoriteError, setFavoriteError] = useState('');
   const { data, isLoading, error } = useClips(page, favoritesOnly);
-  const toggleFavorite = useToggleFavorite();
+  const toggleFavorite = useToggleFavorite((msg) => {
+    setFavoriteError(msg);
+    setTimeout(() => setFavoriteError(''), 4000);
+  });
 
   const clips: IClip[] = data?.data ?? [];
   const totalPages = Math.ceil((data?.total ?? 0) / 12);
@@ -84,6 +91,12 @@ export default function ClipsPage() {
       {error && (
         <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm">
           Failed to load clips
+        </div>
+      )}
+
+      {favoriteError && (
+        <div className="bg-red-500/10 border border-red-500/30 text-red-400 px-4 py-3 rounded-lg text-sm">
+          {favoriteError}
         </div>
       )}
 
