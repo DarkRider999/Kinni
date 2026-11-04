@@ -194,6 +194,38 @@ export class JobsService {
     });
   }
 
+  async getStats(userId: string): Promise<{
+    total_jobs: number;
+    completed_jobs: number;
+    failed_jobs: number;
+    total_clips: number;
+    credits_used: number;
+    credits_remaining: number;
+  }> {
+    const [total, completed, failed, aggregates, balance] = await Promise.all([
+      this.jobRepo.count({ where: { user_id: userId } }),
+      this.jobRepo.count({ where: { user_id: userId, status: JobStatus.COMPLETE } }),
+      this.jobRepo.count({ where: { user_id: userId, status: JobStatus.ERROR } }),
+      this.jobRepo
+        .createQueryBuilder('j')
+        .select('COALESCE(SUM(j.clip_count), 0)', 'total_clips')
+        .addSelect('COALESCE(SUM(j.credits_charged), 0)', 'credits_used')
+        .where('j.user_id = :userId', { userId })
+        .andWhere('j.status = :status', { status: JobStatus.COMPLETE })
+        .getRawOne<{ total_clips: string; credits_used: string }>(),
+      this.billing.getBalance(userId),
+    ]);
+
+    return {
+      total_jobs: total,
+      completed_jobs: completed,
+      failed_jobs: failed,
+      total_clips: parseInt(aggregates?.total_clips ?? '0', 10),
+      credits_used: parseInt(aggregates?.credits_used ?? '0', 10),
+      credits_remaining: balance,
+    };
+  }
+
   // Admin: all jobs
   async findAll(page = 1, perPage = 20) {
     const [jobs, total] = await this.jobRepo.findAndCount({

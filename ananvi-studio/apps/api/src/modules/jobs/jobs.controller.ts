@@ -10,6 +10,12 @@ import { CreateJobDto } from './dto/create-job.dto';
 export class JobsController {
   constructor(private readonly jobs: JobsService) {}
 
+  @Get('stats')
+  async getStats(@CurrentUser('sub') userId: string) {
+    const stats = await this.jobs.getStats(userId);
+    return { success: true, data: stats };
+  }
+
   @Post()
   async create(
     @CurrentUser('sub') userId: string,
