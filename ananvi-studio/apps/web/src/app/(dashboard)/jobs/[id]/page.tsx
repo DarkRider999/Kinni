@@ -47,7 +47,7 @@ export default function JobDetailPage() {
   const [cancelError, setCancelError] = useState<string | null>(null);
 
   const job = jobData?.data;
-  const clips = clipsData?.data ?? [];
+  const clips: IClip[] = clipsData?.data ?? [];
 
   const isActive = job?.status === JobStatus.QUEUED || job?.status === JobStatus.PROCESSING;
 
