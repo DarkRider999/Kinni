@@ -12,7 +12,8 @@
     "test:integration": "jest -c jest.integration.config.ts --runInBand",
     "migration:generate": "ts-node -r tsconfig-paths/register ./node_modules/.bin/typeorm migration:generate -d src/database/datasource.ts",
     "migration:run": "ts-node -r tsconfig-paths/register ./node_modules/.bin/typeorm migration:run -d src/database/datasource.ts",
-    "migration:revert": "ts-node -r tsconfig-paths/register ./node_modules/.bin/typeorm migration:revert -d src/database/datasource.ts"
+    "migration:revert": "ts-node -r tsconfig-paths/register ./node_modules/.bin/typeorm migration:revert -d src/database/datasource.ts",
+    "seed:admin": "ts-node -r tsconfig-paths/register src/database/seeds/admin.seed.ts"
   },
   "dependencies": {
     "@ananvi/shared": "1.0.0",
