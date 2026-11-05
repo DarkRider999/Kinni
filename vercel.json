@@ -1,6 +1,0 @@
-{
-  "buildCommand": "cd ananvi-studio/apps/web && npm install && npm run build",
-  "outputDirectory": "ananvi-studio/apps/web/.next",
-  "framework": "nextjs",
-  "installCommand": "cd ananvi-studio && npm install"
-}
