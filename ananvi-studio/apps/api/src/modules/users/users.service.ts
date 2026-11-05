@@ -56,14 +56,15 @@ export class UsersService {
     id: string,
     prefs: Partial<Record<'job_complete' | 'job_failed' | 'credit_low' | 'marketing', boolean>>,
   ): Promise<Record<string, boolean>> {
-    const user = await this.findByIdOrFail(id);
-    const merged = { ...(user.notification_prefs ?? {}), ...prefs };
     try {
+      const user = await this.findByIdOrFail(id);
+      const merged = { ...(user.notification_prefs ?? {}), ...prefs };
       await this.userRepo.update(id, { notification_prefs: merged as any });
-    } catch {
+      return merged;
+    } catch (err) {
+      if (err instanceof NotFoundException) throw err;
       throw new InternalServerErrorException('Failed to save notification preferences');
     }
-    return merged;
   }
 
   async updateProfile(id: string, data: Partial<Pick<User,
