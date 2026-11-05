@@ -52,6 +52,13 @@ export class UsersService {
     await this.userRepo.update(id, { last_login_at: new Date() });
   }
 
+  async updateNotificationPrefs(
+    id: string,
+    prefs: Partial<Record<'job_complete' | 'job_failed' | 'credit_low' | 'marketing', boolean>>,
+  ): Promise<void> {
+    await this.userRepo.update(id, { notification_prefs: prefs as any });
+  }
+
   async updateProfile(id: string, data: Partial<Pick<User,
     'display_name' | 'avatar_url'
   >>): Promise<User> {

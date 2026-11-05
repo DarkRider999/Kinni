@@ -45,6 +45,9 @@ export class User {
   @Column({ type: 'timestamp', nullable: true })
   last_login_at: Date | null;
 
+  @Column({ type: 'jsonb', nullable: true, default: '{}' })
+  notification_prefs: Record<string, boolean> | null;
+
   @ManyToMany(() => Role, { eager: true })
   @JoinTable({
     name: 'user_roles',

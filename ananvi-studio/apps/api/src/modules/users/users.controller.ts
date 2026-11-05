@@ -29,9 +29,10 @@ export class UsersController {
   @Patch('me/notifications')
   @HttpCode(HttpStatus.OK)
   async updateNotifications(
-    @CurrentUser('sub') _userId: string,
-    @Body() _prefs: { job_complete?: boolean; job_failed?: boolean; credit_low?: boolean; marketing?: boolean },
+    @CurrentUser('sub') userId: string,
+    @Body() prefs: { job_complete?: boolean; job_failed?: boolean; credit_low?: boolean; marketing?: boolean },
   ) {
+    await this.users.updateNotificationPrefs(userId, prefs);
     return { success: true, message: 'Notification preferences saved' };
   }
 }
