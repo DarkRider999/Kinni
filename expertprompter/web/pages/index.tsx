@@ -226,7 +226,7 @@ export default function Home() {
             Turn any idea into an <span className="bg-gradient-to-r from-brand-600 to-fuchsia-500 bg-clip-text text-transparent">expert AI prompt</span>
           </h1>
           <p className="mt-2 text-slate-600 dark:text-slate-400">
-            Describe your task in plain words. ExpertPrompter detects what kind of task it is, writes a detailed, structured prompt, and tells you which AI tool to use.
+            Describe your task in plain words. Ananvi PromptMaster detects what kind of task it is, writes a detailed, structured prompt, and tells you which AI tool to use.
           </p>
         </div>
 
@@ -325,7 +325,7 @@ export default function Home() {
       </main>
 
       <footer className="mx-auto max-w-7xl px-4 pb-10 pt-4 text-xs text-slate-400 sm:px-6">
-        ExpertPrompter writes prompts with its own rule-based logic. Photos you attach are described by an AI running on your own device.
+        Ananvi PromptMaster writes prompts with its own rule-based logic. Photos you attach are described by an AI running on your own device.
         {' · '}<a href="/privacy" className="underline">Privacy</a>{' · '}<a href="/terms" className="underline">Terms</a>
       </footer>
 

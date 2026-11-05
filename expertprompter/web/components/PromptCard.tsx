@@ -37,7 +37,7 @@ export default function PromptCard({ prompt, onRegenerate, regenerating, onSave,
 
   const download = () => {
     const url = URL.createObjectURL(new Blob([prompt], { type: 'text/plain' }));
-    const a = Object.assign(document.createElement('a'), { href: url, download: 'expertprompter-prompt.txt' });
+    const a = Object.assign(document.createElement('a'), { href: url, download: 'ananvi-promptmaster-prompt.txt' });
     a.click();
     URL.revokeObjectURL(url);
   };

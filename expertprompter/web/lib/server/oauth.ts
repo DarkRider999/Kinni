@@ -73,7 +73,7 @@ export const PROVIDERS: Record<ProviderId, ProviderDef> = {
     tokenUrl: 'https://github.com/login/oauth/access_token',
     scope: 'read:user user:email',
     async fetchProfile(token) {
-      const init = { headers: { Authorization: `Bearer ${token}`, 'User-Agent': 'ExpertPrompter' } };
+      const init = { headers: { Authorization: `Bearer ${token}`, 'User-Agent': 'Ananvi PromptMaster' } };
       const user = await getJson<{ id: number; name?: string; login: string; avatar_url?: string }>('https://api.github.com/user', init);
       const emails = await getJson<Array<{ email: string; primary: boolean; verified: boolean }>>('https://api.github.com/user/emails', init);
       const best = emails.find((e) => e.primary && e.verified) ?? emails.find((e) => e.verified) ?? null;

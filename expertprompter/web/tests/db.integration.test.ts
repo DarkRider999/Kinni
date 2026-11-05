@@ -98,7 +98,7 @@ describe.skipIf(!hasDb)('accounts, free runs and billing (database)', async () =
   it('signs in with a username (case-insensitive) and gives isMaster accounts unlimited runs', async () => {
     const bcrypt = (await import('bcryptjs')).default;
     await prisma.user.create({
-      data: { email: 'shared@users.expertprompter.invalid', username: 'teammaster', isMaster: true, passwordHash: await bcrypt.hash('correct-horse-9', 4) },
+      data: { email: 'shared@users.ananvi-promptmaster.invalid', username: 'teammaster', isMaster: true, passwordHash: await bcrypt.hash('correct-horse-9', 4) },
     });
     await expect(login('teammaster', 'wrong-password')).rejects.toThrow('Invalid email or password');
     const session = await login('  TeamMaster ', 'correct-horse-9');

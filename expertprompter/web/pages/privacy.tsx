@@ -4,7 +4,7 @@ export default function Privacy() {
   const contact = contactEmail ? <a className="underline" href={`mailto:${contactEmail}`}>{contactEmail}</a> : 'the site owner';
   return (
     <LegalPage title="Privacy Policy">
-      <p>ExpertPrompter turns your ideas into detailed AI prompts. This page explains what we store and why.</p>
+      <p>Ananvi PromptMaster turns your ideas into detailed AI prompts. This page explains what we store and why.</p>
 
       <h2>What we collect</h2>
       <ul>
@@ -23,7 +23,7 @@ export default function Privacy() {
       <p>Vercel hosts the app, Supabase stores the database, Stripe handles payments, and Hugging Face and jsDelivr deliver the on-device photo AI. Each processes data only to provide its service.</p>
 
       <h2>Deleting your data</h2>
-      <p>You can delete individual prompts from your history at any time. To delete your whole account, including data received through Facebook, Google or GitHub sign-in, contact {contact} from the email on your account and we will delete it within 30 days. You can also remove ExpertPrompter from the connected apps in your Facebook, Google or GitHub settings.</p>
+      <p>You can delete individual prompts from your history at any time. To delete your whole account, including data received through Facebook, Google or GitHub sign-in, contact {contact} from the email on your account and we will delete it within 30 days. You can also remove Ananvi PromptMaster from the connected apps in your Facebook, Google or GitHub settings.</p>
 
       <h2>Contact</h2>
       <p>Questions about privacy: {contact}.</p>
