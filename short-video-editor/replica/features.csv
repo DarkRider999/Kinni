@@ -1,0 +1,51 @@
+feature,area,priority,original,clone,notes
+Create project with aspect ratio (9:16 16:9 1:1 4:5),projects,must,yes,no,S02
+Project list with thumbnails and autosave,projects,must,yes,no,S01 S03
+Import video image and audio by drag and drop,media,must,yes,no,S02 S04
+Multi-track timeline (main overlay text audio),timeline,must,yes,no,S03
+Drag clips onto timeline and reorder,timeline,must,yes,no,S03
+Trim clip edges with handles,timeline,must,yes,no,S03
+Split clip at playhead (Ctrl/Cmd+B),timeline,must,yes,no,src 12
+Delete ripple and snapping,timeline,must,yes,no,S03
+Timeline zoom and playhead scrubbing,timeline,must,yes,no,S03
+Undo and redo,editor,must,yes,no,S03 top bar
+Real-time preview player with play/pause and timecode,player,must,yes,no,S03
+Add text with font size colour stroke,text,must,yes,no,S13
+Auto-captions from speech with word timing,captions,must,yes,no,S07 F02
+Edit caption text and timing in a list,captions,must,yes,no,S07
+Caption style presets,captions,must,yes,no,S07
+Add music track with volume and fade,audio,must,yes,no,S05 S14
+Clip volume and mute,audio,must,yes,no,S14
+Clip speed (constant 0.1x-100x),speed,must,yes,no,src speed range
+Export MP4 up to 1080p 30/60fps,export,must,yes,no,S16
+Export progress and download,export,must,yes,no,S17
+Transform (position scale rotation opacity),clip,should,yes,no,S12
+Keyframe animation of transform and opacity,clip,should,yes,no,src 4
+Colour filters with intensity,effects,should,yes,no,S08
+Transitions between clips,effects,should,yes,no,S09
+Text animation in/out,text,should,yes,no,S13
+Export captions as SRT,captions,should,yes,no,src 15
+Split a caption cue,captions,should,yes,no,src 1
+Beat detection with snap-to-beat markers,audio,should,yes,no,F04 reuse DJ RadicalMix DSP
+Record voiceover,audio,should,yes,no,S05
+Extract audio from video,audio,should,yes,no,S05
+Templates with replaceable media slots,templates,should,yes,no,S11 F03 (our own templates)
+Sign in with email or Google,account,should,yes,no,S19
+Cloud project sync,account,should,yes,no,pricing pages storage
+Plans and checkout,billing,should,yes,no,S18
+Keyboard shortcuts,editor,should,yes,no,src 12
+Speed curves with presets,speed,could,yes,no,S15
+Background removal (auto cutout),ai,could,yes,no,S12 F06
+Chroma key,ai,could,yes,no,S12 F06
+Auto reframe to another aspect ratio,ai,could,yes,no,src 3
+Text to speech voiceover,ai,could,yes,no,src 5
+Noise reduction on audio,audio,could,yes,no,S14
+Stickers and overlays,effects,could,yes,no,S10 (own assets)
+4K and HDR export,export,could,yes,no,Pro-gated in original
+Share to TikTok and YouTube via official APIs,export,could,yes,no,S17 user's own keys
+Original template library content,templates,could,yes,skip,their creators' content - ship our own
+Licensed music and SFX catalogue,audio,could,yes,skip,licensed content
+Proprietary sticker font and effect packs,effects,could,yes,skip,their assets - use OFL fonts and own effects
+TikTok account login and posting partnership,account,could,yes,skip,partner deal
+Creator community and template marketplace,community,could,yes,skip,the network and its users
+Proprietary AI models,ai,could,yes,skip,use open or licensed models
