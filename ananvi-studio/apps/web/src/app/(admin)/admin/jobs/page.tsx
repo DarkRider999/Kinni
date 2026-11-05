@@ -48,7 +48,7 @@ export default function AdminJobsPage() {
 
   const { data, isLoading, isError } = useAdminJobs(page, status);
   const jobs: AdminJob[] = data?.data ?? [];
-  const total: number = data?.total ?? 0;
+  const total: number = data?.meta?.total ?? 0;
   const totalPages = Math.ceil(total / 20);
 
   return (

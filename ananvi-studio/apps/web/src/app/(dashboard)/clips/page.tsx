@@ -49,7 +49,7 @@ export default function ClipsPage() {
   });
 
   const clips: IClip[] = data?.data ?? [];
-  const totalPages = Math.ceil((data?.total ?? 0) / 12);
+  const totalPages = Math.ceil((data?.meta?.total ?? 0) / 12);
 
   return (
     <div className="space-y-6">

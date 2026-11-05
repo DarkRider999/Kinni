@@ -54,7 +54,7 @@ export default function AdminAuditPage() {
 
   const { data, isLoading } = useAuditLog(page, action);
   const entries: AuditEntry[] = data?.data ?? [];
-  const total: number = data?.total ?? 0;
+  const total: number = data?.meta?.total ?? 0;
   const totalPages = Math.ceil(total / 25);
 
   const ACTIONS = [
