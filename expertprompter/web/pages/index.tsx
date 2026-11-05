@@ -1,336 +1,163 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import Header from '@/components/Header';
-import InputPanel, { type InputState } from '@/components/InputPanel';
-import type { UiAttachment } from '@/components/FileUploadPanel';
-import CategoryBadge from '@/components/CategoryBadge';
-import PromptCard from '@/components/PromptCard';
-import AIRecommendationPanel from '@/components/AIRecommendationPanel';
-import HistoryPanel from '@/components/HistoryPanel';
-import AuthModal from '@/components/AuthModal';
-import PaywallModal from '@/components/PaywallModal';
-import { SparklesIcon } from '@/components/Icons';
-import { api, ApiError } from '@/lib/api';
-import { useAuth } from '@/lib/auth';
-import type { AttachmentPayload, Category, GenerateRequest, GenerateResponse, PromptOptions, RecommendedTool, SavedPrompt } from '@/lib/types';
-import { CATEGORY_LABELS } from '@/lib/types';
+import { useState } from 'react';
+import Link from 'next/link';
+import MarketplaceLayout from '@/components/MarketplaceLayout';
+import MarketplacePromptCard, { PromptDetailModal } from '@/components/MarketplacePromptCard';
+import PromptGenerator from '@/components/PromptGenerator';
+import { BRAND, SAMPLE_PROMPTS, TRENDING_IDS, type MarketplacePrompt } from '@/lib/marketplace';
 
-/** Ready files only, reduced to what the API needs. */
-function toPayload(attachments: UiAttachment[]): AttachmentPayload[] {
-  return attachments
-    .filter((a) => a.status === 'ready')
-    .map(({ name, role, kind, size, text, width, height, description }) => ({
-      name, role, kind, size,
-      ...(text ? { text } : {}),
-      ...(width && height ? { width, height } : {}),
-      ...(description ? { description } : {}),
-    }));
-}
+const STATS = [
+  { value: '10,000+', label: 'Prompts' },
+  { value: '50,000+', label: 'Users' },
+  { value: '500+', label: 'Creators' },
+  { value: '4.9★', label: 'Rating' },
+];
 
-/** Drops empty option fields so the request stays clean. */
-function compactOptions(options: PromptOptions): PromptOptions {
-  return Object.fromEntries(Object.entries(options).filter(([, v]) => v && String(v).trim())) as PromptOptions;
+/** Category cards; each opens /explore pre-filtered (Video AI has no filter, so it searches). */
+const CATEGORIES = [
+  { icon: '🎨', name: 'Midjourney', href: '/explore?category=Midjourney' },
+  { icon: '🤖', name: 'ChatGPT', href: '/explore?category=ChatGPT' },
+  { icon: '🖼️', name: 'DALL·E 3', href: `/explore?category=${encodeURIComponent('DALL·E')}` },
+  { icon: '⚡', name: 'Stable Diffusion', href: `/explore?category=${encodeURIComponent('Stable Diffusion')}` },
+  { icon: '📸', name: 'Lightroom', href: '/explore?category=Lightroom' },
+  { icon: '🎬', name: 'Video AI', href: '/explore?q=video' },
+];
+
+const FEATURED = SAMPLE_PROMPTS.slice(0, 6);
+const TRENDING = TRENDING_IDS.flatMap((id) => SAMPLE_PROMPTS.filter((p) => p.id === id));
+
+function SectionHeading({ title, subtitle, action }: { title: string; subtitle?: string; action?: { href: string; label: string } }) {
+  return (
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight sm:text-3xl" style={{ color: BRAND.text }}>{title}</h2>
+        {subtitle && <p className="mt-1" style={{ color: BRAND.text2 }}>{subtitle}</p>}
+      </div>
+      {action && (
+        <Link href={action.href} className="text-sm font-semibold hover:underline" style={{ color: BRAND.accent }}>
+          {action.label} →
+        </Link>
+      )}
+    </div>
+  );
 }
 
 export default function Home() {
-  const { user, entitlement, providers, setEntitlement, refresh, oauthError, clearOauthError } = useAuth();
-  const [input, setInput] = useState<InputState>({ rawInput: '', promptStyle: 'PROFESSIONAL', options: {}, attachments: [] });
-  const [result, setResult] = useState<GenerateResponse | null>(null);
-  const [lastRequest, setLastRequest] = useState<GenerateRequest | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [regenerating, setRegenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [authOpen, setAuthOpen] = useState(false);
-  const [authReason, setAuthReason] = useState<string | null>(null);
-  const [paywallOpen, setPaywallOpen] = useState(false);
-  const [notice, setNotice] = useState<string | null>(null);
-  const [historyKey, setHistoryKey] = useState(0);
-  const [savedId, setSavedId] = useState<string | null>(null);
-  const [recent, setRecent] = useState<SavedPrompt[]>([]);
-  const outputRef = useRef<HTMLDivElement>(null);
-
-  const freeLimit = providers?.freeRunsLimit ?? 5;
-
-  // Last 5 different requests, refreshed whenever a new prompt is generated or saved.
-  useEffect(() => {
-    if (!user) {
-      setRecent([]);
-      return;
-    }
-    let live = true;
-    api
-      .listPrompts({ limit: 20 })
-      .then(({ items }) => {
-        const seen = new Set<string>();
-        const unique = items.filter((p) => {
-          const key = p.rawInput.trim().toLowerCase();
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        });
-        if (live) setRecent(unique.slice(0, 5));
-      })
-      .catch(() => {});
-    return () => {
-      live = false;
-    };
-  }, [user, historyKey]);
-  const openSignIn = useCallback((reason: string | null = null) => {
-    setAuthReason(reason);
-    setAuthOpen(true);
-  }, []);
-
-  // Surface a failed Google/Facebook/GitHub sign-in.
-  useEffect(() => {
-    if (oauthError) {
-      setError(oauthError);
-      clearOauthError();
-    }
-  }, [oauthError, clearOauthError]);
-
-  // Back from Stripe Checkout: the webhook may land a moment after the redirect,
-  // so re-check the plan a few times.
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const billing = params.get('billing');
-    if (!billing) return;
-    window.history.replaceState(null, '', window.location.pathname);
-    if (billing === 'cancelled') {
-      setNotice('Checkout cancelled. You can upgrade any time.');
-      return;
-    }
-    setNotice('Payment received. Activating Premium…');
-    let tries = 0;
-    const timer = setInterval(() => {
-      tries += 1;
-      void refresh();
-      if (tries >= 6) clearInterval(timer);
-    }, 2000);
-    return () => clearInterval(timer);
-  }, [refresh]);
-
-  useEffect(() => {
-    if (notice?.startsWith('Payment received') && entitlement?.plan === 'PREMIUM') {
-      setNotice('Welcome to Premium! Enjoy unlimited prompts.');
-    }
-  }, [notice, entitlement]);
-
-  const run = useCallback(async (payload: GenerateRequest, mode: 'generate' | 'regenerate') => {
-    if (providers?.accountsEnabled && !user) {
-      openSignIn(`Sign in to get ${freeLimit} free expert prompts.`);
-      return;
-    }
-    if (entitlement?.plan === 'FREE' && entitlement.freeRunsRemaining === 0) {
-      setPaywallOpen(true);
-      return;
-    }
-    const setBusy = mode === 'generate' ? setLoading : setRegenerating;
-    setBusy(true);
-    setError(null);
-    try {
-      const res = await api.generate(payload);
-      if (res.entitlement) setEntitlement(res.entitlement);
-      setResult(res);
-      setLastRequest(payload);
-      setSavedId(res.savedPromptId ?? null);
-      if (res.savedPromptId) setHistoryKey((k) => k + 1);
-      if (mode === 'generate') {
-        // On mobile the output is below the form; bring it into view.
-        requestAnimationFrame(() => outputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
-      }
-    } catch (e) {
-      if (e instanceof ApiError && e.code === 'AUTH_REQUIRED') openSignIn(e.message);
-      else if (e instanceof ApiError && e.code === 'PAYWALL') {
-        setPaywallOpen(true);
-        void refresh();
-      } else setError(e instanceof ApiError ? e.message : 'Something went wrong. Please try again.');
-    } finally {
-      setBusy(false);
-    }
-  }, [providers, user, entitlement, freeLimit, openSignIn, setEntitlement, refresh]);
-
-  const generate = () =>
-    run(
-      {
-        rawInput: input.rawInput.trim(),
-        promptStyle: input.promptStyle,
-        options: compactOptions(input.options),
-        variation: 0,
-        attachments: toPayload(input.attachments),
-      },
-      'generate',
-    );
-
-  // Same request, next variation: different phrasing/lighting/structure choices.
-  const regenerate = () => {
-    if (!lastRequest) return;
-    void run({ ...lastRequest, variation: (lastRequest.variation ?? 0) + 1 }, 'regenerate');
-  };
-
-  // User disagrees with the detected category: regenerate with an override.
-  const switchCategory = (category: Category) => {
-    if (!lastRequest) return;
-    void run({ ...lastRequest, category, variation: 0 }, 'regenerate');
-  };
-
-  const saveCurrent = async () => {
-    if (!result || !lastRequest) return;
-    const saved = await api.savePrompt({
-      rawInput: lastRequest.rawInput,
-      generatedPrompt: result.generatedPrompt,
-      detectedCategory: result.detectedCategory,
-      promptStyle: result.promptStyle,
-      recommendedTools: result.recommendedTools,
-      options: lastRequest.options ?? {},
-      title: result.title,
-    });
-    setSavedId(saved.id);
-    setHistoryKey((k) => k + 1);
-  };
-
-  // Re-open a saved prompt without generating again (which would use a free run):
-  // tool cards come from the catalog by name.
-  const openSaved = async (p: SavedPrompt) => {
-    const request: GenerateRequest = { rawInput: p.rawInput, promptStyle: p.promptStyle, options: p.options, category: p.detectedCategory, variation: 0 };
-    setInput({ rawInput: p.rawInput, promptStyle: p.promptStyle, options: p.options ?? {}, attachments: [] });
-    setError(null);
-    const catalog = await api.meta().then((m) => m.tools).catch(() => []);
-    const toolDetails: RecommendedTool[] = p.recommendedTools.flatMap((name, i) => {
-      const tool = catalog.find((t) => t.name === name);
-      return tool ? [{ ...tool, reason: tool.description, rank: i + 1 }] : [];
-    });
-    setResult({
-      generatedPrompt: p.generatedPrompt,
-      detectedCategory: p.detectedCategory,
-      categoryLabel: CATEGORY_LABELS[p.detectedCategory],
-      confidence: 1,
-      alternativeCategories: [],
-      recommendedTools: p.recommendedTools,
-      toolDetails,
-      promptStyle: p.promptStyle,
-      detectedLanguage: p.options?.language || 'English',
-      variation: 0,
-      title: p.title ?? p.rawInput,
-    });
-    setLastRequest(request);
-    setSavedId(p.id);
-    outputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
+  const [open, setOpen] = useState<MarketplacePrompt | null>(null);
 
   return (
-    <div className="min-h-screen">
-      <Header onSignIn={() => openSignIn()} onUpgrade={() => setPaywallOpen(true)} />
+    <MarketplaceLayout>
+      {({ openSignIn, openPaywall }) => (
+        <main>
+          {/* Hero */}
+          <section className="relative overflow-hidden" style={{ background: `radial-gradient(ellipse at top left, rgba(108,99,255,0.35), transparent 55%), radial-gradient(ellipse at bottom right, rgba(255,101,132,0.25), transparent 55%), ${BRAND.bg}` }}>
+            <div className="mx-auto max-w-5xl px-4 py-20 text-center sm:px-6 sm:py-28">
+              <span className="inline-block rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-wider" style={{ borderColor: BRAND.border, color: BRAND.accent3, background: BRAND.bg2 }}>
+                The AI Prompt Marketplace
+              </span>
+              <h1 className="mt-6 text-4xl font-extrabold tracking-tight sm:text-6xl" style={{ color: BRAND.text }}>
+                Discover AI Prompts{' '}
+                <span className="bg-clip-text text-transparent" style={{ backgroundImage: `linear-gradient(90deg, ${BRAND.accent}, ${BRAND.accent2})` }}>That Actually Work</span>
+              </h1>
+              <p className="mx-auto mt-5 max-w-2xl text-lg" style={{ color: BRAND.text2 }}>
+                Browse 10,000+ expert-crafted prompts for Midjourney, DALL·E, ChatGPT, Stable Diffusion &amp; more
+              </p>
+              <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+                <Link href="/explore" className="rounded-xl px-6 py-3 font-semibold text-white shadow-lg transition hover:opacity-90" style={{ background: BRAND.accent }}>
+                  Browse Marketplace
+                </Link>
+                <Link href="/create" className="rounded-xl border px-6 py-3 font-semibold transition hover:opacity-90" style={{ borderColor: BRAND.border, color: BRAND.text, background: BRAND.bg2 }}>
+                  Start Creating Free
+                </Link>
+              </div>
+            </div>
+          </section>
 
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        <div className="mb-8 max-w-2xl">
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Turn any idea into an <span className="bg-gradient-to-r from-brand-600 to-fuchsia-500 bg-clip-text text-transparent">expert AI prompt</span>
-          </h1>
-          <p className="mt-2 text-slate-600 dark:text-slate-400">
-            Describe your task in plain words. Ananvi PromptMaster detects what kind of task it is, writes a detailed, structured prompt, and tells you which AI tool to use.
-          </p>
-        </div>
+          {/* Stats bar */}
+          <section className="border-y" style={{ borderColor: BRAND.border, background: BRAND.bg2 }}>
+            <dl className="mx-auto grid max-w-5xl grid-cols-2 gap-6 px-4 py-8 text-center sm:grid-cols-4 sm:px-6">
+              {STATS.map((s) => (
+                <div key={s.label}>
+                  <dt className="sr-only">{s.label}</dt>
+                  <dd className="text-2xl font-extrabold sm:text-3xl" style={{ color: BRAND.text }}>{s.value}</dd>
+                  <dd className="mt-1 text-sm" style={{ color: BRAND.text2 }}>{s.label}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
-          {/* Left column: input + history */}
-          <div className="space-y-6">
-            <InputPanel
-              value={input}
-              // Files are owned by onAttachmentsChange, so a keystroke can't undo a file that just finished reading.
-              onChange={(next) => setInput((prev) => ({ ...next, attachments: prev.attachments }))}
-              onAttachmentsChange={(update) => setInput((prev) => ({ ...prev, attachments: update(prev.attachments) }))}
-              onGenerate={generate}
-              loading={loading}
-              recent={recent}
-              onPickRecent={(p) => void openSaved(p)}
-            />
-            {user ? (
-              <HistoryPanel refreshKey={historyKey} onSelect={(p) => void openSaved(p)} />
-            ) : (
-              <div className="card text-sm text-slate-600 dark:text-slate-400">
-                <p>
-                  <button type="button" className="font-medium text-brand-600 hover:underline dark:text-brand-400" onClick={() => openSignIn()}>
-                    Sign in with Google, Facebook or email
-                  </button>{' '}
-                  to get {freeLimit} free expert prompts and a searchable history.
+          <div className="mx-auto max-w-7xl space-y-20 px-4 py-16 sm:px-6">
+            {/* Category grid */}
+            <section aria-labelledby="categories">
+              <SectionHeading title="Browse by Category" subtitle="Find prompts for the AI tool you use" />
+              <div id="categories" className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+                {CATEGORIES.map((c) => (
+                  <Link
+                    key={c.name}
+                    href={c.href}
+                    className="flex flex-col items-center gap-3 rounded-2xl border p-6 text-center transition hover:-translate-y-0.5 hover:shadow-lg"
+                    style={{ background: BRAND.bg2, borderColor: BRAND.border }}
+                  >
+                    <span className="text-4xl" aria-hidden>{c.icon}</span>
+                    <span className="text-sm font-semibold" style={{ color: BRAND.text }}>{c.name}</span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+
+            {/* Featured prompts */}
+            <section>
+              <SectionHeading title="Featured Prompts" subtitle="Hand-picked by our editors" action={{ href: '/explore', label: 'View all' }} />
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {FEATURED.map((p) => (
+                  <MarketplacePromptCard key={p.id} prompt={p} onOpen={setOpen} />
+                ))}
+              </div>
+            </section>
+
+            {/* Trending */}
+            <section>
+              <SectionHeading title="Trending This Week" subtitle="What creators are copying right now" action={{ href: '/explore?category=Trending', label: 'See trending' }} />
+              <div className="-mx-4 flex snap-x gap-5 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 lg:grid-cols-4">
+                {TRENDING.map((p) => (
+                  <div key={p.id} className="w-72 shrink-0 snap-start sm:w-auto">
+                    <MarketplacePromptCard prompt={p} onOpen={setOpen} hot />
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            {/* Generator */}
+            <section id="generator" className="scroll-mt-20">
+              <div className="mb-8 rounded-3xl border p-8 text-center sm:p-10" style={{ background: `linear-gradient(135deg, rgba(108,99,255,0.18), rgba(67,233,123,0.08)), ${BRAND.bg2}`, borderColor: BRAND.border }}>
+                <h2 className="text-2xl font-bold tracking-tight sm:text-3xl" style={{ color: BRAND.text }}>Try the AI Generator</h2>
+                <p className="mx-auto mt-2 max-w-2xl" style={{ color: BRAND.text2 }}>
+                  Can&apos;t find the right prompt? Describe your task in plain words and get a detailed, expert-level prompt plus the best AI tool for the job.
                 </p>
               </div>
-            )}
+              <div className="rounded-3xl bg-slate-50 p-4 text-slate-900 sm:p-6 dark:bg-slate-950 dark:text-slate-100">
+                <PromptGenerator onSignIn={openSignIn} onPaywall={openPaywall} />
+              </div>
+            </section>
+
+            {/* Creator CTA */}
+            <section className="relative overflow-hidden rounded-3xl border p-8 sm:p-12" style={{ background: `radial-gradient(circle at top right, rgba(255,101,132,0.25), transparent 50%), ${BRAND.bg3}`, borderColor: BRAND.border }}>
+              <div className="max-w-2xl">
+                <h2 className="text-3xl font-extrabold tracking-tight sm:text-4xl" style={{ color: BRAND.text }}>
+                  Sell Your Prompts, <span style={{ color: BRAND.accent3 }}>Earn 70%</span>
+                </h2>
+                <p className="mt-3 text-lg" style={{ color: BRAND.text2 }}>
+                  Turn your prompt engineering skills into income. List your best prompts, reach thousands of buyers, and keep 70% of every sale.
+                </p>
+                <Link href="/create" className="mt-6 inline-block rounded-xl px-6 py-3 font-semibold text-white transition hover:opacity-90" style={{ background: BRAND.accent2 }}>
+                  Become a Creator
+                </Link>
+              </div>
+            </section>
           </div>
 
-          {/* Right column: output */}
-          <div ref={outputRef} className="scroll-mt-24 space-y-6" aria-live="polite">
-            {notice && (
-              <div role="status" className="flex items-start justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
-                <span>{notice}</span>
-                <button type="button" className="text-xs underline" onClick={() => setNotice(null)}>Dismiss</button>
-              </div>
-            )}
-            {error && (
-              <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
-                {error}
-              </div>
-            )}
-
-            {loading && !result && (
-              <div className="card space-y-3" aria-busy="true">
-                <div className="h-6 w-32 animate-pulse rounded-full bg-slate-200 dark:bg-slate-800" />
-                <div className="h-24 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800/60" />
-                <div className="h-48 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800/60" />
-              </div>
-            )}
-
-            {!result && !loading && (
-              <div className="card flex flex-col items-center justify-center py-16 text-center">
-                <span className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-50 text-brand-600 dark:bg-brand-900/30 dark:text-brand-300">
-                  <SparklesIcon width={28} height={28} />
-                </span>
-                <h2 className="mt-4 font-semibold">Your expert prompt will appear here</h2>
-                <p className="mt-1 max-w-sm text-sm text-slate-500 dark:text-slate-400">Type anything, from a resignation letter to a YouTube script, or attach a photo and ask for a prompt to recreate it.</p>
-              </div>
-            )}
-
-            {result && (
-              <>
-                <div className="card flex flex-wrap items-center gap-3 !py-4">
-                  <span className="text-sm text-slate-500 dark:text-slate-400">Detected category</span>
-                  <CategoryBadge category={result.detectedCategory} confidence={result.confidence} />
-                  <span className="text-xs text-slate-400">
-                    {result.promptStyle.charAt(0) + result.promptStyle.slice(1).toLowerCase()} · {result.detectedLanguage}
-                    {result.variation > 0 && ` · variation ${result.variation}`}
-                  </span>
-                  {result.alternativeCategories.length > 0 && (
-                    <span className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500 sm:ml-auto dark:text-slate-400">
-                      Not right? Try
-                      {result.alternativeCategories.map((c) => (
-                        <button key={c} type="button" onClick={() => switchCategory(c)} className="rounded-full border border-slate-300 px-2 py-0.5 hover:border-brand-500 hover:text-brand-700 dark:border-slate-700 dark:hover:text-brand-300">
-                          {CATEGORY_LABELS[c]}
-                        </button>
-                      ))}
-                    </span>
-                  )}
-                </div>
-
-                <PromptCard
-                  prompt={result.generatedPrompt}
-                  onRegenerate={regenerate}
-                  regenerating={regenerating}
-                  onSave={user ? saveCurrent : undefined}
-                  saved={Boolean(savedId)}
-                />
-                <AIRecommendationPanel tools={result.toolDetails} />
-              </>
-            )}
-          </div>
-        </div>
-      </main>
-
-      <footer className="mx-auto max-w-7xl px-4 pb-10 pt-4 text-xs text-slate-400 sm:px-6">
-        Ananvi PromptMaster writes prompts with its own rule-based logic. Photos you attach are described by an AI running on your own device.
-        {' · '}<a href="/privacy" className="underline">Privacy</a>{' · '}<a href="/terms" className="underline">Terms</a>
-      </footer>
-
-      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} reason={authReason} />
-      <PaywallModal open={paywallOpen} onClose={() => setPaywallOpen(false)} />
-    </div>
+          <PromptDetailModal prompt={open} onClose={() => setOpen(null)} />
+        </main>
+      )}
+    </MarketplaceLayout>
   );
 }

@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { api, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import ThemeToggle from './ThemeToggle';
-import { SparklesIcon, SpinnerIcon } from './Icons';
+import { SparklesIcon, SpinnerIcon, XIcon } from './Icons';
 
 interface HeaderProps {
   onSignIn: () => void;
@@ -31,9 +33,34 @@ function PlanBadge() {
   );
 }
 
+const NAV_LINKS = [
+  { href: '/explore', label: 'Explore' },
+  { href: '/create', label: 'Create' },
+];
+
+const MenuIcon = () => (
+  <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden>
+    <path d="M4 6h16M4 12h16M4 18h16" />
+  </svg>
+);
+
 export default function Header({ onSignIn, onUpgrade }: HeaderProps) {
   const { user, entitlement, logout, ready } = useAuth();
+  const { pathname } = useRouter();
   const [opening, setOpening] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const linkClass = (href: string, mobile = false) => {
+    const active = pathname === href;
+    const base = mobile ? 'block rounded-lg px-3 py-2 text-sm font-medium' : 'rounded-lg px-3 py-2 text-sm font-medium transition';
+    return `${base} ${active ? 'bg-brand-50 text-brand-700 dark:bg-brand-900/40 dark:text-brand-200' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white'}`;
+  };
+
+  // "Pricing" opens the upgrade modal, which holds the plan and price.
+  const showPricing = () => {
+    setMenuOpen(false);
+    onUpgrade();
+  };
 
   const manageBilling = async () => {
     setOpening(true);
@@ -58,6 +85,14 @@ export default function Header({ onSignIn, onUpgrade }: HeaderProps) {
             <span className="hidden text-xs text-slate-500 sm:block dark:text-slate-400">Turn any idea into an expert AI prompt</span>
           </span>
         </a>
+        <nav aria-label="Main" className="hidden items-center gap-1 md:flex">
+          {NAV_LINKS.map((l) => (
+            <Link key={l.href} href={l.href} className={linkClass(l.href)} aria-current={pathname === l.href ? 'page' : undefined}>
+              {l.label}
+            </Link>
+          ))}
+          <button type="button" className={linkClass('#pricing')} onClick={showPricing}>Pricing</button>
+        </nav>
         <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
           {ready && user ? (
             <>
@@ -77,8 +112,28 @@ export default function Header({ onSignIn, onUpgrade }: HeaderProps) {
             <button type="button" className="btn-secondary" onClick={onSignIn} disabled={!ready}>Sign in</button>
           )}
           <ThemeToggle />
+          <button
+            type="button"
+            className="btn-ghost !px-2 md:hidden"
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-nav"
+            onClick={() => setMenuOpen((o) => !o)}
+          >
+            {menuOpen ? <XIcon width={20} height={20} /> : <MenuIcon />}
+          </button>
         </div>
       </div>
+      {menuOpen && (
+        <nav id="mobile-nav" aria-label="Main" className="border-t border-slate-200/70 px-4 py-3 md:hidden dark:border-slate-800/70">
+          {NAV_LINKS.map((l) => (
+            <Link key={l.href} href={l.href} className={linkClass(l.href, true)} aria-current={pathname === l.href ? 'page' : undefined} onClick={() => setMenuOpen(false)}>
+              {l.label}
+            </Link>
+          ))}
+          <button type="button" className={`${linkClass('#pricing', true)} w-full text-left`} onClick={showPricing}>Pricing</button>
+        </nav>
+      )}
     </header>
   );
 }
