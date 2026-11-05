@@ -114,7 +114,7 @@ export default function StudioPage() {
   const urlInputRef = useRef<HTMLInputElement>(null);
 
   const jobs: IJob[] = data?.data ?? [];
-  const total = data?.total ?? 0;
+  const total = data?.meta?.total ?? 0;
   const totalPages = Math.ceil(total / 20);
 
   const handleSubmit = (e: React.FormEvent) => {
