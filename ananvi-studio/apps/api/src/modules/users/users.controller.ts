@@ -32,7 +32,7 @@ export class UsersController {
     @CurrentUser('sub') userId: string,
     @Body() prefs: { job_complete?: boolean; job_failed?: boolean; credit_low?: boolean; marketing?: boolean },
   ) {
-    await this.users.updateNotificationPrefs(userId, prefs);
-    return { success: true, message: 'Notification preferences saved' };
+    const saved = await this.users.updateNotificationPrefs(userId, prefs);
+    return { success: true, data: saved };
   }
 }

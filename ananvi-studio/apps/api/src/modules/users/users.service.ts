@@ -55,8 +55,11 @@ export class UsersService {
   async updateNotificationPrefs(
     id: string,
     prefs: Partial<Record<'job_complete' | 'job_failed' | 'credit_low' | 'marketing', boolean>>,
-  ): Promise<void> {
-    await this.userRepo.update(id, { notification_prefs: prefs as any });
+  ): Promise<Record<string, boolean>> {
+    const user = await this.findByIdOrFail(id);
+    const merged = { ...(user.notification_prefs ?? {}), ...prefs };
+    await this.userRepo.update(id, { notification_prefs: merged as any });
+    return merged;
   }
 
   async updateProfile(id: string, data: Partial<Pick<User,
