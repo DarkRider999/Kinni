@@ -171,17 +171,21 @@ export default function PromptGenerator({ onSignIn, onPaywall }: PromptGenerator
 
   const saveCurrent = async () => {
     if (!result || !lastRequest) return;
-    const saved = await api.savePrompt({
-      rawInput: lastRequest.rawInput,
-      generatedPrompt: result.generatedPrompt,
-      detectedCategory: result.detectedCategory,
-      promptStyle: result.promptStyle,
-      recommendedTools: result.recommendedTools,
-      options: lastRequest.options ?? {},
-      title: result.title,
-    });
-    setSavedId(saved.id);
-    setHistoryKey((k) => k + 1);
+    try {
+      const saved = await api.savePrompt({
+        rawInput: lastRequest.rawInput,
+        generatedPrompt: result.generatedPrompt,
+        detectedCategory: result.detectedCategory,
+        promptStyle: result.promptStyle,
+        recommendedTools: result.recommendedTools,
+        options: lastRequest.options ?? {},
+        title: result.title,
+      });
+      setSavedId(saved.id);
+      setHistoryKey((k) => k + 1);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Failed to save prompt. Please try again.');
+    }
   };
 
   // Re-open a saved prompt without generating again (which would use a free run):
