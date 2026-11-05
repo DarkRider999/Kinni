@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
@@ -58,7 +58,11 @@ export class UsersService {
   ): Promise<Record<string, boolean>> {
     const user = await this.findByIdOrFail(id);
     const merged = { ...(user.notification_prefs ?? {}), ...prefs };
-    await this.userRepo.update(id, { notification_prefs: merged as any });
+    try {
+      await this.userRepo.update(id, { notification_prefs: merged as any });
+    } catch {
+      throw new InternalServerErrorException('Failed to save notification preferences');
+    }
     return merged;
   }
 
