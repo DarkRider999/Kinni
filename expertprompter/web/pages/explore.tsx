@@ -35,11 +35,11 @@ export default function ExplorePage() {
   const [filter, setFilter] = useState<Filter>('All');
   const [open, setOpen] = useState<MarketplacePrompt | null>(null);
 
-  // Homepage category cards link here with ?category= or ?q=.
   useEffect(() => {
     if (!router.isReady) return;
-    const { category, q } = router.query;
+    const { category, q, filter: f } = router.query;
     if (isFilter(category)) setFilter(category);
+    if (isFilter(f)) setFilter(f);
     if (typeof q === 'string') setQuery(q);
   }, [router.isReady, router.query]);
 
@@ -52,23 +52,35 @@ export default function ExplorePage() {
           <Head>
             <title>Explore Prompts — Ananvi PromptMaster</title>
           </Head>
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: BRAND.text }}>Explore Prompts</h1>
-          <p className="mt-2" style={{ color: BRAND.text2 }}>Expert-crafted prompts for Midjourney, ChatGPT, DALL·E, Stable Diffusion and more.</p>
 
-          <label className="relative mt-6 block">
+          {/* Page header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl" style={{ color: BRAND.text }}>
+              Explore Prompts
+            </h1>
+            <p className="mt-2 text-base" style={{ color: BRAND.text2 }}>
+              Discover AI-generated images and copy the exact prompts that created them.
+            </p>
+          </div>
+
+          {/* Search */}
+          <label className="relative block">
             <span className="sr-only">Search prompts</span>
-            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2" style={{ color: BRAND.text2 }}><SearchIcon /></span>
+            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2" style={{ color: BRAND.text2 }}>
+              <SearchIcon />
+            </span>
             <input
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search prompts, styles, tools..."
-              className="w-full rounded-2xl border py-4 pl-12 pr-4 text-base focus:outline-none focus:ring-2"
+              placeholder="Search by style, tool, subject…"
+              className="w-full rounded-2xl border py-4 pl-12 pr-4 text-base focus:outline-none focus:ring-2 focus:ring-purple-500"
               style={{ background: BRAND.bg2, borderColor: BRAND.border, color: BRAND.text }}
             />
           </label>
 
-          <div role="group" aria-label="Filter prompts" className="mt-4 flex flex-wrap gap-2">
+          {/* Filter pills */}
+          <div role="group" aria-label="Filter by category" className="mt-4 flex flex-wrap gap-2">
             {FILTERS.map((f) => {
               const active = f === filter;
               return (
@@ -78,7 +90,11 @@ export default function ExplorePage() {
                   aria-pressed={active}
                   onClick={() => setFilter(f)}
                   className="rounded-full border px-4 py-1.5 text-sm font-medium transition hover:opacity-90"
-                  style={active ? { background: BRAND.accent, borderColor: BRAND.accent, color: '#fff' } : { background: BRAND.bg2, borderColor: BRAND.border, color: BRAND.text2 }}
+                  style={
+                    active
+                      ? { background: BRAND.accent, borderColor: BRAND.accent, color: '#fff' }
+                      : { background: BRAND.bg2, borderColor: BRAND.border, color: BRAND.text2 }
+                  }
                 >
                   {f}
                 </button>
@@ -86,15 +102,28 @@ export default function ExplorePage() {
             })}
           </div>
 
-          <p className="mt-6 text-sm" style={{ color: BRAND.text2 }}>{results.length} {results.length === 1 ? 'prompt' : 'prompts'}</p>
+          {/* Result count */}
+          <p className="mt-6 text-sm" style={{ color: BRAND.text2 }}>
+            {results.length} {results.length === 1 ? 'prompt' : 'prompts'}
+          </p>
+
+          {/* Image grid */}
           {results.length > 0 ? (
-            <div className="mt-3 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <div className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {results.map((p) => (
-                <MarketplacePromptCard key={p.id} prompt={p} onOpen={setOpen} hot={TRENDING_IDS.includes(p.id)} />
+                <MarketplacePromptCard
+                  key={p.id}
+                  prompt={p}
+                  onOpen={setOpen}
+                  hot={TRENDING_IDS.includes(p.id)}
+                />
               ))}
             </div>
           ) : (
-            <div className="mt-3 rounded-2xl border p-10 text-center" style={{ background: BRAND.bg2, borderColor: BRAND.border, color: BRAND.text2 }}>
+            <div
+              className="mt-3 rounded-2xl border p-10 text-center"
+              style={{ background: BRAND.bg2, borderColor: BRAND.border, color: BRAND.text2 }}
+            >
               No prompts match. Try another search or filter.
             </div>
           )}
