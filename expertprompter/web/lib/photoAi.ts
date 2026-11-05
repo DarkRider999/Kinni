@@ -3,7 +3,7 @@
 // and the browser caches it.
 
 export const MODEL_DOWNLOAD_MB = 215;
-const CONSENT_KEY = 'expertprompter.photoAi';
+const CONSENT_KEY = 'ananvi-promptmaster.photoAi';
 const CACHE_NAME = 'transformers-cache'; // transformers.js default cache
 const MODEL_ID = 'Florence-2-base-ft';
 

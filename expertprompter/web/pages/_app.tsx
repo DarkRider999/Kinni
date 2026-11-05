@@ -8,7 +8,7 @@ export default function App({ Component, pageProps }: AppProps) {
     <AuthProvider>
       <Head>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>ExpertPrompter — AI Prompt Generator</title>
+        <title>Ananvi PromptMaster — AI Prompt Marketplace</title>
         <meta name="description" content="Turn any idea into a detailed, expert-level AI prompt and find the best AI tool for the job." />
       </Head>
       <Component {...pageProps} />

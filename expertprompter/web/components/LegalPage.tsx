@@ -6,10 +6,10 @@ export default function LegalPage({ title, children }: { title: string; children
   return (
     <>
       <Head>
-        <title>{`${title} — ExpertPrompter`}</title>
+        <title>{`${title} — Ananvi PromptMaster`}</title>
       </Head>
       <main className="mx-auto max-w-2xl px-4 py-12 sm:px-6">
-        <a href="/" className="text-sm text-brand-600 hover:underline dark:text-brand-400">← Back to ExpertPrompter</a>
+        <a href="/" className="text-sm text-brand-600 hover:underline dark:text-brand-400">← Back to Ananvi PromptMaster</a>
         <h1 className="mt-4 text-3xl font-bold tracking-tight">{title}</h1>
         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Last updated: September 2026</p>
         <div className="mt-8 space-y-6 text-[15px] leading-relaxed text-slate-700 [&_h2]:mt-8 [&_h2]:text-lg [&_h2]:font-semibold [&_h2]:text-slate-900 [&_li]:ml-5 [&_li]:list-disc dark:text-slate-300 dark:[&_h2]:text-slate-100">

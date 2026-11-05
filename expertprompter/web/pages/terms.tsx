@@ -4,7 +4,7 @@ export default function Terms() {
   const contact = contactEmail ? <a className="underline" href={`mailto:${contactEmail}`}>{contactEmail}</a> : 'the site owner';
   return (
     <LegalPage title="Terms of Service">
-      <p>By using ExpertPrompter you agree to these terms.</p>
+      <p>By using Ananvi PromptMaster you agree to these terms.</p>
 
       <h2>Free plan</h2>
       <p>Each account includes 5 free prompt generations. Creating extra accounts to get more free prompts is not allowed.</p>

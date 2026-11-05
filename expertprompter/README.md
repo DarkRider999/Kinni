@@ -1,6 +1,6 @@
-# ExpertPrompter
+# Ananvi PromptMaster
 
-Type any idea or task in plain words. ExpertPrompter:
+Type any idea or task in plain words. Ananvi PromptMaster:
 
 1. detects the task category (Writing, Business, Coding, Image, Video, Music, Marketing, Education, Data Analysis, Research, General Writing),
 2. writes a detailed, structured prompt for it,
