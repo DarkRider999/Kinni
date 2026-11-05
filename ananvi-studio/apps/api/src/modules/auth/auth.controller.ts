@@ -52,15 +52,36 @@ export class AuthController {
     return { success: true, message: 'Password reset successfully' };
   }
 
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  async changePassword(
+    @CurrentUser('sub') userId: string,
+    @Body('current_password') currentPassword: string,
+    @Body('new_password') newPassword: string,
+  ) {
+    await this.auth.changePassword(userId, currentPassword, newPassword);
+    return { success: true, message: 'Password changed successfully' };
+  }
+
   @Post('2fa/setup')
   async setup2FA(@CurrentUser('sub') userId: string) {
-    const result = await this.auth.setup2FA(userId);
-    return { success: true, data: result };
+    const { secret, qrUri } = await this.auth.setup2FA(userId);
+    return { success: true, data: { secret, qr_url: qrUri } };
   }
 
   @Post('2fa/verify')
   @HttpCode(HttpStatus.OK)
   async verify2FA(
+    @CurrentUser('sub') userId: string,
+    @Body('code') code: string,
+  ) {
+    await this.auth.verify2FA(userId, code);
+    return { success: true, message: '2FA enabled' };
+  }
+
+  @Post('2fa/enable')
+  @HttpCode(HttpStatus.OK)
+  async enable2FA(
     @CurrentUser('sub') userId: string,
     @Body('code') code: string,
   ) {

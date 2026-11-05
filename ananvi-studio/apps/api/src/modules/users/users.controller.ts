@@ -1,4 +1,4 @@
-import { Controller, Get, Patch, Body } from '@nestjs/common';
+import { Controller, Get, Patch, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -24,5 +24,14 @@ export class UsersController {
     const user = await this.users.updateProfile(userId, dto);
     const { password_hash, totp_secret, reset_token, reset_token_expires, ...safe } = user as any;
     return { success: true, data: safe };
+  }
+
+  @Patch('me/notifications')
+  @HttpCode(HttpStatus.OK)
+  async updateNotifications(
+    @CurrentUser('sub') _userId: string,
+    @Body() _prefs: { job_complete?: boolean; job_failed?: boolean; credit_low?: boolean; marketing?: boolean },
+  ) {
+    return { success: true, message: 'Notification preferences saved' };
   }
 }

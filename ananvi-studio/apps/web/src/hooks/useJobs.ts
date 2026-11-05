@@ -46,7 +46,7 @@ export function useCancelJob() {
 export function useJobClips(jobId: string | undefined) {
   return useQuery<IApiResponse<IClip[]>>({
     queryKey: ['job-clips', jobId],
-    queryFn: () => api.get(`/jobs/${jobId}/clips`).then(r => r.data),
+    queryFn: () => api.get(`/clips/job/${jobId}`).then(r => r.data),
     enabled: !!jobId,
   });
 }

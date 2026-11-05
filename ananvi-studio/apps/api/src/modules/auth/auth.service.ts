@@ -143,6 +143,17 @@ export class AuthService {
     await this.users.enableTotp(userId);
   }
 
+  async changePassword(userId: string, currentPassword: string, newPassword: string): Promise<void> {
+    const user = await this.users.findById(userId);
+    if (!user) throw new UnauthorizedException();
+
+    const valid = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!valid) throw new UnauthorizedException('Current password is incorrect');
+
+    const password_hash = await bcrypt.hash(newPassword, this.SALT_ROUNDS);
+    await this.users.updatePassword(userId, password_hash);
+  }
+
   async disable2FA(userId: string, password: string): Promise<void> {
     const user = await this.users.findById(userId);
     if (!user) throw new UnauthorizedException();

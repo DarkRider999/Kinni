@@ -7,6 +7,8 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+let refreshPromise: Promise<any> | null = null;
+
 // Attach access token
 api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = useAuthStore.getState().accessToken;
@@ -24,10 +26,13 @@ api.interceptors.response.use(
       const refreshToken = useAuthStore.getState().refreshToken;
       if (refreshToken) {
         try {
-          const { data } = await axios.post(
-            `${api.defaults.baseURL}/auth/refresh`,
-            { refresh_token: refreshToken },
-          );
+          if (!refreshPromise) {
+            refreshPromise = axios.post(
+              `${api.defaults.baseURL}/auth/refresh`,
+              { refresh_token: refreshToken },
+            ).finally(() => { refreshPromise = null; });
+          }
+          const { data } = await refreshPromise;
           useAuthStore.getState().setTokens(data.data);
           original.headers.Authorization = `Bearer ${data.data.access_token}`;
           return api(original);
