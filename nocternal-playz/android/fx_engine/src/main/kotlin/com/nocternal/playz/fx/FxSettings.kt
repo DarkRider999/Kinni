@@ -13,6 +13,15 @@ data class FlangerParams(val enabled: Boolean = false, val rateHz: Float = 0.25f
 data class PhaserParams(val enabled: Boolean = false, val rateHz: Float = 0.5f, val depth: Float = 0.8f, val feedback: Float = 0.4f, val stages: Int = 6, val mix: Float = 0.7f)
 
 @Serializable
+data class DelayParams(val enabled: Boolean = false, val delayMs: Float = 375f, val feedback: Float = 0.4f, val mix: Float = 0.5f)
+
+@Serializable
+data class EchoParams(val enabled: Boolean = false, val delayMs: Float = 500f, val decayFactor: Float = 0.5f, val mix: Float = 0.6f)
+
+@Serializable
+data class FilterParams(val enabled: Boolean = false, /** Hz — 0 = bypass */ val cutoffHz: Float = 0f, val resonance: Float = 0.7f, val highPass: Boolean = false)
+
+@Serializable
 data class CompressorParams(
     val enabled: Boolean = false, val thresholdDb: Float = -18f, val ratio: Float = 3f, val kneeDb: Float = 6f,
     val attackMs: Float = 10f, val releaseMs: Float = 120f, val makeupDb: Float = 3f,
@@ -34,6 +43,9 @@ data class FxSettings(
     val reverb: ReverbParams = ReverbParams(),
     val flanger: FlangerParams = FlangerParams(),
     val phaser: PhaserParams = PhaserParams(),
+    val delay: DelayParams = DelayParams(),
+    val echo: EchoParams = EchoParams(),
+    val filter: FilterParams = FilterParams(),
     val compressor: CompressorParams = CompressorParams(),
     /** 0 = mono, 1 = normal, 2 = extra wide. */
     val stereoWidth: Float = 1f,

@@ -235,7 +235,7 @@ fun DjHubScreen(viewModel: DjHubViewModel, onBack: () -> Unit, modifier: Modifie
                                 val idx = rowIdx * 4 + colIdx
                                 val accent = padColors[idx % padColors.size]
                                 Button(
-                                    onClick = { /* pad trigger — audio engine integration point */ },
+                                    onClick = { viewModel.triggerPad(idx) },
                                     shape = RoundedCornerShape(10.dp),
                                     contentPadding = PaddingValues(0.dp),
                                     border = BorderStroke(1.dp, accent),

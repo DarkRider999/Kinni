@@ -15,12 +15,15 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
 
+enum class SortOrder { TITLE, ARTIST, BPM_ASC, BPM_DESC, RECENT }
+
 data class LibraryUiState(
     val tracks: List<TrackEntity> = emptyList(),
     val playlists: List<PlaylistEntity> = emptyList(),
     val isLoading: Boolean = true,
     val searchQuery: String = "",
     val selectedTab: LibraryTab = LibraryTab.TRACKS,
+    val sortOrder: SortOrder = SortOrder.RECENT,
     val error: String? = null,
     // track context-menu sheet state
     val trackMenuTarget: TrackEntity? = null,
@@ -36,6 +39,7 @@ class LibraryViewModel(database: NocternalDatabase) : ViewModel() {
     private val playlistDao = database.playlistDao()
     private val historyDao = database.historyDao()
 
+    private val _sortOrder = MutableStateFlow(SortOrder.RECENT)
     private val _searchQuery = MutableStateFlow("")
     private val _selectedTab = MutableStateFlow(LibraryTab.TRACKS)
 
@@ -65,7 +69,8 @@ class LibraryViewModel(database: NocternalDatabase) : ViewModel() {
             Triple(tab, query, Triple(tracks, recent, Pair(playlists, favorites)))
         },
         _sheetState,
-    ) { (tab, query, inner), sheet ->
+        _sortOrder,
+    ) { (tab, query, inner), sheet, sortOrder ->
         val (tracks, recent, pf) = inner
         val (playlists, favorites) = pf
         val source = when (tab) {
@@ -74,12 +79,13 @@ class LibraryViewModel(database: NocternalDatabase) : ViewModel() {
             LibraryTab.TRACKS, LibraryTab.PLAYLISTS -> tracks
         }
         LibraryUiState(
-            tracks = source.filterBy(query),
+            tracks = source.filterBy(query).sortedBy(sortOrder),
             playlists = if (query.isBlank()) playlists
                 else playlists.filter { it.name.contains(query, ignoreCase = true) },
             isLoading = false,
             searchQuery = query,
             selectedTab = tab,
+            sortOrder = sortOrder,
             error = null,
             trackMenuTarget = sheet.trackMenuTarget,
             showEditSheet = sheet.showEditSheet,
@@ -211,7 +217,17 @@ class LibraryViewModel(database: NocternalDatabase) : ViewModel() {
         }
     }
 
+    fun onSortOrderChange(order: SortOrder) { _sortOrder.value = order }
+
     private fun List<TrackEntity>.filterBy(query: String): List<TrackEntity> =
         if (query.isBlank()) this
         else filter { it.title.contains(query, ignoreCase = true) || it.artist.contains(query, ignoreCase = true) }
+
+    private fun List<TrackEntity>.sortedBy(order: SortOrder): List<TrackEntity> = when (order) {
+        SortOrder.TITLE -> sortedBy { it.title.lowercase() }
+        SortOrder.ARTIST -> sortedBy { it.artist.lowercase() }
+        SortOrder.BPM_ASC -> sortedBy { it.bpm }
+        SortOrder.BPM_DESC -> sortedByDescending { it.bpm }
+        SortOrder.RECENT -> this
+    }
 }

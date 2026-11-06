@@ -16,7 +16,11 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class DjHubViewModel(private val db: NocternalDatabase) : ViewModel() {
+class DjHubViewModel(
+    private val db: NocternalDatabase,
+    private val onFxUpdate: (reverb: Boolean, delay: Boolean, flanger: Boolean, echo: Boolean, phaser: Boolean, filter: Boolean) -> Unit = { _, _, _, _, _, _ -> },
+    private val triggerSampler: (Int) -> Unit = {},
+) : ViewModel() {
     private val trackDao = db.trackDao()
     private val cuePointDao = db.cuePointDao()
 
@@ -124,13 +128,29 @@ class DjHubViewModel(private val db: NocternalDatabase) : ViewModel() {
         }
     }
 
-    class Factory(private val db: NocternalDatabase) : ViewModelProvider.Factory {
+    fun triggerPad(index: Int) { triggerSampler(index) }
+
+    private fun syncFx() {
+        onFxUpdate(fxReverb.value, fxDelay.value, fxFlanger.value, fxEcho.value, fxPhaser.value, fxFilter.value)
+    }
+
+    init {
+        listOf(fxReverb, fxDelay, fxFlanger, fxEcho, fxPhaser, fxFilter).forEach { flow ->
+            viewModelScope.launch { flow.collect { syncFx() } }
+        }
+    }
+
+    class Factory(
+        private val db: NocternalDatabase,
+        private val onFxUpdate: (reverb: Boolean, delay: Boolean, flanger: Boolean, echo: Boolean, phaser: Boolean, filter: Boolean) -> Unit = { _, _, _, _, _, _ -> },
+        private val triggerSampler: (Int) -> Unit = {},
+    ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(DjHubViewModel::class.java)) {
                 "Unknown ViewModel class: ${modelClass.name}"
             }
-            return DjHubViewModel(db) as T
+            return DjHubViewModel(db, onFxUpdate, triggerSampler) as T
         }
     }
 
