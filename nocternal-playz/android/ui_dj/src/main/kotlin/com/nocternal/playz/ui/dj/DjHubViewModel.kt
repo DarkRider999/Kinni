@@ -52,6 +52,16 @@ class DjHubViewModel(private val db: NocternalDatabase) : ViewModel() {
     val eqMid = MutableStateFlow(0f)
     val eqHigh = MutableStateFlow(0f)
 
+    val manualBpmInput = MutableStateFlow("")
+
+    // FX toggles: REVERB, DELAY, FLANGER, ECHO, PHASER, FILTER
+    val fxReverb = MutableStateFlow(false)
+    val fxDelay = MutableStateFlow(false)
+    val fxFlanger = MutableStateFlow(false)
+    val fxEcho = MutableStateFlow(false)
+    val fxPhaser = MutableStateFlow(false)
+    val fxFilter = MutableStateFlow(false)
+
     fun loadTrackToDeckA(track: TrackEntity) {
         currentTrack.value = track
         showDeckAPicker.value = false
@@ -95,6 +105,23 @@ class DjHubViewModel(private val db: NocternalDatabase) : ViewModel() {
 
     fun updateTempo(multiplier: Float) {
         tempoMultiplier.value = multiplier.coerceIn(MIN_TEMPO, MAX_TEMPO)
+    }
+
+    fun applyManualBpm(bpmText: String) {
+        bpmText.trim().toFloatOrNull()?.let { bpm ->
+            if (bpm > 0f) {
+                masterBpm.value = bpm
+                tempoMultiplier.value = 1f
+            }
+        }
+    }
+
+    /** Sync tempo so deck B's BPM matches the master BPM. */
+    fun autoSyncToDeckB() {
+        val deckB = nextTrack.value ?: return
+        if (deckB.bpm > 0f && masterBpm.value > 0f) {
+            updateTempo(deckB.bpm / masterBpm.value)
+        }
     }
 
     class Factory(private val db: NocternalDatabase) : ViewModelProvider.Factory {

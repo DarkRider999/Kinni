@@ -28,6 +28,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -39,11 +41,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.buildString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -80,6 +83,13 @@ fun DjHubScreen(viewModel: DjHubViewModel, onBack: () -> Unit, modifier: Modifie
     val showDeckAPicker by viewModel.showDeckAPicker.collectAsStateWithLifecycle()
     val showDeckBPicker by viewModel.showDeckBPicker.collectAsStateWithLifecycle()
     val availableTracks by viewModel.availableTracks.collectAsStateWithLifecycle()
+    val manualBpmInput by viewModel.manualBpmInput.collectAsStateWithLifecycle()
+    val fxReverb by viewModel.fxReverb.collectAsStateWithLifecycle()
+    val fxDelay by viewModel.fxDelay.collectAsStateWithLifecycle()
+    val fxFlanger by viewModel.fxFlanger.collectAsStateWithLifecycle()
+    val fxEcho by viewModel.fxEcho.collectAsStateWithLifecycle()
+    val fxPhaser by viewModel.fxPhaser.collectAsStateWithLifecycle()
+    val fxFilter by viewModel.fxFilter.collectAsStateWithLifecycle()
 
     // Tap-tempo timestamps; only the most recent taps feed the average.
     val tapTimes = remember { mutableStateListOf<Long>() }
@@ -177,8 +187,7 @@ fun DjHubScreen(viewModel: DjHubViewModel, onBack: () -> Unit, modifier: Modifie
                             modifier = Modifier.weight(1f),
                         )
                         ConsoleButton("SYNC", NeonCyan, enabled = nextTrack != null) {
-                            // Match the effective master BPM to deck B's track.
-                            nextTrack?.let { if (masterBpm > 0f) viewModel.updateTempo(it.bpm / masterBpm) }
+                            viewModel.autoSyncToDeckB()
                         }
                         ConsoleButton("TAP", NeonPink) {
                             val now = System.currentTimeMillis()
@@ -193,6 +202,85 @@ fun DjHubScreen(viewModel: DjHubViewModel, onBack: () -> Unit, modifier: Modifie
                                 }
                             }
                         }
+                    }
+                }
+
+                ConsoleSection("MANUAL BPM") {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = manualBpmInput,
+                            onValueChange = { viewModel.manualBpmInput.value = it },
+                            label = { Text("BPM", color = NeonGold, fontSize = 11.sp) },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = NeonGold,
+                                unfocusedBorderColor = NeonGold.copy(alpha = 0.4f),
+                                focusedTextColor = Color.White,
+                                unfocusedTextColor = Color.White,
+                                cursorColor = NeonGold,
+                            ),
+                            modifier = Modifier.weight(1f),
+                        )
+                        ConsoleButton("APPLY", NeonGold) { viewModel.applyManualBpm(manualBpmInput) }
+                    }
+                }
+
+                ConsoleSection("SAMPLER PADS") {
+                    val padLabels = listOf("KICK", "SNARE", "HI-HAT", "CLAP", "BASS DROP", "FX1", "FX2", "LOOP")
+                    val padColors = listOf(NeonPink, NeonPurple, NeonCyan, NeonGold, NeonPink, NeonPurple, NeonCyan, NeonGold)
+                    padLabels.chunked(4).forEachIndexed { rowIdx, row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                            row.forEachIndexed { colIdx, label ->
+                                val idx = rowIdx * 4 + colIdx
+                                val accent = padColors[idx % padColors.size]
+                                Button(
+                                    onClick = { /* pad trigger — audio engine integration point */ },
+                                    shape = RoundedCornerShape(10.dp),
+                                    contentPadding = PaddingValues(0.dp),
+                                    border = BorderStroke(1.dp, accent),
+                                    colors = ButtonDefaults.buttonColors(containerColor = accent.copy(alpha = 0.18f), contentColor = accent),
+                                    modifier = Modifier.weight(1f).height(52.dp),
+                                ) {
+                                    Text(label, fontWeight = FontWeight.Black, fontSize = 9.sp)
+                                }
+                            }
+                        }
+                        if (rowIdx < padLabels.chunked(4).size - 1) Spacer(Modifier.height(6.dp))
+                    }
+                }
+
+                ConsoleSection("FX") {
+                    val fxList = listOf(
+                        "REVERB" to fxReverb, "DELAY" to fxDelay, "FLANGER" to fxFlanger,
+                        "ECHO" to fxEcho, "PHASER" to fxPhaser, "FILTER" to fxFilter,
+                    )
+                    val fxSetters: List<(Boolean) -> Unit> = listOf(
+                        { viewModel.fxReverb.value = it }, { viewModel.fxDelay.value = it },
+                        { viewModel.fxFlanger.value = it }, { viewModel.fxEcho.value = it },
+                        { viewModel.fxPhaser.value = it }, { viewModel.fxFilter.value = it },
+                    )
+                    fxList.chunked(3).forEachIndexed { rowIdx, row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                            row.forEachIndexed { colIdx, (label, active) ->
+                                val idx = rowIdx * 3 + colIdx
+                                val accent = NeonPurple
+                                Button(
+                                    onClick = { fxSetters[idx](!active) },
+                                    shape = RoundedCornerShape(10.dp),
+                                    contentPadding = PaddingValues(0.dp),
+                                    border = BorderStroke(1.dp, if (active) accent else accent.copy(alpha = 0.4f)),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (active) accent.copy(alpha = 0.35f) else DarkBackground,
+                                        contentColor = if (active) accent else accent.copy(alpha = 0.5f),
+                                    ),
+                                    modifier = Modifier.weight(1f).height(44.dp),
+                                ) {
+                                    Text(label, fontWeight = FontWeight.Bold, fontSize = 9.sp)
+                                }
+                            }
+                        }
+                        if (rowIdx < fxList.chunked(3).size - 1) Spacer(Modifier.height(6.dp))
                     }
                 }
             }
