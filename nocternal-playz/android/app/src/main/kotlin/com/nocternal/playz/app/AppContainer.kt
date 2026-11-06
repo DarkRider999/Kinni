@@ -44,6 +44,8 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import com.nocternal.playz.database.entity.TrackEntity
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -119,6 +121,19 @@ class AppContainer(val context: Context) {
 
     fun start() {
         scope.launch { library.load() }
+        // Sync scanned tracks from LibraryRepository (JSON store) → Room DB so UI screens can observe them.
+        scope.launch {
+            library.data
+                .map { it.tracks }
+                .distinctUntilChanged()
+                .collect { tracks ->
+                    if (tracks.isNotEmpty()) {
+                        runCatching {
+                            database.trackDao().insertTracks(tracks.map { it.toTrackEntity() })
+                        }
+                    }
+                }
+        }
         offline.start()
         OfflineManager.candidates = {
             val snap = library.snapshot()
@@ -176,3 +191,23 @@ class AppContainer(val context: Context) {
 
     fun hour(): Int = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
 }
+
+private fun com.nocternal.playz.model.Track.toTrackEntity() = TrackEntity(
+    id = id,
+    title = title,
+    artist = artist,
+    album = album,
+    genre = genreTag ?: "",
+    bpm = bpm ?: 0f,
+    camelotKey = camelotKey ?: "",
+    durationMs = durationMs,
+    filePath = uri,
+    artworkUri = artworkUri,
+    energy = energy ?: 0f,
+    danceability = 0f,
+    mood = "",
+    loudnessDb = loudnessDb ?: 0f,
+    year = year,
+    addedAt = dateAddedEpochMs.takeIf { it > 0 } ?: System.currentTimeMillis(),
+    source = source.name.lowercase(),
+)

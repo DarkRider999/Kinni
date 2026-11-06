@@ -2,15 +2,19 @@ package com.nocternal.playz.ui.dj
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -19,8 +23,10 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -28,6 +34,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -36,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.buildString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -69,11 +77,28 @@ fun DjHubScreen(viewModel: DjHubViewModel, onBack: () -> Unit, modifier: Modifie
     val eqLow by viewModel.eqLow.collectAsStateWithLifecycle()
     val eqMid by viewModel.eqMid.collectAsStateWithLifecycle()
     val eqHigh by viewModel.eqHigh.collectAsStateWithLifecycle()
+    val showDeckAPicker by viewModel.showDeckAPicker.collectAsStateWithLifecycle()
+    val showDeckBPicker by viewModel.showDeckBPicker.collectAsStateWithLifecycle()
+    val availableTracks by viewModel.availableTracks.collectAsStateWithLifecycle()
 
     // Tap-tempo timestamps; only the most recent taps feed the average.
     val tapTimes = remember { mutableStateListOf<Long>() }
 
     NocternalAppTheme {
+        if (showDeckAPicker) {
+            TrackPickerSheet(
+                tracks = availableTracks,
+                onSelect = viewModel::loadTrackToDeckA,
+                onDismiss = { viewModel.showDeckAPicker.value = false },
+            )
+        }
+        if (showDeckBPicker) {
+            TrackPickerSheet(
+                tracks = availableTracks,
+                onSelect = viewModel::loadTrackToDeckB,
+                onDismiss = { viewModel.showDeckBPicker.value = false },
+            )
+        }
         Scaffold(
             modifier = modifier,
             containerColor = DarkBackground,
@@ -101,8 +126,8 @@ fun DjHubScreen(viewModel: DjHubViewModel, onBack: () -> Unit, modifier: Modifie
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    DeckPanel("DECK A", currentTrack, deckAVolume, NeonPink, { viewModel.deckAVolume.value = it })
-                    DeckPanel("DECK B", nextTrack, deckBVolume, NeonCyan, { viewModel.deckBVolume.value = it })
+                    DeckPanel("DECK A", currentTrack, deckAVolume, NeonPink, { viewModel.deckAVolume.value = it }, { viewModel.showDeckAPicker.value = true })
+                    DeckPanel("DECK B", nextTrack, deckBVolume, NeonCyan, { viewModel.deckBVolume.value = it }, { viewModel.showDeckBPicker.value = true })
                 }
 
                 ConsoleSection("EQ") {
@@ -182,6 +207,7 @@ private fun RowScope.DeckPanel(
     volume: Float,
     accent: Color,
     onVolumeChange: (Float) -> Unit,
+    onLoad: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -191,7 +217,10 @@ private fun RowScope.DeckPanel(
             .padding(10.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(title, color = accent, fontWeight = FontWeight.Black, fontSize = 13.sp, letterSpacing = 2.sp)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+            Text(title, color = accent, fontWeight = FontWeight.Black, fontSize = 13.sp, letterSpacing = 2.sp)
+            ConsoleButton("LOAD", accent, onClick = onLoad)
+        }
         Text(
             track?.title ?: "No track loaded",
             color = Color.White,
@@ -297,6 +326,70 @@ private fun NeonBadge(text: String, color: Color) {
             .background(color.copy(alpha = 0.15f))
             .padding(horizontal = 10.dp, vertical = 4.dp),
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun TrackPickerSheet(
+    tracks: List<TrackEntity>,
+    onSelect: (TrackEntity) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        containerColor = DarkSurface,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+    ) {
+        Text(
+            "Load Track",
+            color = NeonPink,
+            fontWeight = FontWeight.Black,
+            fontSize = 16.sp,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        )
+        if (tracks.isEmpty()) {
+            Text(
+                "No tracks in library — scan your device first",
+                color = Color.White.copy(alpha = 0.5f),
+                modifier = Modifier.padding(16.dp),
+            )
+        } else {
+            LazyColumn {
+                items(tracks) { track ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(track) }
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                track.title,
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                buildString {
+                                    append(track.artist)
+                                    if (track.camelotKey.isNotBlank()) append(" · Key: ${track.camelotKey}")
+                                    if (track.bpm > 0f) append(" · %.0f BPM".format(track.bpm))
+                                },
+                                color = Color.White.copy(alpha = 0.5f),
+                                fontSize = 12.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                }
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+    }
 }
 
 @Composable

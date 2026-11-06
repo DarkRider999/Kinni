@@ -11,11 +11,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.filterNotNull
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -23,17 +20,18 @@ class DjHubViewModel(private val db: NocternalDatabase) : ViewModel() {
     private val trackDao = db.trackDao()
     private val cuePointDao = db.cuePointDao()
 
-    private val tracks: StateFlow<List<TrackEntity>> = trackDao.getAllTracks()
+    val availableTracks: StateFlow<List<TrackEntity>> = trackDao.getAllTracks()
         .catch { emit(emptyList()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    /** Deck A: the first track in the library, or null when the library is empty. */
-    val currentTrack: StateFlow<TrackEntity?> = tracks.map { it.firstOrNull() }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    /** Deck A: manually loaded by the user. */
+    val currentTrack = MutableStateFlow<TrackEntity?>(null)
 
-    /** Deck B: the second track in the library. */
-    val nextTrack: StateFlow<TrackEntity?> = tracks.map { it.getOrNull(1) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    /** Deck B: manually loaded by the user. */
+    val nextTrack = MutableStateFlow<TrackEntity?>(null)
+
+    val showDeckAPicker = MutableStateFlow(false)
+    val showDeckBPicker = MutableStateFlow(false)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val cuePoints: StateFlow<List<CuePointEntity>> = currentTrack
@@ -43,7 +41,7 @@ class DjHubViewModel(private val db: NocternalDatabase) : ViewModel() {
         .catch { emit(emptyList()) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    /** Base BPM of the mix: 128 until the deck A track loads, then that track's BPM. */
+    /** Base BPM of the mix: 128 until the user loads a track into Deck A. */
     val masterBpm = MutableStateFlow(DEFAULT_BPM)
     val tempoMultiplier = MutableStateFlow(1.0f)
 
@@ -54,8 +52,15 @@ class DjHubViewModel(private val db: NocternalDatabase) : ViewModel() {
     val eqMid = MutableStateFlow(0f)
     val eqHigh = MutableStateFlow(0f)
 
-    init {
-        viewModelScope.launch { masterBpm.value = currentTrack.filterNotNull().first().bpm }
+    fun loadTrackToDeckA(track: TrackEntity) {
+        currentTrack.value = track
+        showDeckAPicker.value = false
+        if (track.bpm > 0f) masterBpm.value = track.bpm
+    }
+
+    fun loadTrackToDeckB(track: TrackEntity) {
+        nextTrack.value = track
+        showDeckBPicker.value = false
     }
 
     fun setCuePoint(trackId: String, positionMs: Long, label: String, isHotCue: Boolean, hotCueIndex: Int?) {
