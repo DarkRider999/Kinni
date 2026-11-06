@@ -1,7 +1,7 @@
 package com.nocternal.playz.fx.dsp
 
 /** Multi-tap echo (3 taps, decaying) for stereo interleaved PCM. */
-class Echo : AudioProcessor {
+class Echo : StereoProcessor {
     var mix: Float = 0f
     var delayMs: Float = 500f
     var decayFactor: Float = 0.5f

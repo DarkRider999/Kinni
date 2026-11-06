@@ -1,7 +1,7 @@
 package com.nocternal.playz.fx.dsp
 
 /** Biquad-based variable low/high-pass filter for stereo interleaved PCM. */
-class Filter : AudioProcessor {
+class Filter : StereoProcessor {
     var mix: Float = 0f
     var cutoffHz: Float = 1000f
     var resonance: Float = 0.7f

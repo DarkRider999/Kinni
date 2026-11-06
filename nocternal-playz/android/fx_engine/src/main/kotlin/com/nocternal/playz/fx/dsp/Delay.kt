@@ -1,7 +1,7 @@
 package com.nocternal.playz.fx.dsp
 
 /** Single-tap feedback delay line for stereo interleaved PCM. */
-class Delay : AudioProcessor {
+class Delay : StereoProcessor {
     var mix: Float = 0f       // 0 = dry, 1 = fully wet
     var delayMs: Float = 375f
     var feedback: Float = 0.4f
