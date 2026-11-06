@@ -19,7 +19,7 @@ data class DelayParams(val enabled: Boolean = false, val delayMs: Float = 375f, 
 data class EchoParams(val enabled: Boolean = false, val delayMs: Float = 500f, val decayFactor: Float = 0.5f, val mix: Float = 0.6f)
 
 @Serializable
-data class FilterParams(val enabled: Boolean = false, /** Hz — 0 = bypass */ val cutoffHz: Float = 0f, val resonance: Float = 0.7f, val highPass: Boolean = false)
+data class FilterParams(val enabled: Boolean = false, /** Hz — 0 = bypass */ val cutoffHz: Float = 0f, val resonance: Float = 0.7f, val highPass: Boolean = false, val mix: Float = 0.8f)
 
 @Serializable
 data class CompressorParams(
