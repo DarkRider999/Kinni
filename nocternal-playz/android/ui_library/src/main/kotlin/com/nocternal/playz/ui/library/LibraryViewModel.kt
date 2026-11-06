@@ -72,7 +72,7 @@ class LibraryViewModel(database: NocternalDatabase) : ViewModel() {
     fun toggleFavorite(trackId: String) {
         viewModelScope.launch {
             val track = uiState.value.tracks.find { it.id == trackId } ?: return@launch
-            trackDao.setFavorite(trackId, !track.isFavorite)
+            runCatching { trackDao.setFavorite(trackId, !track.isFavorite) }
         }
     }
 

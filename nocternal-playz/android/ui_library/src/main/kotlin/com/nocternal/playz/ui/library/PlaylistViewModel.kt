@@ -54,7 +54,7 @@ class PlaylistViewModel(database: NocternalDatabase, private val playlistId: Str
 
     fun removeTrack(trackId: String) {
         viewModelScope.launch {
-            playlistDao.removeTrackFromPlaylist(playlistId, trackId)
+            runCatching { playlistDao.removeTrackFromPlaylist(playlistId, trackId) }
             membershipVersion.update { it + 1 }
         }
     }
