@@ -48,5 +48,6 @@ include(
     ":ui_radio_panel",
     ":ui_library",
     ":ui_dj",
+    ":ui_analytics",
     ":app",
 )

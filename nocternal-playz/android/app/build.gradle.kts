@@ -57,6 +57,7 @@ dependencies {
     implementation(project(":ui_radio_panel"))
     implementation(project(":ui_library"))
     implementation(project(":ui_dj"))
+    implementation(project(":ui_analytics"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
