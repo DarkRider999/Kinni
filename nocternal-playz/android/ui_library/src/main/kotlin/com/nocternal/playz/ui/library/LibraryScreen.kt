@@ -1,6 +1,7 @@
 package com.nocternal.playz.ui.library
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,16 +16,29 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
-import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -33,16 +47,22 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -60,6 +80,15 @@ import com.nocternal.playz.designsystem.NeonLogo
 import com.nocternal.playz.designsystem.NeonPink
 import com.nocternal.playz.designsystem.NeonPurple
 import com.nocternal.playz.designsystem.NocternalAppTheme
+
+private fun onTrackMenuOpen(track: TrackEntity, action: TrackMenuAction, viewModel: LibraryViewModel) {
+    viewModel.onTrackMenuOpen(track)
+    when (action) {
+        TrackMenuAction.EDIT -> viewModel.onEditOpen()
+        TrackMenuAction.ADD_TO_PLAYLIST -> viewModel.onAddToPlaylistOpen()
+        TrackMenuAction.DELETE -> viewModel.onDeleteOpen()
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -113,9 +142,38 @@ fun LibraryScreen(
                             tracks = uiState.tracks,
                             onTrackClick = onTrackClick,
                             onToggleFavorite = viewModel::toggleFavorite,
+                            onTrackMenuOpen = { track, action -> onTrackMenuOpen(track, action, viewModel) },
                         )
                     }
                 }
+            }
+
+            // ── Bottom sheets / dialogs ───────────────────────────────────
+            if (uiState.showEditSheet && uiState.trackMenuTarget != null) {
+                EditTrackSheet(
+                    track = uiState.trackMenuTarget,
+                    onDismiss = viewModel::onDismissSheet,
+                    onSave = { title, artist, bpm, key ->
+                        viewModel.updateTrack(title, artist, bpm, key)
+                    },
+                )
+            }
+
+            if (uiState.showAddToPlaylistSheet && uiState.trackMenuTarget != null) {
+                AddToPlaylistSheet(
+                    playlists = uiState.playlists,
+                    onDismiss = viewModel::onDismissSheet,
+                    onAddToExisting = viewModel::addToPlaylist,
+                    onCreateNew = viewModel::createPlaylistAndAdd,
+                )
+            }
+
+            if (uiState.showDeleteConfirm && uiState.trackMenuTarget != null) {
+                DeleteTrackDialog(
+                    trackTitle = uiState.trackMenuTarget.title,
+                    onConfirm = viewModel::deleteTrack,
+                    onDismiss = viewModel::onDismissSheet,
+                )
             }
         }
     }
@@ -183,6 +241,7 @@ private fun TrackList(
     tracks: List<TrackEntity>,
     onTrackClick: (String) -> Unit,
     onToggleFavorite: (String) -> Unit,
+    onTrackMenuOpen: (TrackEntity, TrackMenuAction) -> Unit,
 ) {
     if (tracks.isEmpty()) {
         EmptyState("No tracks found")
@@ -198,13 +257,23 @@ private fun TrackList(
                 track = track,
                 onClick = { onTrackClick(track.id) },
                 onToggleFavorite = { onToggleFavorite(track.id) },
+                onMenuAction = { action -> onTrackMenuOpen(track, action) },
             )
         }
     }
 }
 
+private enum class TrackMenuAction { EDIT, ADD_TO_PLAYLIST, DELETE }
+
 @Composable
-private fun TrackCard(track: TrackEntity, onClick: () -> Unit, onToggleFavorite: () -> Unit) {
+private fun TrackCard(
+    track: TrackEntity,
+    onClick: () -> Unit,
+    onToggleFavorite: () -> Unit,
+    onMenuAction: (TrackMenuAction) -> Unit,
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+
     GlowCard(modifier = Modifier.fillMaxWidth(), glowColor = NeonPurple, onClick = onClick) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -218,6 +287,41 @@ private fun TrackCard(track: TrackEntity, onClick: () -> Unit, onToggleFavorite:
                     contentDescription = if (track.isFavorite) "Remove from favorites" else "Add to favorites",
                     tint = if (track.isFavorite) NeonPink else Color.White.copy(alpha = 0.5f),
                 )
+            }
+            Box {
+                IconButton(onClick = { menuExpanded = true }) {
+                    Icon(Icons.Filled.MoreVert, contentDescription = "More options", tint = Color.White.copy(alpha = 0.7f))
+                }
+                DropdownMenu(
+                    expanded = menuExpanded,
+                    onDismissRequest = { menuExpanded = false },
+                    containerColor = DarkSurface,
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Edit", color = Color.White) },
+                        leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null, tint = NeonCyan) },
+                        onClick = {
+                            menuExpanded = false
+                            onMenuAction(TrackMenuAction.EDIT)
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Add to playlist", color = Color.White) },
+                        leadingIcon = { Icon(Icons.Filled.PlaylistAdd, contentDescription = null, tint = NeonPurple) },
+                        onClick = {
+                            menuExpanded = false
+                            onMenuAction(TrackMenuAction.ADD_TO_PLAYLIST)
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Delete", color = NeonPink) },
+                        leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null, tint = NeonPink) },
+                        onClick = {
+                            menuExpanded = false
+                            onMenuAction(TrackMenuAction.DELETE)
+                        },
+                    )
+                }
             }
         }
     }
@@ -328,6 +432,196 @@ internal fun TrackBadges(track: TrackEntity) {
         }
     }
 }
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EditTrackSheet(
+    track: TrackEntity,
+    onDismiss: () -> Unit,
+    onSave: (title: String, artist: String, bpm: Float, camelotKey: String) -> Unit,
+) {
+    var title by remember { mutableStateOf(track.title) }
+    var artist by remember { mutableStateOf(track.artist) }
+    var bpm by remember { mutableStateOf(track.bpm.toInt().toString()) }
+    var key by remember { mutableStateOf(track.camelotKey) }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = DarkSurface,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 8.dp)
+                .padding(bottom = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Text("Edit Track", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            OutlinedTextField(
+                value = title,
+                onValueChange = { title = it },
+                label = { Text("Title") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                colors = sheetFieldColors(),
+            )
+            OutlinedTextField(
+                value = artist,
+                onValueChange = { artist = it },
+                label = { Text("Artist") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                colors = sheetFieldColors(),
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                OutlinedTextField(
+                    value = bpm,
+                    onValueChange = { bpm = it.filter { c -> c.isDigit() } },
+                    label = { Text("BPM") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.weight(1f),
+                    colors = sheetFieldColors(),
+                )
+                OutlinedTextField(
+                    value = key,
+                    onValueChange = { key = it },
+                    label = { Text("Key") },
+                    singleLine = true,
+                    modifier = Modifier.weight(1f),
+                    colors = sheetFieldColors(),
+                )
+            }
+            Button(
+                onClick = { onSave(title, artist, bpm.toFloatOrNull() ?: track.bpm, key) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(containerColor = NeonPink),
+            ) {
+                Text("Save", fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddToPlaylistSheet(
+    playlists: List<PlaylistEntity>,
+    onDismiss: () -> Unit,
+    onAddToExisting: (PlaylistEntity) -> Unit,
+    onCreateNew: (String) -> Unit,
+) {
+    var showNewField by remember { mutableStateOf(false) }
+    var newName by remember { mutableStateOf("") }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = DarkSurface,
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 8.dp)
+                .padding(bottom = 24.dp),
+        ) {
+            Text(
+                "Add to Playlist",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 18.sp,
+                modifier = Modifier.padding(bottom = 12.dp),
+            )
+            LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
+                items(playlists, key = { it.id }) { playlist ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onAddToExisting(playlist) }
+                            .padding(vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        PlaylistThumbnail(artworkUri = playlist.artworkUri, size = 40)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(playlist.name, color = Color.White, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("${playlist.trackCount} tracks", color = NeonCyan, fontSize = 12.sp)
+                        }
+                    }
+                    HorizontalDivider(color = Color.White.copy(alpha = 0.08f))
+                }
+            }
+            Spacer(Modifier.size(8.dp))
+            if (showNewField) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(
+                        value = newName,
+                        onValueChange = { newName = it },
+                        placeholder = { Text("Playlist name") },
+                        singleLine = true,
+                        modifier = Modifier.weight(1f),
+                        colors = sheetFieldColors(),
+                    )
+                    Button(
+                        onClick = { if (newName.isNotBlank()) onCreateNew(newName) },
+                        colors = ButtonDefaults.buttonColors(containerColor = NeonPurple),
+                    ) { Text("Create") }
+                }
+            } else {
+                TextButton(
+                    onClick = { showNewField = true },
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = null, tint = NeonPurple)
+                    Spacer(Modifier.width(8.dp))
+                    Text("New playlist", color = NeonPurple, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DeleteTrackDialog(
+    trackTitle: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = DarkSurface,
+        title = { Text("Delete track?", color = Color.White, fontWeight = FontWeight.Bold) },
+        text = {
+            Text(
+                "\"$trackTitle\" will be removed from your library.",
+                color = Color.White.copy(alpha = 0.8f),
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(containerColor = NeonPink),
+            ) { Text("Delete", fontWeight = FontWeight.Bold) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel", color = Color.White.copy(alpha = 0.7f)) }
+        },
+    )
+}
+
+@Composable
+private fun sheetFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedTextColor = Color.White,
+    unfocusedTextColor = Color.White,
+    focusedBorderColor = NeonPink,
+    unfocusedBorderColor = NeonPurple.copy(alpha = 0.5f),
+    focusedLabelColor = NeonPink,
+    unfocusedLabelColor = Color.White.copy(alpha = 0.5f),
+    cursorColor = NeonPink,
+    focusedContainerColor = DarkSurface,
+    unfocusedContainerColor = DarkSurface,
+)
 
 /** Formats milliseconds as `m:ss`, or `h:mm:ss` once past an hour. */
 internal fun formatDuration(durationMs: Long): String {
