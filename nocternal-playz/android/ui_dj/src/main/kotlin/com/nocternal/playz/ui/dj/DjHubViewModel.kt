@@ -60,22 +60,26 @@ class DjHubViewModel(private val db: NocternalDatabase) : ViewModel() {
 
     fun setCuePoint(trackId: String, positionMs: Long, label: String, isHotCue: Boolean, hotCueIndex: Int?) {
         viewModelScope.launch {
-            cuePointDao.insertCuePoint(
-                CuePointEntity(
-                    trackId = trackId,
-                    positionMs = positionMs,
-                    label = label,
-                    isHotCue = isHotCue,
-                    hotCueIndex = hotCueIndex,
-                ),
-            )
+            runCatching {
+                cuePointDao.insertCuePoint(
+                    CuePointEntity(
+                        trackId = trackId,
+                        positionMs = positionMs,
+                        label = label,
+                        isHotCue = isHotCue,
+                        hotCueIndex = hotCueIndex,
+                    ),
+                )
+            }
         }
     }
 
     /** Room's @Delete matches on the primary key only, so the other fields are placeholders. */
     fun deleteCuePoint(id: Long) {
         viewModelScope.launch {
-            cuePointDao.deleteCuePoint(CuePointEntity(id = id, trackId = "", positionMs = 0L))
+            runCatching {
+                cuePointDao.deleteCuePoint(CuePointEntity(id = id, trackId = "", positionMs = 0L))
+            }
         }
     }
 
