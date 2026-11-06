@@ -38,6 +38,7 @@ include(
 // Android modules.
 include(
     ":core:designsystem",
+    ":core:database",
     ":audio_engine",
     ":library_scanner",
     ":lighting_effects",

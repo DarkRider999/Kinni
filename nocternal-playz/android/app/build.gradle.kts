@@ -39,6 +39,7 @@ kotlin {
 dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:designsystem"))
+    implementation(project(":core:database"))
     implementation(project(":plugin_api"))
     implementation(project(":theme_manager"))
     implementation(project(":playlists"))
