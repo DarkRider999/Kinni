@@ -9,7 +9,7 @@ interface HistoryDao {
     @Query("SELECT * FROM history ORDER BY playedAt DESC LIMIT :limit")
     fun getRecentHistory(limit: Int = 50): Flow<List<HistoryEntity>>
 
-    @Query("SELECT trackId, COUNT(*) as count FROM history GROUP BY trackId ORDER BY count DESC LIMIT :limit")
+    @Query("SELECT trackId FROM history GROUP BY trackId ORDER BY COUNT(*) DESC LIMIT :limit")
     suspend fun getMostPlayedTrackIds(limit: Int = 20): List<String>
 
     @Insert
