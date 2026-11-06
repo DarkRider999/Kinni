@@ -48,6 +48,17 @@ class LibraryViewModel(database: NocternalDatabase) : ViewModel() {
         tracks to history.map { it.trackId }.distinct().mapNotNull { byId[it] }
     }
 
+    // ── Internal sheet state (merged into uiState via combine) ────────────────
+
+    private data class SheetState(
+        val trackMenuTarget: TrackEntity? = null,
+        val showEditSheet: Boolean = false,
+        val showAddToPlaylistSheet: Boolean = false,
+        val showDeleteConfirm: Boolean = false,
+    )
+
+    private val _sheetState = MutableStateFlow(SheetState())
+
     val uiState: StateFlow<LibraryUiState> = combine(
         combine(_selectedTab, _searchQuery, tracksWithHistory, playlistDao.getAllPlaylists(), trackDao.getFavorites()) {
                 tab, query, (tracks, recent), playlists, favorites ->
@@ -199,17 +210,6 @@ class LibraryViewModel(database: NocternalDatabase) : ViewModel() {
             _sheetState.value = SheetState()
         }
     }
-
-    // ── Internal sheet state (merged into uiState via combine) ────────────────
-
-    private data class SheetState(
-        val trackMenuTarget: TrackEntity? = null,
-        val showEditSheet: Boolean = false,
-        val showAddToPlaylistSheet: Boolean = false,
-        val showDeleteConfirm: Boolean = false,
-    )
-
-    private val _sheetState = MutableStateFlow(SheetState())
 
     private fun List<TrackEntity>.filterBy(query: String): List<TrackEntity> =
         if (query.isBlank()) this

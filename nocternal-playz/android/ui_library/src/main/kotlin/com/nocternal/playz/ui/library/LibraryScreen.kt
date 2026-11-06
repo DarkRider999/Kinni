@@ -149,9 +149,10 @@ fun LibraryScreen(
             }
 
             // ── Bottom sheets / dialogs ───────────────────────────────────
-            if (uiState.showEditSheet && uiState.trackMenuTarget != null) {
+            val editTarget = uiState.trackMenuTarget
+            if (uiState.showEditSheet && editTarget != null) {
                 EditTrackSheet(
-                    track = uiState.trackMenuTarget,
+                    track = editTarget,
                     onDismiss = viewModel::onDismissSheet,
                     onSave = { title, artist, bpm, key ->
                         viewModel.updateTrack(title, artist, bpm, key)
@@ -159,7 +160,8 @@ fun LibraryScreen(
                 )
             }
 
-            if (uiState.showAddToPlaylistSheet && uiState.trackMenuTarget != null) {
+            val addTarget = uiState.trackMenuTarget
+            if (uiState.showAddToPlaylistSheet && addTarget != null) {
                 AddToPlaylistSheet(
                     playlists = uiState.playlists,
                     onDismiss = viewModel::onDismissSheet,
@@ -168,9 +170,10 @@ fun LibraryScreen(
                 )
             }
 
-            if (uiState.showDeleteConfirm && uiState.trackMenuTarget != null) {
+            val deleteTarget = uiState.trackMenuTarget
+            if (uiState.showDeleteConfirm && deleteTarget != null) {
                 DeleteTrackDialog(
-                    trackTitle = uiState.trackMenuTarget.title,
+                    trackTitle = deleteTarget.title,
                     onConfirm = viewModel::deleteTrack,
                     onDismiss = viewModel::onDismissSheet,
                 )
