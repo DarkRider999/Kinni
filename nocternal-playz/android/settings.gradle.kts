@@ -46,5 +46,6 @@ include(
     ":ui_player",
     ":ui_youtube_panel",
     ":ui_radio_panel",
+    ":ui_library",
     ":app",
 )
