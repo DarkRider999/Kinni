@@ -20,6 +20,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Lightbulb
+import androidx.compose.material.icons.filled.LibraryMusic
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlayCircle
@@ -54,6 +56,11 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import com.nocternal.playz.app.ActionExecutor
 import com.nocternal.playz.app.AppContainer
 import com.nocternal.playz.designsystem.Neon
@@ -63,6 +70,18 @@ import com.nocternal.playz.designsystem.VoiceOrb
 import com.nocternal.playz.designsystem.neonGlow
 import com.nocternal.playz.lighting.EdgeLightingOverlay
 import com.nocternal.playz.theme.EqPresets
+import com.nocternal.playz.ui.analytics.AiAssistantScreen
+import com.nocternal.playz.ui.analytics.AiAssistantViewModel
+import com.nocternal.playz.ui.analytics.AnalyticsScreen
+import com.nocternal.playz.ui.analytics.AnalyticsViewModel
+import com.nocternal.playz.ui.dj.DjHubScreen
+import com.nocternal.playz.ui.dj.DjHubViewModel
+import com.nocternal.playz.ui.dj.VisualizerScreen
+import com.nocternal.playz.ui.dj.VisualizerViewModel
+import com.nocternal.playz.ui.library.LibraryScreen
+import com.nocternal.playz.ui.library.LibraryViewModel
+import com.nocternal.playz.ui.library.PlaylistScreen
+import com.nocternal.playz.ui.library.PlaylistViewModel
 import com.nocternal.playz.ui.player.AlbumArt
 import com.nocternal.playz.ui.player.EqFxScreen
 import com.nocternal.playz.ui.player.PlayerCallbacks
@@ -70,8 +89,9 @@ import com.nocternal.playz.ui.player.PlayerScreen
 
 private enum class Tab(val route: String, val label: String, val icon: ImageVector) {
     HOME("home", "Home", Icons.Filled.Home),
+    LIBRARY("library", "Library", Icons.Filled.LibraryMusic),
+    DJ("dj", "DJ", Icons.Filled.MusicNote),
     PLAYER("player", "Player", Icons.Filled.PlayCircle),
-    LIGHTING("lighting", "Lighting", Icons.Filled.Lightbulb),
     SETTINGS("settings", "Settings", Icons.Filled.Settings),
 }
 
@@ -126,7 +146,56 @@ fun NocternalRoot(c: AppContainer, actions: ActionExecutor) {
                                 onEnhance = c.audio::enhance, onBack = { nav.popBackStack() },
                             )
                         }
-                        composable(Tab.LIGHTING.route) { LightingScreen(c, spectrum, playback.isPlaying) }
+                        composable("lighting") { LightingScreen(c, spectrum, playback.isPlaying) }
+                        composable(Tab.LIBRARY.route) {
+                            LibraryScreen(
+                                viewModel = viewModel(factory = object : ViewModelProvider.Factory {
+                                    @Suppress("UNCHECKED_CAST")
+                                    override fun <T : ViewModel> create(modelClass: Class<T>): T = LibraryViewModel(c.database) as T
+                                }),
+                                onTrackClick = { /* TODO: play track by id */ },
+                                onPlaylistClick = { playlistId -> nav.navigate("playlist/$playlistId") },
+                            )
+                        }
+                        composable(
+                            "playlist/{playlistId}",
+                            arguments = listOf(navArgument("playlistId") { type = NavType.StringType }),
+                        ) { backStack ->
+                            val playlistId = backStack.arguments?.getString("playlistId") ?: return@composable
+                            PlaylistScreen(
+                                viewModel = viewModel(factory = object : ViewModelProvider.Factory {
+                                    @Suppress("UNCHECKED_CAST")
+                                    override fun <T : ViewModel> create(modelClass: Class<T>): T = PlaylistViewModel(c.database, playlistId) as T
+                                }),
+                                onBack = { nav.popBackStack() },
+                                onTrackClick = { /* TODO: play track by id */ },
+                                onAddTrack = {},
+                            )
+                        }
+                        composable(Tab.DJ.route) {
+                            DjHubScreen(
+                                viewModel = viewModel(factory = DjHubViewModel.Factory(c.database)),
+                                onBack = { nav.popBackStack() },
+                            )
+                        }
+                        composable("visualizer") {
+                            VisualizerScreen(
+                                viewModel = viewModel(),
+                                onBack = { nav.popBackStack() },
+                            )
+                        }
+                        composable("analytics") {
+                            AnalyticsScreen(
+                                viewModel = viewModel(factory = AnalyticsViewModel.Factory(c.database)),
+                                onBack = { nav.popBackStack() },
+                            )
+                        }
+                        composable("assistant") {
+                            AiAssistantScreen(
+                                viewModel = viewModel(factory = AiAssistantViewModel.Factory(c.database)),
+                                onBack = { nav.popBackStack() },
+                            )
+                        }
                         composable(Tab.SETTINGS.route) { SettingsScreen(c) }
                     }
                     // AI voice orb, always one tap away.

@@ -1,6 +1,7 @@
 package com.nocternal.playz.app
 
 import android.content.Context
+import com.nocternal.playz.database.NocternalDatabase
 import com.nocternal.playz.ai.AlbumArtGenerator
 import com.nocternal.playz.ai.AssistantEngine
 import com.nocternal.playz.ai.ClaudeAssistantLlm
@@ -56,6 +57,7 @@ import java.util.Calendar
  */
 class AppContainer(val context: Context) {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    val database: NocternalDatabase = NocternalDatabase.getInstance(context)
 
     val settingsRepo = SettingsRepository(context, scope)
     val library = LibraryRepository(context, scope)
