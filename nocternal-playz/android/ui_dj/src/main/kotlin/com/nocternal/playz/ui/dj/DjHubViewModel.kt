@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 class DjHubViewModel(
     private val db: NocternalDatabase,
     private val onFxUpdate: (reverb: Boolean, delay: Boolean, flanger: Boolean, echo: Boolean, phaser: Boolean, filter: Boolean) -> Unit = { _, _, _, _, _, _ -> },
+    private val onAdvancedFxUpdate: (roll: Boolean, beatRepeat: Boolean, gate: Boolean, reverse: Boolean, brake: Boolean, spinBack: Boolean, vinylStop: Boolean) -> Unit = { _, _, _, _, _, _, _ -> },
     private val triggerSampler: (Int) -> Unit = {},
 ) : ViewModel() {
     private val trackDao = db.trackDao()
@@ -65,6 +66,15 @@ class DjHubViewModel(
     val fxEcho = MutableStateFlow(false)
     val fxPhaser = MutableStateFlow(false)
     val fxFilter = MutableStateFlow(false)
+
+    // Advanced FX toggles: ROLL, BEAT REPEAT, GATE, REVERSE, BRAKE, SPIN BACK, VINYL STOP
+    val fxRoll = MutableStateFlow(false)
+    val fxBeatRepeat = MutableStateFlow(false)
+    val fxGate = MutableStateFlow(false)
+    val fxReverse = MutableStateFlow(false)
+    val fxBrake = MutableStateFlow(false)
+    val fxSpinBack = MutableStateFlow(false)
+    val fxVinylStop = MutableStateFlow(false)
 
     fun loadTrackToDeckA(track: TrackEntity) {
         currentTrack.value = track
@@ -134,15 +144,23 @@ class DjHubViewModel(
         onFxUpdate(fxReverb.value, fxDelay.value, fxFlanger.value, fxEcho.value, fxPhaser.value, fxFilter.value)
     }
 
+    private fun syncAdvancedFx() {
+        onAdvancedFxUpdate(fxRoll.value, fxBeatRepeat.value, fxGate.value, fxReverse.value, fxBrake.value, fxSpinBack.value, fxVinylStop.value)
+    }
+
     init {
         listOf(fxReverb, fxDelay, fxFlanger, fxEcho, fxPhaser, fxFilter).forEach { flow ->
             viewModelScope.launch { flow.collect { syncFx() } }
+        }
+        listOf(fxRoll, fxBeatRepeat, fxGate, fxReverse, fxBrake, fxSpinBack, fxVinylStop).forEach { flow ->
+            viewModelScope.launch { flow.collect { syncAdvancedFx() } }
         }
     }
 
     class Factory(
         private val db: NocternalDatabase,
         private val onFxUpdate: (reverb: Boolean, delay: Boolean, flanger: Boolean, echo: Boolean, phaser: Boolean, filter: Boolean) -> Unit = { _, _, _, _, _, _ -> },
+        private val onAdvancedFxUpdate: (roll: Boolean, beatRepeat: Boolean, gate: Boolean, reverse: Boolean, brake: Boolean, spinBack: Boolean, vinylStop: Boolean) -> Unit = { _, _, _, _, _, _, _ -> },
         private val triggerSampler: (Int) -> Unit = {},
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
@@ -150,7 +168,7 @@ class DjHubViewModel(
             require(modelClass.isAssignableFrom(DjHubViewModel::class.java)) {
                 "Unknown ViewModel class: ${modelClass.name}"
             }
-            return DjHubViewModel(db, onFxUpdate, triggerSampler) as T
+            return DjHubViewModel(db, onFxUpdate, onAdvancedFxUpdate, triggerSampler) as T
         }
     }
 

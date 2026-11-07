@@ -90,6 +90,13 @@ fun DjHubScreen(viewModel: DjHubViewModel, onBack: () -> Unit, modifier: Modifie
     val fxEcho by viewModel.fxEcho.collectAsStateWithLifecycle()
     val fxPhaser by viewModel.fxPhaser.collectAsStateWithLifecycle()
     val fxFilter by viewModel.fxFilter.collectAsStateWithLifecycle()
+    val fxRoll by viewModel.fxRoll.collectAsStateWithLifecycle()
+    val fxBeatRepeat by viewModel.fxBeatRepeat.collectAsStateWithLifecycle()
+    val fxGate by viewModel.fxGate.collectAsStateWithLifecycle()
+    val fxReverse by viewModel.fxReverse.collectAsStateWithLifecycle()
+    val fxBrake by viewModel.fxBrake.collectAsStateWithLifecycle()
+    val fxSpinBack by viewModel.fxSpinBack.collectAsStateWithLifecycle()
+    val fxVinylStop by viewModel.fxVinylStop.collectAsStateWithLifecycle()
 
     // Tap-tempo timestamps; only the most recent taps feed the average.
     val tapTimes = remember { mutableStateListOf<Long>() }
@@ -281,6 +288,42 @@ fun DjHubScreen(viewModel: DjHubViewModel, onBack: () -> Unit, modifier: Modifie
                             }
                         }
                         if (rowIdx < fxList.chunked(3).size - 1) Spacer(Modifier.height(6.dp))
+                    }
+                }
+
+                ConsoleSection("ADVANCED FX") {
+                    val advFxList = listOf(
+                        "ROLL" to fxRoll, "BEAT RPT" to fxBeatRepeat, "GATE" to fxGate,
+                        "REVERSE" to fxReverse, "BRAKE" to fxBrake, "SPIN BACK" to fxSpinBack,
+                        "VINYL STOP" to fxVinylStop,
+                    )
+                    val advFxSetters: List<(Boolean) -> Unit> = listOf(
+                        { viewModel.fxRoll.value = it }, { viewModel.fxBeatRepeat.value = it },
+                        { viewModel.fxGate.value = it }, { viewModel.fxReverse.value = it },
+                        { viewModel.fxBrake.value = it }, { viewModel.fxSpinBack.value = it },
+                        { viewModel.fxVinylStop.value = it },
+                    )
+                    advFxList.chunked(4).forEachIndexed { rowIdx, row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                            row.forEachIndexed { colIdx, (label, active) ->
+                                val idx = rowIdx * 4 + colIdx
+                                val accent = NeonPink
+                                Button(
+                                    onClick = { advFxSetters[idx](!active) },
+                                    shape = RoundedCornerShape(10.dp),
+                                    contentPadding = PaddingValues(0.dp),
+                                    border = BorderStroke(1.dp, if (active) accent else accent.copy(alpha = 0.4f)),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (active) accent.copy(alpha = 0.35f) else DarkBackground,
+                                        contentColor = if (active) accent else accent.copy(alpha = 0.5f),
+                                    ),
+                                    modifier = Modifier.weight(1f).height(44.dp),
+                                ) {
+                                    Text(label, fontWeight = FontWeight.Bold, fontSize = 9.sp)
+                                }
+                            }
+                        }
+                        if (rowIdx < advFxList.chunked(4).size - 1) Spacer(Modifier.height(6.dp))
                     }
                 }
             }

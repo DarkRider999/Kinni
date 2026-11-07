@@ -27,6 +27,15 @@ data class CompressorParams(
     val attackMs: Float = 10f, val releaseMs: Float = 120f, val makeupDb: Float = 3f,
 )
 
+@Serializable
+data class RollParams(val enabled: Boolean = false, val sizeBeats: Float = 0.5f)
+
+@Serializable
+data class BeatRepeatParams(val enabled: Boolean = false, val sizeBeats: Float = 0.25f, val pitch: Float = 0f)
+
+@Serializable
+data class GateParams(val enabled: Boolean = false, val rateHz: Float = 4f, val depth: Float = 1f)
+
 /** Where audio is going. Affects speaker boost and safe-mode limits. */
 @Serializable
 enum class OutputRoute { SPEAKER, WIRED_HEADPHONES, BLUETOOTH, OTHER }
@@ -47,6 +56,13 @@ data class FxSettings(
     val echo: EchoParams = EchoParams(),
     val filter: FilterParams = FilterParams(),
     val compressor: CompressorParams = CompressorParams(),
+    val roll: RollParams = RollParams(),
+    val beatRepeat: BeatRepeatParams = BeatRepeatParams(),
+    val gate: GateParams = GateParams(),
+    val reverse: Boolean = false,
+    val brake: Boolean = false,
+    val spinBack: Boolean = false,
+    val vinylStop: Boolean = false,
     /** 0 = mono, 1 = normal, 2 = extra wide. */
     val stereoWidth: Float = 1f,
     val pitchSemitones: Float = 0f,
