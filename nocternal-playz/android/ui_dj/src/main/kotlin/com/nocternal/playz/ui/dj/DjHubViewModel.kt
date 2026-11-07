@@ -3,6 +3,7 @@ package com.nocternal.playz.ui.dj
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.nocternal.playz.audio.SamplerEngine
 import com.nocternal.playz.database.NocternalDatabase
 import com.nocternal.playz.database.entity.CuePointEntity
 import com.nocternal.playz.database.entity.TrackEntity
@@ -20,7 +21,7 @@ class DjHubViewModel(
     private val db: NocternalDatabase,
     private val onFxUpdate: (reverb: Boolean, delay: Boolean, flanger: Boolean, echo: Boolean, phaser: Boolean, filter: Boolean) -> Unit = { _, _, _, _, _, _ -> },
     private val onAdvancedFxUpdate: (roll: Boolean, beatRepeat: Boolean, gate: Boolean, reverse: Boolean, brake: Boolean, spinBack: Boolean, vinylStop: Boolean) -> Unit = { _, _, _, _, _, _, _ -> },
-    private val triggerSampler: (Int) -> Unit = {},
+    private val triggerSampler: (Int, Int) -> Unit = { _, _ -> },
 ) : ViewModel() {
     private val trackDao = db.trackDao()
     private val cuePointDao = db.cuePointDao()
@@ -75,6 +76,8 @@ class DjHubViewModel(
     val fxBrake = MutableStateFlow(false)
     val fxSpinBack = MutableStateFlow(false)
     val fxVinylStop = MutableStateFlow(false)
+
+    val selectedSamplerBank = MutableStateFlow(0)
 
     fun loadTrackToDeckA(track: TrackEntity) {
         currentTrack.value = track
@@ -138,7 +141,9 @@ class DjHubViewModel(
         }
     }
 
-    fun triggerPad(index: Int) { triggerSampler(index) }
+    fun selectBank(bank: Int) { selectedSamplerBank.value = bank.coerceIn(0, SamplerEngine.BANK_COUNT - 1) }
+
+    fun triggerPad(index: Int) { triggerSampler(selectedSamplerBank.value, index) }
 
     private fun syncFx() {
         onFxUpdate(fxReverb.value, fxDelay.value, fxFlanger.value, fxEcho.value, fxPhaser.value, fxFilter.value)
@@ -161,7 +166,7 @@ class DjHubViewModel(
         private val db: NocternalDatabase,
         private val onFxUpdate: (reverb: Boolean, delay: Boolean, flanger: Boolean, echo: Boolean, phaser: Boolean, filter: Boolean) -> Unit = { _, _, _, _, _, _ -> },
         private val onAdvancedFxUpdate: (roll: Boolean, beatRepeat: Boolean, gate: Boolean, reverse: Boolean, brake: Boolean, spinBack: Boolean, vinylStop: Boolean) -> Unit = { _, _, _, _, _, _, _ -> },
-        private val triggerSampler: (Int) -> Unit = {},
+        private val triggerSampler: (Int, Int) -> Unit = { _, _ -> },
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {

@@ -20,6 +20,7 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":audio_engine"))
     implementation(project(":core:database"))
     implementation(project(":core:designsystem"))
     // :core:database declares Room as `implementation`; NocternalDatabase extends RoomDatabase,

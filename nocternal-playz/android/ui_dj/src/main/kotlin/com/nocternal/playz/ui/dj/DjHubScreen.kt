@@ -52,6 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nocternal.playz.audio.SamplerEngine
 import com.nocternal.playz.database.entity.CuePointEntity
 import com.nocternal.playz.database.entity.TrackEntity
 import com.nocternal.playz.designsystem.DarkBackground
@@ -97,6 +98,7 @@ fun DjHubScreen(viewModel: DjHubViewModel, onBack: () -> Unit, modifier: Modifie
     val fxBrake by viewModel.fxBrake.collectAsStateWithLifecycle()
     val fxSpinBack by viewModel.fxSpinBack.collectAsStateWithLifecycle()
     val fxVinylStop by viewModel.fxVinylStop.collectAsStateWithLifecycle()
+    val selectedSamplerBank by viewModel.selectedSamplerBank.collectAsStateWithLifecycle()
 
     // Tap-tempo timestamps; only the most recent taps feed the average.
     val tapTimes = remember { mutableStateListOf<Long>() }
@@ -234,7 +236,30 @@ fun DjHubScreen(viewModel: DjHubViewModel, onBack: () -> Unit, modifier: Modifie
                 }
 
                 ConsoleSection("SAMPLER PADS") {
-                    val padLabels = listOf("KICK", "SNARE", "HI-HAT", "CLAP", "BASS DROP", "FX1", "FX2", "LOOP")
+                    val bankAccents = listOf(NeonGold, NeonPink, NeonCyan, NeonPurple)
+                    // Bank selector row
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                        SamplerEngine.BANK_NAMES.forEachIndexed { bankIdx, bankName ->
+                            val accent = bankAccents[bankIdx]
+                            val selected = bankIdx == selectedSamplerBank
+                            Button(
+                                onClick = { viewModel.selectBank(bankIdx) },
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                                border = BorderStroke(if (selected) 2.dp else 1.dp, accent),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (selected) accent.copy(alpha = 0.35f) else accent.copy(alpha = 0.1f),
+                                    contentColor = accent,
+                                ),
+                                modifier = Modifier.weight(1f).height(36.dp),
+                            ) {
+                                Text(bankName.replace(" ", "\n"), fontWeight = FontWeight.Black, fontSize = 7.sp, lineHeight = 8.sp)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    // Pad grid for selected bank
+                    val padLabels = SamplerEngine.PAD_LABELS[selectedSamplerBank].toList()
                     val padColors = listOf(NeonPink, NeonPurple, NeonCyan, NeonGold, NeonPink, NeonPurple, NeonCyan, NeonGold)
                     padLabels.chunked(4).forEachIndexed { rowIdx, row ->
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
