@@ -36,8 +36,18 @@ class DjHubViewModel(
     /** Deck B: manually loaded by the user. */
     val nextTrack = MutableStateFlow<TrackEntity?>(null)
 
+    /** Deck C: fourth-deck slot (visible in 4-deck mode). */
+    val deckCTrack = MutableStateFlow<TrackEntity?>(null)
+
+    /** Deck D: fourth-deck slot (visible in 4-deck mode). */
+    val deckDTrack = MutableStateFlow<TrackEntity?>(null)
+
     val showDeckAPicker = MutableStateFlow(false)
     val showDeckBPicker = MutableStateFlow(false)
+    val showDeckCPicker = MutableStateFlow(false)
+    val showDeckDPicker = MutableStateFlow(false)
+
+    val fourDeckMode = MutableStateFlow(false)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val cuePoints: StateFlow<List<CuePointEntity>> = currentTrack
@@ -54,6 +64,8 @@ class DjHubViewModel(
     val crossfaderPosition = MutableStateFlow(0.5f)
     val deckAVolume = MutableStateFlow(1.0f)
     val deckBVolume = MutableStateFlow(1.0f)
+    val deckCVolume = MutableStateFlow(1.0f)
+    val deckDVolume = MutableStateFlow(1.0f)
     val eqLow = MutableStateFlow(0f)
     val eqMid = MutableStateFlow(0f)
     val eqHigh = MutableStateFlow(0f)
@@ -88,6 +100,16 @@ class DjHubViewModel(
     fun loadTrackToDeckB(track: TrackEntity) {
         nextTrack.value = track
         showDeckBPicker.value = false
+    }
+
+    fun loadTrackToDeckC(track: TrackEntity) {
+        deckCTrack.value = track
+        showDeckCPicker.value = false
+    }
+
+    fun loadTrackToDeckD(track: TrackEntity) {
+        deckDTrack.value = track
+        showDeckDPicker.value = false
     }
 
     fun setCuePoint(trackId: String, positionMs: Long, label: String, isHotCue: Boolean, hotCueIndex: Int?) {

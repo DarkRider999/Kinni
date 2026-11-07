@@ -99,6 +99,13 @@ fun DjHubScreen(viewModel: DjHubViewModel, onBack: () -> Unit, modifier: Modifie
     val fxSpinBack by viewModel.fxSpinBack.collectAsStateWithLifecycle()
     val fxVinylStop by viewModel.fxVinylStop.collectAsStateWithLifecycle()
     val selectedSamplerBank by viewModel.selectedSamplerBank.collectAsStateWithLifecycle()
+    val fourDeckMode by viewModel.fourDeckMode.collectAsStateWithLifecycle()
+    val deckCTrack by viewModel.deckCTrack.collectAsStateWithLifecycle()
+    val deckDTrack by viewModel.deckDTrack.collectAsStateWithLifecycle()
+    val deckCVolume by viewModel.deckCVolume.collectAsStateWithLifecycle()
+    val deckDVolume by viewModel.deckDVolume.collectAsStateWithLifecycle()
+    val showDeckCPicker by viewModel.showDeckCPicker.collectAsStateWithLifecycle()
+    val showDeckDPicker by viewModel.showDeckDPicker.collectAsStateWithLifecycle()
 
     // Tap-tempo timestamps; only the most recent taps feed the average.
     val tapTimes = remember { mutableStateListOf<Long>() }
@@ -116,6 +123,20 @@ fun DjHubScreen(viewModel: DjHubViewModel, onBack: () -> Unit, modifier: Modifie
                 tracks = availableTracks,
                 onSelect = viewModel::loadTrackToDeckB,
                 onDismiss = { viewModel.showDeckBPicker.value = false },
+            )
+        }
+        if (showDeckCPicker) {
+            TrackPickerSheet(
+                tracks = availableTracks,
+                onSelect = viewModel::loadTrackToDeckC,
+                onDismiss = { viewModel.showDeckCPicker.value = false },
+            )
+        }
+        if (showDeckDPicker) {
+            TrackPickerSheet(
+                tracks = availableTracks,
+                onSelect = viewModel::loadTrackToDeckD,
+                onDismiss = { viewModel.showDeckDPicker.value = false },
             )
         }
         Scaffold(
@@ -147,6 +168,23 @@ fun DjHubScreen(viewModel: DjHubViewModel, onBack: () -> Unit, modifier: Modifie
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     DeckPanel("DECK A", currentTrack, deckAVolume, NeonPink, { viewModel.deckAVolume.value = it }, { viewModel.showDeckAPicker.value = true })
                     DeckPanel("DECK B", nextTrack, deckBVolume, NeonCyan, { viewModel.deckBVolume.value = it }, { viewModel.showDeckBPicker.value = true })
+                }
+
+                ConsoleSection("DECK MODE") {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ConsoleButton(
+                            label = if (fourDeckMode) "4-DECK ON" else "4-DECK OFF",
+                            accent = if (fourDeckMode) NeonGold else NeonGold.copy(alpha = 0.5f),
+                            onClick = { viewModel.fourDeckMode.value = !fourDeckMode },
+                        )
+                    }
+                }
+
+                if (fourDeckMode) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        DeckPanel("DECK C", deckCTrack, deckCVolume, NeonGold, { viewModel.deckCVolume.value = it }, { viewModel.showDeckCPicker.value = true })
+                        DeckPanel("DECK D", deckDTrack, deckDVolume, NeonPurple, { viewModel.deckDVolume.value = it }, { viewModel.showDeckDPicker.value = true })
+                    }
                 }
 
                 ConsoleSection("EQ") {
