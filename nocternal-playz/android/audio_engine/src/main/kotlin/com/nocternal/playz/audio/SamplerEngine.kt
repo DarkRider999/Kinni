@@ -46,7 +46,7 @@ class SamplerEngine(private val scope: CoroutineScope) {
     private val soundIds = Array(BANK_COUNT) { IntArray(PAD_COUNT) { -1 } }
 
     init {
-        scope.launch { runCatching { loadAllBanks() } }
+        scope.launch { runCatching { loadAllBanks() }.onFailure { e -> android.util.Log.e("NocternalDB", "DB write failed", e) } }
     }
 
     private fun loadAllBanks() {

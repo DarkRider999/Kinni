@@ -102,7 +102,7 @@ class LibraryViewModel(database: NocternalDatabase) : ViewModel() {
     fun toggleFavorite(trackId: String) {
         viewModelScope.launch {
             val track = uiState.value.tracks.find { it.id == trackId } ?: return@launch
-            runCatching { trackDao.setFavorite(trackId, !track.isFavorite) }
+            runCatching { trackDao.setFavorite(trackId, !track.isFavorite) }.onFailure { e -> android.util.Log.e("NocternalDB", "DB write failed", e) }
         }
     }
 
@@ -151,7 +151,7 @@ class LibraryViewModel(database: NocternalDatabase) : ViewModel() {
                         camelotKey = camelotKey.trim(),
                     ),
                 )
-            }
+            }.onFailure { e -> android.util.Log.e("NocternalDB", "DB write failed", e) }
             _sheetState.value = SheetState()
         }
     }
@@ -159,7 +159,7 @@ class LibraryViewModel(database: NocternalDatabase) : ViewModel() {
     fun deleteTrack() {
         val track = _sheetState.value.trackMenuTarget ?: return
         viewModelScope.launch {
-            runCatching { trackDao.deleteTrack(track) }
+            runCatching { trackDao.deleteTrack(track) }.onFailure { e -> android.util.Log.e("NocternalDB", "DB write failed", e) }
             _sheetState.value = SheetState()
         }
     }
@@ -185,7 +185,7 @@ class LibraryViewModel(database: NocternalDatabase) : ViewModel() {
                         ),
                     )
                 }
-            }
+            }.onFailure { e -> android.util.Log.e("NocternalDB", "DB write failed", e) }
             _sheetState.value = SheetState()
         }
     }
@@ -212,7 +212,7 @@ class LibraryViewModel(database: NocternalDatabase) : ViewModel() {
                         position = 0,
                     ),
                 )
-            }
+            }.onFailure { e -> android.util.Log.e("NocternalDB", "DB write failed", e) }
             _sheetState.value = SheetState()
         }
     }

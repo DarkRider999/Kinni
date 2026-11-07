@@ -132,7 +132,7 @@ class AppContainer(val context: Context) {
                     if (tracks.isNotEmpty()) {
                         runCatching {
                             database.trackDao().insertTracks(tracks.map { it.toTrackEntity() })
-                        }
+                        }.onFailure { e -> android.util.Log.e("NocternalDB", "DB write failed", e) }
                     }
                 }
         }

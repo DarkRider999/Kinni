@@ -124,7 +124,7 @@ class DjHubViewModel(
                         hotCueIndex = hotCueIndex,
                     ),
                 )
-            }
+            }.onFailure { e -> android.util.Log.e("NocternalDB", "DB write failed", e) }
         }
     }
 
@@ -133,7 +133,7 @@ class DjHubViewModel(
         viewModelScope.launch {
             runCatching {
                 cuePointDao.deleteCuePoint(CuePointEntity(id = id, trackId = "", positionMs = 0L))
-            }
+            }.onFailure { e -> android.util.Log.e("NocternalDB", "DB write failed", e) }
         }
     }
 

@@ -54,7 +54,7 @@ class PlaylistViewModel(database: NocternalDatabase, private val playlistId: Str
 
     fun removeTrack(trackId: String) {
         viewModelScope.launch {
-            runCatching { playlistDao.removeTrackFromPlaylist(playlistId, trackId) }
+            runCatching { playlistDao.removeTrackFromPlaylist(playlistId, trackId) }.onFailure { e -> android.util.Log.e("NocternalDB", "DB write failed", e) }
             membershipVersion.update { it + 1 }
         }
     }
