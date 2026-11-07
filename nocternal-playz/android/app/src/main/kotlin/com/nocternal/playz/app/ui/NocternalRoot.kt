@@ -174,7 +174,22 @@ fun NocternalRoot(c: AppContainer, actions: ActionExecutor) {
                         }
                         composable(Tab.DJ.route) {
                             DjHubScreen(
-                                viewModel = viewModel(factory = DjHubViewModel.Factory(c.database)),
+                                viewModel = viewModel(factory = DjHubViewModel.Factory(
+                                    db = c.database,
+                                    onFxUpdate = { reverb, delay, flanger, echo, phaser, filter ->
+                                        c.audio.updateFx { s ->
+                                            s.copy(
+                                                reverb = s.reverb.copy(enabled = reverb),
+                                                delay = s.delay.copy(enabled = delay),
+                                                flanger = s.flanger.copy(enabled = flanger),
+                                                echo = s.echo.copy(enabled = echo),
+                                                phaser = s.phaser.copy(enabled = phaser),
+                                                filter = s.filter.copy(enabled = filter),
+                                            )
+                                        }
+                                    },
+                                    triggerSampler = c.samplerEngine::trigger,
+                                )),
                                 onBack = { nav.popBackStack() },
                             )
                         }

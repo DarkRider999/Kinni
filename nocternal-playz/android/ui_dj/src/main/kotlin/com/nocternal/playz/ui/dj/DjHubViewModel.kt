@@ -3,6 +3,7 @@ package com.nocternal.playz.ui.dj
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.nocternal.playz.audio.SamplerEngine
 import com.nocternal.playz.database.NocternalDatabase
 import com.nocternal.playz.database.entity.CuePointEntity
 import com.nocternal.playz.database.entity.TrackEntity
@@ -16,7 +17,12 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class DjHubViewModel(private val db: NocternalDatabase) : ViewModel() {
+class DjHubViewModel(
+    private val db: NocternalDatabase,
+    private val onFxUpdate: (reverb: Boolean, delay: Boolean, flanger: Boolean, echo: Boolean, phaser: Boolean, filter: Boolean) -> Unit = { _, _, _, _, _, _ -> },
+    private val onAdvancedFxUpdate: (roll: Boolean, beatRepeat: Boolean, gate: Boolean, reverse: Boolean, brake: Boolean, spinBack: Boolean, vinylStop: Boolean) -> Unit = { _, _, _, _, _, _, _ -> },
+    private val triggerSampler: (Int, Int) -> Unit = { _, _ -> },
+) : ViewModel() {
     private val trackDao = db.trackDao()
     private val cuePointDao = db.cuePointDao()
 
@@ -30,8 +36,18 @@ class DjHubViewModel(private val db: NocternalDatabase) : ViewModel() {
     /** Deck B: manually loaded by the user. */
     val nextTrack = MutableStateFlow<TrackEntity?>(null)
 
+    /** Deck C: fourth-deck slot (visible in 4-deck mode). */
+    val deckCTrack = MutableStateFlow<TrackEntity?>(null)
+
+    /** Deck D: fourth-deck slot (visible in 4-deck mode). */
+    val deckDTrack = MutableStateFlow<TrackEntity?>(null)
+
     val showDeckAPicker = MutableStateFlow(false)
     val showDeckBPicker = MutableStateFlow(false)
+    val showDeckCPicker = MutableStateFlow(false)
+    val showDeckDPicker = MutableStateFlow(false)
+
+    val fourDeckMode = MutableStateFlow(false)
 
     @OptIn(ExperimentalCoroutinesApi::class)
     val cuePoints: StateFlow<List<CuePointEntity>> = currentTrack
@@ -48,6 +64,8 @@ class DjHubViewModel(private val db: NocternalDatabase) : ViewModel() {
     val crossfaderPosition = MutableStateFlow(0.5f)
     val deckAVolume = MutableStateFlow(1.0f)
     val deckBVolume = MutableStateFlow(1.0f)
+    val deckCVolume = MutableStateFlow(1.0f)
+    val deckDVolume = MutableStateFlow(1.0f)
     val eqLow = MutableStateFlow(0f)
     val eqMid = MutableStateFlow(0f)
     val eqHigh = MutableStateFlow(0f)
@@ -62,6 +80,17 @@ class DjHubViewModel(private val db: NocternalDatabase) : ViewModel() {
     val fxPhaser = MutableStateFlow(false)
     val fxFilter = MutableStateFlow(false)
 
+    // Advanced FX toggles: ROLL, BEAT REPEAT, GATE, REVERSE, BRAKE, SPIN BACK, VINYL STOP
+    val fxRoll = MutableStateFlow(false)
+    val fxBeatRepeat = MutableStateFlow(false)
+    val fxGate = MutableStateFlow(false)
+    val fxReverse = MutableStateFlow(false)
+    val fxBrake = MutableStateFlow(false)
+    val fxSpinBack = MutableStateFlow(false)
+    val fxVinylStop = MutableStateFlow(false)
+
+    val selectedSamplerBank = MutableStateFlow(0)
+
     fun loadTrackToDeckA(track: TrackEntity) {
         currentTrack.value = track
         showDeckAPicker.value = false
@@ -71,6 +100,16 @@ class DjHubViewModel(private val db: NocternalDatabase) : ViewModel() {
     fun loadTrackToDeckB(track: TrackEntity) {
         nextTrack.value = track
         showDeckBPicker.value = false
+    }
+
+    fun loadTrackToDeckC(track: TrackEntity) {
+        deckCTrack.value = track
+        showDeckCPicker.value = false
+    }
+
+    fun loadTrackToDeckD(track: TrackEntity) {
+        deckDTrack.value = track
+        showDeckDPicker.value = false
     }
 
     fun setCuePoint(trackId: String, positionMs: Long, label: String, isHotCue: Boolean, hotCueIndex: Int?) {
@@ -85,7 +124,7 @@ class DjHubViewModel(private val db: NocternalDatabase) : ViewModel() {
                         hotCueIndex = hotCueIndex,
                     ),
                 )
-            }
+            }.onFailure { e -> android.util.Log.e("NocternalDB", "DB write failed", e) }
         }
     }
 
@@ -94,7 +133,7 @@ class DjHubViewModel(private val db: NocternalDatabase) : ViewModel() {
         viewModelScope.launch {
             runCatching {
                 cuePointDao.deleteCuePoint(CuePointEntity(id = id, trackId = "", positionMs = 0L))
-            }
+            }.onFailure { e -> android.util.Log.e("NocternalDB", "DB write failed", e) }
         }
     }
 
@@ -124,13 +163,39 @@ class DjHubViewModel(private val db: NocternalDatabase) : ViewModel() {
         }
     }
 
-    class Factory(private val db: NocternalDatabase) : ViewModelProvider.Factory {
+    fun selectBank(bank: Int) { selectedSamplerBank.value = bank.coerceIn(0, SamplerEngine.BANK_COUNT - 1) }
+
+    fun triggerPad(index: Int) { triggerSampler(selectedSamplerBank.value, index) }
+
+    private fun syncFx() {
+        onFxUpdate(fxReverb.value, fxDelay.value, fxFlanger.value, fxEcho.value, fxPhaser.value, fxFilter.value)
+    }
+
+    private fun syncAdvancedFx() {
+        onAdvancedFxUpdate(fxRoll.value, fxBeatRepeat.value, fxGate.value, fxReverse.value, fxBrake.value, fxSpinBack.value, fxVinylStop.value)
+    }
+
+    init {
+        listOf(fxReverb, fxDelay, fxFlanger, fxEcho, fxPhaser, fxFilter).forEach { flow ->
+            viewModelScope.launch { flow.collect { syncFx() } }
+        }
+        listOf(fxRoll, fxBeatRepeat, fxGate, fxReverse, fxBrake, fxSpinBack, fxVinylStop).forEach { flow ->
+            viewModelScope.launch { flow.collect { syncAdvancedFx() } }
+        }
+    }
+
+    class Factory(
+        private val db: NocternalDatabase,
+        private val onFxUpdate: (reverb: Boolean, delay: Boolean, flanger: Boolean, echo: Boolean, phaser: Boolean, filter: Boolean) -> Unit = { _, _, _, _, _, _ -> },
+        private val onAdvancedFxUpdate: (roll: Boolean, beatRepeat: Boolean, gate: Boolean, reverse: Boolean, brake: Boolean, spinBack: Boolean, vinylStop: Boolean) -> Unit = { _, _, _, _, _, _, _ -> },
+        private val triggerSampler: (Int, Int) -> Unit = { _, _ -> },
+    ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(DjHubViewModel::class.java)) {
                 "Unknown ViewModel class: ${modelClass.name}"
             }
-            return DjHubViewModel(db) as T
+            return DjHubViewModel(db, onFxUpdate, onAdvancedFxUpdate, triggerSampler) as T
         }
     }
 

@@ -24,7 +24,7 @@ import { McpModule } from './modules/mcp/mcp.module';
         host: cfg.get('DB_HOST', 'localhost'),
         port: cfg.get<number>('DB_PORT', 5432),
         username: cfg.get('DB_USER', 'ananvi'),
-        password: cfg.get('DB_PASS', 'ananvi_secret'),
+        password: cfg.get('DB_PASS'),
         database: cfg.get('DB_NAME', 'ananvi_studio'),
         autoLoadEntities: true,
         synchronize: cfg.get('NODE_ENV') === 'development',

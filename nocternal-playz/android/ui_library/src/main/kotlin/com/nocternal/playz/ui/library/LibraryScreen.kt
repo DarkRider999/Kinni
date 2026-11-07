@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -121,6 +122,25 @@ fun LibraryScreen(
             ) {
                 LibrarySearchBar(query = uiState.searchQuery, onQueryChange = viewModel::onSearch)
                 LibraryTabs(selected = uiState.selectedTab, onSelect = viewModel::onTabSelected)
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    val orders = listOf(
+                        SortOrder.RECENT to "Recent",
+                        SortOrder.BPM_ASC to "BPM ↑",
+                        SortOrder.BPM_DESC to "BPM ↓",
+                        SortOrder.TITLE to "Title",
+                        SortOrder.ARTIST to "Artist",
+                    )
+                    items(orders) { (order, label) ->
+                        NeonChip(
+                            text = label,
+                            selected = uiState.sortOrder == order,
+                            onClick = { viewModel.onSortOrderChange(order) },
+                        )
+                    }
+                }
                 Box(Modifier.fillMaxSize()) {
                     when {
                         uiState.isLoading -> CircularProgressIndicator(

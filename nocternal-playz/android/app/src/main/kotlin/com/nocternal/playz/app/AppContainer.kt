@@ -11,6 +11,7 @@ import com.nocternal.playz.app.voice.MusicRecognizer
 import com.nocternal.playz.app.voice.VoiceInput
 import com.nocternal.playz.audio.AudioEngine
 import com.nocternal.playz.audio.PlaybackEvent
+import com.nocternal.playz.audio.SamplerEngine
 import com.nocternal.playz.backup.BackupManager
 import com.nocternal.playz.library.LibraryRepository
 import com.nocternal.playz.lighting.LightingEngineImpl
@@ -70,6 +71,7 @@ class AppContainer(val context: Context) {
     val artGenerator = AlbumArtGenerator(genreDetector)
 
     val audio = AudioEngine(context, scope, autoMixPool = { library.data.value.tracks })
+    val samplerEngine = SamplerEngine(scope)
     val themeStore = ThemeStateStore()
     val lighting = LightingEngineImpl()
     val themeSwitcher = ThemeSwitcher(ThemeApplier(themeStore, lighting, audio, themeStore), { settingsRepo.settings.value }, genreDetector)
@@ -113,8 +115,8 @@ class AppContainer(val context: Context) {
     val panelSearch = MutableStateFlow<Pair<AudioSource, String>?>(null)
     val requestedSource = MutableStateFlow<AudioSource?>(null)
 
-    private fun buildAssistant(apiKey: String?) = AssistantEngine(
-        llm = apiKey?.takeIf { it.isNotBlank() }?.let { ClaudeAssistantLlm(it) },
+    private fun buildAssistant(apiKey: String?, model: String = "claude-opus-5") = AssistantEngine(
+        llm = apiKey?.takeIf { it.isNotBlank() }?.let { ClaudeAssistantLlm(it, model) },
         pluginHandler = { plugins.dispatchAssistantCommand(it) },
         genres = genreDetector, moods = moodDetector, recommender = recommender, art = artGenerator,
     )
@@ -130,7 +132,7 @@ class AppContainer(val context: Context) {
                     if (tracks.isNotEmpty()) {
                         runCatching {
                             database.trackDao().insertTracks(tracks.map { it.toTrackEntity() })
-                        }
+                        }.onFailure { e -> android.util.Log.e("NocternalDB", "DB write failed", e) }
                     }
                 }
         }
@@ -162,7 +164,7 @@ class AppContainer(val context: Context) {
                 offline.scheduleAutoDownload(s)
             }
         }
-        scope.launch { settingsRepo.settings.map { it.assistantApiKey }.distinctUntilChanged().collect { _assistant.value = buildAssistant(it) } }
+        scope.launch { settingsRepo.settings.map { it.assistantApiKey to it.assistantModel }.distinctUntilChanged().collect { (key, model) -> _assistant.value = buildAssistant(key, model) } }
 
         scope.launch {
             audio.events.collect { e ->
