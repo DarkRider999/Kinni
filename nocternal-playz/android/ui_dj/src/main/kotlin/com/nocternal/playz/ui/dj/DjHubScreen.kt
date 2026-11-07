@@ -173,8 +173,8 @@ fun DjHubScreen(viewModel: DjHubViewModel, onBack: () -> Unit, modifier: Modifie
                 ConsoleSection("DECK MODE") {
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         ConsoleButton(
-                            label = if (fourDeckMode) "4-DECK ON" else "4-DECK OFF",
-                            accent = if (fourDeckMode) NeonGold else NeonGold.copy(alpha = 0.5f),
+                            text = if (fourDeckMode) "4-DECK ON" else "4-DECK OFF",
+                            color = if (fourDeckMode) NeonGold else NeonGold.copy(alpha = 0.5f),
                             onClick = { viewModel.fourDeckMode.value = !fourDeckMode },
                         )
                     }
