@@ -143,7 +143,7 @@ private fun SyncedLyrics(
                 }
                 if (active && line.text.isNotBlank()) {
                     val bookmarked = isBookmarked(line)
-                    IconButton(onClick = { onToggleBookmark(line) }, modifier = Modifier.size(28.dp)) {
+                    IconButton(onClick = { onToggleBookmark(line) }, modifier = Modifier.size(48.dp)) {
                         Icon(
                             if (bookmarked) Icons.Filled.Star else Icons.Outlined.StarBorder,
                             if (bookmarked) "Remove bookmark" else "Bookmark this line",

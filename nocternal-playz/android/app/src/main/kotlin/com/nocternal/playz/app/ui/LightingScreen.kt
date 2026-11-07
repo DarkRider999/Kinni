@@ -39,7 +39,9 @@ import com.nocternal.playz.app.AppContainer
 import com.nocternal.playz.designsystem.GlowCard
 import com.nocternal.playz.designsystem.Neon
 import com.nocternal.playz.designsystem.NeonChip
+import com.nocternal.playz.designsystem.Responsive
 import com.nocternal.playz.designsystem.SectionTitle
+import com.nocternal.playz.designsystem.rememberScreenSize
 import com.nocternal.playz.designsystem.toColor
 import com.nocternal.playz.lighting.LightingCanvas
 import com.nocternal.playz.lighting.NeonLightBar
@@ -62,6 +64,7 @@ fun LightingScreen(c: AppContainer, spectrum: SpectrumFrame, playing: Boolean) {
     val appSettings by c.settingsRepo.settings.collectAsStateWithLifecycle()
     // When nothing plays, previews run on a gentle synthetic spectrum so the grid still moves.
     val preview = if (playing) spectrum else remember { demoSpectrum() }
+    val gridColumns = Responsive.gridColumns(rememberScreenSize())
     fun settings(block: (com.nocternal.playz.model.AppSettings) -> com.nocternal.playz.model.AppSettings) = c.settingsRepo.update(block)
 
     LazyColumn(Modifier.fillMaxSize().statusBarsPadding(), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -104,7 +107,7 @@ fun LightingScreen(c: AppContainer, spectrum: SpectrumFrame, playing: Boolean) {
         }
 
         item { SectionTitle("Animations") }
-        items(LightingAnimation.entries.chunked(2)) { row ->
+        items(LightingAnimation.entries.chunked(gridColumns)) { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 row.forEach { a ->
                     val selected = lighting.lightBarAnimation == a
@@ -117,7 +120,7 @@ fun LightingScreen(c: AppContainer, spectrum: SpectrumFrame, playing: Boolean) {
                         Text(a.label, Modifier.padding(8.dp), color = if (selected) p.accent else p.onBackground, style = MaterialTheme.typography.labelSmall)
                     }
                 }
-                if (row.size == 1) Spacer(Modifier.weight(1f))
+                repeat(gridColumns - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
         if (appSettings.lightBar.customAnimation) item {
@@ -133,7 +136,7 @@ fun LightingScreen(c: AppContainer, spectrum: SpectrumFrame, playing: Boolean) {
         item {
             ToggleRow("Auto-switch theme by genre", appSettings.autoThemeByGenre) { on -> settings { it.copy(autoThemeByGenre = on) } }
         }
-        items(ThemePresets.all.chunked(2)) { row ->
+        items(ThemePresets.all.chunked(gridColumns)) { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 row.forEach { preset ->
                     GlowCard(Modifier.weight(1f), glowColor = preset.accent.toColor(), onClick = { c.themeSwitcher.onEvent(ThemeEvent.ManualThemeSelected(preset.id)) }) {
@@ -146,7 +149,7 @@ fun LightingScreen(c: AppContainer, spectrum: SpectrumFrame, playing: Boolean) {
                         Text(preset.lightBarAnimation.label, color = p.muted, style = MaterialTheme.typography.labelSmall)
                     }
                 }
-                if (row.size == 1) Spacer(Modifier.weight(1f))
+                repeat(gridColumns - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
         item { NeonChip("Resume automatic themes") { c.themeSwitcher.onEvent(ThemeEvent.ManualLockReleased) } }

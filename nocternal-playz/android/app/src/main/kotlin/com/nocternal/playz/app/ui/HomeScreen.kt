@@ -51,7 +51,9 @@ import com.nocternal.playz.designsystem.GlowCard
 import com.nocternal.playz.designsystem.Neon
 import com.nocternal.playz.designsystem.NeonChip
 import com.nocternal.playz.designsystem.NeonLogo
+import com.nocternal.playz.designsystem.Responsive
 import com.nocternal.playz.designsystem.SectionTitle
+import com.nocternal.playz.designsystem.rememberScreenSize
 import com.nocternal.playz.designsystem.neonGlow
 import com.nocternal.playz.designsystem.toColor
 import com.nocternal.playz.library.ScanPhase
@@ -165,6 +167,7 @@ private fun LocalPanel(c: AppContainer, actions: ActionExecutor, onOpenPlayer: (
     val ideas = remember(playback.track?.id) { c.recommender.ideasFor(c.hour(), playback.track) }
     val onThisDay = remember(lib.history) { if (lib.history.isEmpty()) null else c.listeningMemories.onThisDay(lib.tracks, lib.history) }
     val vinylRecords = remember(lib.tracks) { VinylCollection.build(lib.tracks) }
+    val gridColumns = Responsive.gridColumns(rememberScreenSize())
 
     fun play(list: List<Track>, index: Int) { c.audio.playQueue(list, index); onOpenPlayer() }
     fun playMood(mood: Mood, bpmRange: ClosedFloatingPointRange<Float>? = null) {
@@ -266,7 +269,7 @@ private fun LocalPanel(c: AppContainer, actions: ActionExecutor, onOpenPlayer: (
         }
 
         item { SectionTitle("Genres") }
-        items(GenreCatalog.all.chunked(3)) { row ->
+        items(GenreCatalog.all.chunked(gridColumns)) { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { g ->
                     GenreTile(g, genrePlaylists[g.id]?.trackIds?.size ?: 0, Modifier.weight(1f)) {
@@ -275,7 +278,7 @@ private fun LocalPanel(c: AppContainer, actions: ActionExecutor, onOpenPlayer: (
                         if (pl != null) { actions.playPlaylist(pl); onOpenPlayer() } else onGenreRadio(g.id)
                     }
                 }
-                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                repeat(gridColumns - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
 
@@ -338,14 +341,14 @@ private fun LocalPanel(c: AppContainer, actions: ActionExecutor, onOpenPlayer: (
             }
             LibraryTab.VINYL -> {
                 if (vinylRecords.isEmpty()) item { Text("Your collection builds up as songs are scanned.", color = p.muted) }
-                items(vinylRecords.chunked(2), key = { it.joinToString { r -> r.key } }) { row ->
+                items(vinylRecords.chunked(gridColumns), key = { it.joinToString { r -> r.key } }) { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         row.forEach { record ->
                             VinylSleeveTile(c, record, Modifier.weight(1f)) {
                                 play(record.trackIds.mapNotNull(c.library::track), 0)
                             }
                         }
-                        repeat(2 - row.size) { Spacer(Modifier.weight(1f)) }
+                        repeat(gridColumns - row.size) { Spacer(Modifier.weight(1f)) }
                     }
                 }
             }
@@ -421,8 +424,9 @@ private val ENERGY_RANGES = listOf("Chill" to (60f..100f), "Balanced" to (100f..
 private fun QuickMoodLauncher(onTap: (Mood) -> Unit, onCustomize: (Mood, ClosedFloatingPointRange<Float>) -> Unit) {
     val p = Neon.palette
     var customizing by remember { mutableStateOf<Mood?>(null) }
+    val columns = Responsive.gridColumns(rememberScreenSize())
     Column {
-        MOOD_BUTTONS.chunked(3).forEach { row ->
+        MOOD_BUTTONS.chunked(columns).forEach { row ->
             Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { b ->
                     Box(
@@ -437,7 +441,7 @@ private fun QuickMoodLauncher(onTap: (Mood) -> Unit, onCustomize: (Mood, ClosedF
                         }
                     }
                 }
-                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
         customizing?.let { mood ->
