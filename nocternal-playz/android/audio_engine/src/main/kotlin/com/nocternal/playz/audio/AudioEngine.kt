@@ -200,6 +200,13 @@ class AudioEngine(
         _state.update { it.copy(queue = currentQueue()) }
     }
 
+    /** Appends to the end of the queue (as opposed to [addNext], which plays right after the current track). */
+    fun addToQueue(track: Track) {
+        queueTracks[track.id] = track
+        player.addMediaItem(player.mediaItemCount, toMediaItem(track))
+        _state.update { it.copy(queue = currentQueue()) }
+    }
+
     fun setAutoMix(on: Boolean) {
         _state.update { it.copy(autoMix = on, autoMixExplanation = if (on) it.autoMixExplanation else null) }
         if (on) queueAutoMixNext()

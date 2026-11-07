@@ -1,5 +1,6 @@
 package com.nocternal.playz.app.ui
 
+import android.content.Intent
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -26,7 +27,17 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -41,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -397,9 +409,18 @@ private fun TrackCard(c: AppContainer, t: Track, onClick: () -> Unit) {
     }
 }
 
+/** Every song's own action menu (spec: "Every song must include: Play Now, Play Next, Add To Queue, Add To
+ *  Playlist, Edit Title/BPM/Key/Genre, Rename, Favourite, Share"). Play Now is the row's own [onClick]; the
+ *  rest live behind the overflow menu so the row stays compact. Delete is intentionally left out here — it's
+ *  destructive and already has its own dedicated flow for downloaded tracks in the Downloads screen. */
 @Composable
 fun TrackRow(c: AppContainer, t: Track, favorite: Boolean, onClick: () -> Unit) {
     val p = Neon.palette
+    val context = LocalContext.current
+    var menuOpen by remember { mutableStateOf(false) }
+    var editing by remember { mutableStateOf(false) }
+    var pickingPlaylist by remember { mutableStateOf(false) }
+
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         AlbumArt(t.artworkUri, remember(t.id) { c.artGenerator.generate(t) }, Modifier.size(48.dp).clip(RoundedCornerShape(10.dp)))
         Spacer(Modifier.width(12.dp))
@@ -407,8 +428,105 @@ fun TrackRow(c: AppContainer, t: Track, favorite: Boolean, onClick: () -> Unit) 
             Text(t.title, color = p.onBackground, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(listOfNotNull(t.artist, t.bpm?.let { "${it.toInt()} BPM" }, t.camelotKey).joinToString(" · "), color = p.muted, style = MaterialTheme.typography.labelSmall, maxLines = 1)
         }
-        if (favorite) Text("♥", color = p.secondary)
+        IconButton(onClick = { c.library.toggleFavorite(t.id) }) {
+            Icon(if (favorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder, "Favourite", tint = if (favorite) p.secondary else p.muted)
+        }
+        Box {
+            IconButton(onClick = { menuOpen = true }) { Icon(Icons.Filled.MoreVert, "More", tint = p.muted) }
+            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                DropdownMenuItem(text = { Text("Play next") }, onClick = { c.audio.addNext(t); menuOpen = false })
+                DropdownMenuItem(text = { Text("Add to queue") }, onClick = { c.audio.addToQueue(t); menuOpen = false })
+                DropdownMenuItem(text = { Text("Add to playlist") }, onClick = { pickingPlaylist = true; menuOpen = false })
+                DropdownMenuItem(text = { Text("Edit info") }, onClick = { editing = true; menuOpen = false })
+                DropdownMenuItem(text = { Text("Share") }, onClick = {
+                    menuOpen = false
+                    val intent = Intent(Intent.ACTION_SEND).apply { type = "text/plain"; putExtra(Intent.EXTRA_TEXT, "${t.title} — ${t.artist}") }
+                    context.startActivity(Intent.createChooser(intent, "Share song"))
+                })
+            }
+        }
     }
+
+    if (editing) TrackEditDialog(c, t, onDismiss = { editing = false })
+    if (pickingPlaylist) AddToPlaylistDialog(c, t, onDismiss = { pickingPlaylist = false })
+}
+
+/** Title/Artist/BPM/Key/Genre edit (spec: "Edit Title, Edit BPM, Edit Key, Edit Tags, Edit Genre, Rename"). */
+@Composable
+private fun TrackEditDialog(c: AppContainer, t: Track, onDismiss: () -> Unit) {
+    var title by remember(t.id) { mutableStateOf(t.title) }
+    var artist by remember(t.id) { mutableStateOf(t.artist) }
+    var genre by remember(t.id) { mutableStateOf(t.genreTag.orEmpty()) }
+    var bpm by remember(t.id) { mutableStateOf(t.bpm?.toString().orEmpty()) }
+    var key by remember(t.id) { mutableStateOf(t.camelotKey.orEmpty()) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit song info") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(title, { title = it }, label = { Text("Title") }, singleLine = true)
+                OutlinedTextField(artist, { artist = it }, label = { Text("Artist") }, singleLine = true)
+                OutlinedTextField(genre, { genre = it }, label = { Text("Genre") }, singleLine = true)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedTextField(bpm, { bpm = it }, label = { Text("BPM") }, singleLine = true, modifier = Modifier.weight(1f))
+                    OutlinedTextField(key, { key = it }, label = { Text("Key") }, singleLine = true, modifier = Modifier.weight(1f))
+                }
+            }
+        },
+        confirmButton = {
+            NeonChip("Save") {
+                c.library.editTrack(t.id) {
+                    it.copy(
+                        title = title.trim().takeIf { s -> s.isNotEmpty() && s != t.title },
+                        artist = artist.trim().takeIf { s -> s.isNotEmpty() && s != t.artist },
+                        genreTag = genre.trim().takeIf { s -> s.isNotEmpty() },
+                        bpm = bpm.toFloatOrNull(),
+                        camelotKey = key.trim().uppercase().takeIf { s -> s.isNotEmpty() },
+                    )
+                }
+                onDismiss()
+            }
+        },
+        dismissButton = { NeonChip("Cancel") { onDismiss() } },
+    )
+}
+
+/** Existing playlists, or a one-tap new playlist containing just this song. */
+@Composable
+private fun AddToPlaylistDialog(c: AppContainer, t: Track, onDismiss: () -> Unit) {
+    val p = Neon.palette
+    val lib by c.library.data.collectAsStateWithLifecycle()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add to playlist") },
+        text = {
+            Column {
+                if (lib.playlists.isEmpty()) Text("No playlists yet — this will create your first one.", color = p.muted)
+                lib.playlists.forEach { pl ->
+                    Text(
+                        pl.name, color = p.onBackground, modifier = Modifier.fillMaxWidth()
+                            .clickable {
+                                if (t.id !in pl.trackIds) c.library.savePlaylist(pl.copy(trackIds = pl.trackIds + t.id))
+                                onDismiss()
+                            }.padding(vertical = 10.dp),
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            NeonChip("+ New playlist") {
+                c.library.savePlaylist(
+                    com.nocternal.playz.model.Playlist(
+                        id = "user_" + System.currentTimeMillis(), name = t.title, trackIds = listOf(t.id),
+                        kind = com.nocternal.playz.model.PlaylistKind.USER,
+                    ),
+                )
+                onDismiss()
+            }
+        },
+        dismissButton = { NeonChip("Cancel") { onDismiss() } },
+    )
 }
 
 private data class MoodButton(val mood: Mood, val label: String, val emoji: String)

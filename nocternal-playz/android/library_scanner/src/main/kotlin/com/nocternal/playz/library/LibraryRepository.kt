@@ -20,6 +20,17 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
 
+/** User edits to a track's metadata (spec: "Edit Title/BPM/Key/Tags/Genre, Rename"), kept separate from the
+ *  scanned file tags so a re-scan never loses them. Null fields mean "use the scanned/analyzed value". */
+@Serializable
+data class TrackOverride(
+    val title: String? = null,
+    val artist: String? = null,
+    val genreTag: String? = null,
+    val bpm: Float? = null,
+    val camelotKey: String? = null,
+)
+
 /** Analysis results cached by track id, so a re-scan doesn't re-decode. */
 @Serializable
 data class TrackAnalysis(
@@ -40,6 +51,7 @@ data class LibraryData(
     val analysis: Map<String, TrackAnalysis> = emptyMap(),
     val lyricsOffsetsMs: Map<String, Long> = emptyMap(),
     val lyricBookmarks: List<LyricBookmark> = emptyList(),
+    val trackOverrides: Map<String, TrackOverride> = emptyMap(),
 )
 
 enum class ScanPhase { IDLE, SCANNING, ANALYZING, DONE, NO_PERMISSION }
@@ -80,15 +92,16 @@ class LibraryRepository(
         _scan.value = ScanStatus(ScanPhase.SCANNING)
         val found = scanner.scan()
         val analysis = _data.value.analysis
+        val overrides = _data.value.trackOverrides
         // Free downloads live in app storage (not MediaStore), so keep them across scans while their file exists.
-        mutate { d -> d.copy(tracks = found.map { it.withAnalysis(analysis[it.id]) } + d.tracks.filter { it.isDownload() && it.fileExists() }) }
+        mutate { d -> d.copy(tracks = found.map { it.withAnalysis(analysis[it.id]).withOverride(overrides[it.id]) } + d.tracks.filter { it.isDownload() && it.fileExists() }) }
         val todo = found.filter { it.id !in analysis && !it.isPodcast }
         _scan.value = ScanStatus(ScanPhase.ANALYZING, 0, todo.size)
         todo.forEachIndexed { i, t ->
             analyzer.analyze(t.uri, t.durationMs)?.let { r ->
                 val peaks = waveform.extract(t.uri, t.durationMs).orEmpty()
                 val a = TrackAnalysis(r.bpm, r.key?.camelot, r.loudnessDb, r.energy, peaks)
-                mutate(persist = i % 10 == 9) { d -> d.copy(analysis = d.analysis + (t.id to a), tracks = d.tracks.map { if (it.id == t.id) it.withAnalysis(a) else it }) }
+                mutate(persist = i % 10 == 9) { d -> d.copy(analysis = d.analysis + (t.id to a), tracks = d.tracks.map { if (it.id == t.id) it.withAnalysis(a).withOverride(d.trackOverrides[t.id]) else it }) }
             }
             _scan.update { it.copy(analyzed = i + 1) }
         }
@@ -131,6 +144,14 @@ class LibraryRepository(
         mutate { d -> d.copy(lyricBookmarks = d.lyricBookmarks.filterNot { it.trackId == trackId && it.lineStartMs == lineStartMs }) }
     }
 
+    /** User metadata edit (spec: "Edit Title/BPM/Key/Tags/Genre, Rename") - persists forever, survives a re-scan. */
+    fun editTrack(id: String, block: (TrackOverride) -> TrackOverride) = scope.launch {
+        mutate { d ->
+            val next = block(d.trackOverrides[id] ?: TrackOverride())
+            d.copy(trackOverrides = d.trackOverrides + (id to next), tracks = d.tracks.map { if (it.id == id) it.withOverride(next) else it })
+        }
+    }
+
     /** Replaces user data after a backup restore (tracks stay as scanned). */
     fun replaceUserData(favorites: Set<String>, history: List<PlayEvent>, playlists: List<Playlist>, offsets: Map<String, Long>) =
         scope.launch { mutate { it.copy(favorites = favorites, history = history, playlists = playlists, lyricsOffsetsMs = offsets) } }
@@ -155,4 +176,11 @@ class LibraryRepository(
 
     private fun Track.withAnalysis(a: TrackAnalysis?): Track =
         if (a == null) this else copy(bpm = bpm ?: a.bpm, camelotKey = camelotKey ?: a.camelotKey, loudnessDb = a.loudnessDb, energy = a.energy)
+
+    /** A user edit always wins over the scanned tag or analyzed value it would otherwise show. */
+    private fun Track.withOverride(o: TrackOverride?): Track =
+        if (o == null) this else copy(
+            title = o.title ?: title, artist = o.artist ?: artist, genreTag = o.genreTag ?: genreTag,
+            bpm = o.bpm ?: bpm, camelotKey = o.camelotKey ?: camelotKey,
+        )
 }
