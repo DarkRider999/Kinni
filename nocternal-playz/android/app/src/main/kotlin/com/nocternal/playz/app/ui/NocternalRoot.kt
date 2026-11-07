@@ -120,6 +120,7 @@ fun NocternalRoot(c: AppContainer, actions: ActionExecutor) {
                                 isFavorite = track?.id in library.favorites,
                                 artSpec = remember(track?.id) { track?.let(c.artGenerator::generate) },
                                 sleepRemainingMs = sleepLeft,
+                                waveformPeaks = remember(track?.id) { track?.let { c.library.waveformPeaks(it.id) } ?: emptyList() },
                                 isLyricBookmarked = { line -> track != null && c.library.isLyricBookmarked(track.id, line.startMs) },
                                 onToggleLyricBookmark = { line ->
                                     track?.let { t ->

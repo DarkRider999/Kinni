@@ -22,7 +22,14 @@ import java.io.File
 
 /** Analysis results cached by track id, so a re-scan doesn't re-decode. */
 @Serializable
-data class TrackAnalysis(val bpm: Float?, val camelotKey: String?, val loudnessDb: Float, val energy: Float)
+data class TrackAnalysis(
+    val bpm: Float?,
+    val camelotKey: String?,
+    val loudnessDb: Float,
+    val energy: Float,
+    /** Normalized (0..1) amplitude peaks spanning the whole track, for the waveform seek bar and beat grid. */
+    val waveformPeaks: List<Float> = emptyList(),
+)
 
 @Serializable
 data class LibraryData(
@@ -47,6 +54,7 @@ class LibraryRepository(
     private val scope: CoroutineScope,
     private val scanner: MediaStoreScanner = MediaStoreScanner(context),
     private val analyzer: AudioAnalyzer = AudioAnalyzer(context),
+    private val waveform: WaveformExtractor = WaveformExtractor(context),
 ) {
     private val file = File(context.filesDir, "library.json")
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = false }
@@ -61,6 +69,7 @@ class LibraryRepository(
 
     fun snapshot(): LibrarySnapshot = _data.value.let { LibrarySnapshot(it.tracks, it.favorites, it.history) }
     fun track(id: String): Track? = _data.value.tracks.firstOrNull { it.id == id }
+    fun waveformPeaks(id: String): List<Float> = _data.value.analysis[id]?.waveformPeaks.orEmpty()
 
     suspend fun load() = withContext(Dispatchers.IO) {
         if (file.exists()) runCatching { _data.value = json.decodeFromString(LibraryData.serializer(), file.readText()) }
@@ -77,7 +86,8 @@ class LibraryRepository(
         _scan.value = ScanStatus(ScanPhase.ANALYZING, 0, todo.size)
         todo.forEachIndexed { i, t ->
             analyzer.analyze(t.uri, t.durationMs)?.let { r ->
-                val a = TrackAnalysis(r.bpm, r.key?.camelot, r.loudnessDb, r.energy)
+                val peaks = waveform.extract(t.uri, t.durationMs).orEmpty()
+                val a = TrackAnalysis(r.bpm, r.key?.camelot, r.loudnessDb, r.energy, peaks)
                 mutate(persist = i % 10 == 9) { d -> d.copy(analysis = d.analysis + (t.id to a), tracks = d.tracks.map { if (it.id == t.id) it.withAnalysis(a) else it }) }
             }
             _scan.update { it.copy(analyzed = i + 1) }

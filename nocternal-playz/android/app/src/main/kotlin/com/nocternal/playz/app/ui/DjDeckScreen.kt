@@ -54,6 +54,8 @@ import com.nocternal.playz.designsystem.NeonButton
 import com.nocternal.playz.designsystem.NeonChip
 import com.nocternal.playz.designsystem.SectionTitle
 import com.nocternal.playz.intelligence.SongDnaAnalyzer
+import com.nocternal.playz.ui.player.BeatGridOverlay
+import com.nocternal.playz.ui.player.WaveformSeekBar
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -96,6 +98,14 @@ fun DjDeckScreen(c: AppContainer, onOpenPlayer: () -> Unit, onBack: () -> Unit) 
                                     Text(cand.relation.label, color = p.secondary, style = MaterialTheme.typography.labelSmall)
                                 }
                             }
+                        }
+                        val peaks = remember(current.id) { c.library.waveformPeaks(current.id) }
+                        Box(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                            WaveformSeekBar(
+                                current.id, playback.positionMs, playback.durationMs, 0f, c.audio::seekTo, Modifier.fillMaxWidth(),
+                                peaks = peaks.takeIf { it.isNotEmpty() }?.toFloatArray(),
+                            )
+                            BeatGridOverlay(playback.durationMs, current.bpm, Modifier.fillMaxWidth())
                         }
                     }
                 }

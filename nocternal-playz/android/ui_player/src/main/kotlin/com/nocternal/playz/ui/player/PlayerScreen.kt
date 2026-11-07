@@ -112,6 +112,7 @@ fun PlayerScreen(
     modifier: Modifier = Modifier,
     isLyricBookmarked: (LyricsLine) -> Boolean = { false },
     onToggleLyricBookmark: (LyricsLine) -> Unit = {},
+    waveformPeaks: List<Float> = emptyList(),
 ) {
     val p = Neon.palette
     var showLyrics by remember { mutableStateOf(false) }
@@ -158,7 +159,13 @@ fun PlayerScreen(
                 }
             }
             Spacer(Modifier.height(8.dp))
-            WaveformSeekBar(track?.id, state.positionMs, state.durationMs, spectrum.bass, callbacks.seek, Modifier.fillMaxWidth())
+            Box(Modifier.fillMaxWidth()) {
+                WaveformSeekBar(
+                    track?.id, state.positionMs, state.durationMs, spectrum.bass, callbacks.seek, Modifier.fillMaxWidth(),
+                    peaks = waveformPeaks.takeIf { it.isNotEmpty() }?.toFloatArray(),
+                )
+                BeatGridOverlay(state.durationMs, track?.bpm, Modifier.fillMaxWidth())
+            }
             Spacer(Modifier.height(8.dp))
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
