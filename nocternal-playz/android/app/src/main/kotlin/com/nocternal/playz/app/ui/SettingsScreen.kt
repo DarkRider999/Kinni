@@ -195,9 +195,13 @@ fun SettingsScreen(c: AppContainer) {
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = p.accent), shape = RoundedCornerShape(14.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     NeonButton("Save") {
-                        c.settingsRepo.update { it.copy(assistantApiKey = apiKey.trim().ifBlank { null }, assistantModel = selectedModel) }
-                        c.settingsRepo.setRecognitionToken(token)
-                        toast("Saved")
+                        scope.launch {
+                            runCatching {
+                                c.settingsRepo.update { it.copy(assistantApiKey = apiKey.trim().ifBlank { null }, assistantModel = selectedModel) }
+                                c.settingsRepo.setRecognitionToken(token)
+                            }.onSuccess { toast("Saved") }
+                             .onFailure { e -> toast("Save failed: ${e.message}"); android.util.Log.e("NocternalDB", "Settings write failed", e) }
+                        }
                     }
                     NeonButton("Test key") {
                         val key = apiKey.trim()
