@@ -39,6 +39,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nocternal.playz.ai.ClaudeAssistantLlm
+import com.nocternal.playz.ai.LlmRole
+import com.nocternal.playz.ai.LlmTurn
 import com.nocternal.playz.app.AppContainer
 import com.nocternal.playz.app.MainActivity
 import com.nocternal.playz.app.bubble.FloatingBubbleService
@@ -59,6 +62,13 @@ import kotlinx.coroutines.withContext
 
 private val ACCENTS = listOf("#00F0FF", "#FF00E5", "#8F00FF", "#00A3FF", "#00F5A0", "#B6FF00", "#FFC940", "#FF1744", "#FF2E88").map(NeonColor::hex)
 
+private data class ClaudeModel(val id: String, val label: String, val note: String)
+private val CLAUDE_MODELS = listOf(
+    ClaudeModel("claude-opus-5",    "Opus 5",    "Most powerful"),
+    ClaudeModel("claude-sonnet-4-5","Sonnet 4.5","Fast & smart"),
+    ClaudeModel("claude-haiku-4-5", "Haiku 4.5", "Fastest"),
+)
+
 /** Settings (spec §10): theme mode, accent, crossfade, sleep timer, private mode, backup & restore, AI, plugins. */
 @Composable
 fun SettingsScreen(c: AppContainer) {
@@ -70,7 +80,9 @@ fun SettingsScreen(c: AppContainer) {
     val sleepLeft by c.audio.sleepTimer.remainingMs.collectAsStateWithLifecycle()
     val fx by c.audio.fxSettings.collectAsStateWithLifecycle()
     var apiKey by remember(s.assistantApiKey) { mutableStateOf(s.assistantApiKey.orEmpty()) }
+    var selectedModel by remember(s.assistantModel) { mutableStateOf(s.assistantModel) }
     var token by remember(auddToken) { mutableStateOf(auddToken.orEmpty()) }
+    var testResult by remember { mutableStateOf<String?>(null) }
     var restoreStrategy by remember { mutableStateOf(RestoreStrategy.MERGE) }
     fun toast(msg: String) = Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
 
@@ -170,16 +182,39 @@ fun SettingsScreen(c: AppContainer) {
         item { SectionTitle("AI") }
         item {
             GlowCard(Modifier.fillMaxWidth()) {
-                Text("Commands work offline. Add your own Claude API key to ask the assistant anything; it stays on this device and is never backed up.", color = p.muted, style = MaterialTheme.typography.labelSmall)
-                OutlinedTextField(apiKey, { apiKey = it }, Modifier.fillMaxWidth(), label = { Text("Claude API key") }, singleLine = true, visualTransformation = PasswordVisualTransformation(),
+                Text("Commands work offline. Add your Claude API key to unlock the full assistant; it stays on this device and is never backed up.", color = p.muted, style = MaterialTheme.typography.labelSmall)
+                OutlinedTextField(apiKey, { apiKey = it; testResult = null }, Modifier.fillMaxWidth(), label = { Text("Claude API key (sk-ant-…)") }, singleLine = true, visualTransformation = PasswordVisualTransformation(),
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = p.accent), shape = RoundedCornerShape(14.dp))
+                Text("Model", color = p.muted, style = MaterialTheme.typography.labelSmall)
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(CLAUDE_MODELS) { m ->
+                        NeonChip("${m.label} · ${m.note}", selected = selectedModel == m.id) { selectedModel = m.id; testResult = null }
+                    }
+                }
                 OutlinedTextField(token, { token = it }, Modifier.fillMaxWidth(), label = { Text("Music recognition token (audd.io)") }, singleLine = true, visualTransformation = PasswordVisualTransformation(),
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = p.accent), shape = RoundedCornerShape(14.dp))
-                NeonChip("Save keys") {
-                    c.settingsRepo.update { it.copy(assistantApiKey = apiKey.trim().ifBlank { null }) }
-                    c.settingsRepo.setRecognitionToken(token)
-                    toast("Saved")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    NeonButton("Save") {
+                        c.settingsRepo.update { it.copy(assistantApiKey = apiKey.trim().ifBlank { null }, assistantModel = selectedModel) }
+                        c.settingsRepo.setRecognitionToken(token)
+                        toast("Saved")
+                    }
+                    NeonButton("Test key") {
+                        val key = apiKey.trim()
+                        if (key.isBlank()) { toast("Enter a key first"); return@NeonButton }
+                        testResult = "Testing…"
+                        scope.launch(Dispatchers.IO) {
+                            val result = runCatching {
+                                ClaudeAssistantLlm(key, selectedModel).complete(
+                                    "You are a DJ assistant. Reply in one short sentence.",
+                                    listOf(LlmTurn(LlmRole.USER, "Say hello to DJ RadicalMix.")),
+                                )
+                            }.fold({ "✓ $it" }, { "✗ ${it.message ?: "Connection failed"}" })
+                            withContext(Dispatchers.Main) { testResult = result }
+                        }
+                    }
                 }
+                testResult?.let { Text(it, color = if (it.startsWith("✓")) p.accent else p.onBackground, style = MaterialTheme.typography.bodySmall) }
             }
         }
 
