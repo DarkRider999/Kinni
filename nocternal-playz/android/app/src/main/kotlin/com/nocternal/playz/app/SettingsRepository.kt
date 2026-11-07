@@ -4,10 +4,12 @@ import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.nocternal.playz.fx.FxSettings
 import com.nocternal.playz.model.AppSettings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -19,6 +21,7 @@ private val Context.dataStore by preferencesDataStore("settings")
 class SettingsRepository(private val context: Context, private val scope: CoroutineScope) {
     private val key = stringPreferencesKey("app_settings")
     private val secretKey = stringPreferencesKey("audd_token")
+    private val fxKey = stringPreferencesKey("active_fx")
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = false }
 
     val settings: StateFlow<AppSettings> = context.dataStore.data
@@ -37,5 +40,19 @@ class SettingsRepository(private val context: Context, private val scope: Corout
 
     fun setRecognitionToken(token: String?) = scope.launch {
         context.dataStore.edit { if (token.isNullOrBlank()) it.remove(secretKey) else it[secretKey] = token.trim() }
+    }
+
+    /**
+     * The live EQ/FX chain (bands, bass boost, reverb, etc.) persisted so it survives an app restart —
+     * spec: "Saved EQ presets" / "Audio Settings" must restore automatically when the app reopens.
+     * A genuine suspend read (not the eagerly-defaulted [settings] StateFlow) so the caller gets the real
+     * saved value rather than a default racing ahead of disk I/O.
+     */
+    suspend fun loadActiveFx(): FxSettings? = context.dataStore.data
+        .map { prefs -> prefs[fxKey]?.let { runCatching { json.decodeFromString(FxSettings.serializer(), it) }.getOrNull() } }
+        .first()
+
+    fun saveActiveFx(fx: FxSettings) = scope.launch {
+        context.dataStore.edit { it[fxKey] = json.encodeToString(FxSettings.serializer(), fx) }
     }
 }

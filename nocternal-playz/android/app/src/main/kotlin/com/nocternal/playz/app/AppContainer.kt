@@ -185,6 +185,12 @@ class AppContainer(val context: Context) {
     fun start() {
         scope.launch { library.load() }
         offline.start()
+        scope.launch {
+            // Restore must finish before the save-on-change collector starts below, or that collector's
+            // first (still-default) emission would overwrite the just-saved real value on disk.
+            settingsRepo.loadActiveFx()?.let { saved -> audio.updateFx { saved.copy(route = it.route) } }
+            audio.fxSettings.collect { fx -> settingsRepo.saveActiveFx(fx) }
+        }
         OfflineManager.candidates = {
             val snap = library.snapshot()
             (smartPlaylists.mostPlayed(snap).trackIds + smartPlaylists.recentlyPlayed(snap).trackIds).distinct().mapNotNull(library::track)
