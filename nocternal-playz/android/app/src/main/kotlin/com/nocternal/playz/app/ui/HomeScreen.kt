@@ -476,13 +476,21 @@ private fun TrackEditDialog(c: AppContainer, t: Track, onDismiss: () -> Unit) {
         },
         confirmButton = {
             NeonChip("Save") {
-                c.library.editTrack(t.id) {
-                    it.copy(
-                        title = title.trim().takeIf { s -> s.isNotEmpty() && s != t.title },
-                        artist = artist.trim().takeIf { s -> s.isNotEmpty() && s != t.artist },
-                        genreTag = genre.trim().takeIf { s -> s.isNotEmpty() },
-                        bpm = bpm.toFloatOrNull(),
-                        camelotKey = key.trim().uppercase().takeIf { s -> s.isNotEmpty() },
+                // Only touch a field whose text actually changed from what was displayed - otherwise keep
+                // whatever override already existed (`current.x`). Comparing against the displayed value
+                // (title.trim() != t.title etc.) rather than always overwriting avoids silently wiping a
+                // previously-saved override on a field the user didn't mean to edit this time.
+                c.library.editTrack(t.id) { current ->
+                    val newTitle = title.trim()
+                    val newArtist = artist.trim()
+                    val newGenre = genre.trim()
+                    val newKey = key.trim().uppercase()
+                    current.copy(
+                        title = if (newTitle != t.title) newTitle.takeIf { it.isNotEmpty() } else current.title,
+                        artist = if (newArtist != t.artist) newArtist.takeIf { it.isNotEmpty() } else current.artist,
+                        genreTag = if (newGenre != t.genreTag.orEmpty()) newGenre.takeIf { it.isNotEmpty() } else current.genreTag,
+                        bpm = if (bpm != t.bpm?.toString().orEmpty()) bpm.toFloatOrNull() else current.bpm,
+                        camelotKey = if (newKey != t.camelotKey.orEmpty()) newKey.takeIf { it.isNotEmpty() } else current.camelotKey,
                     )
                 }
                 onDismiss()

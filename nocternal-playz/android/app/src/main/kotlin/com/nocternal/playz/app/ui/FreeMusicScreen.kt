@@ -229,7 +229,7 @@ private fun FreeTrackRow(t: FreeTrack, cb: FreeRowCallbacks) {
     val p = Neon.palette
     val state = cb.state(t)
     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        AlbumArt(t.artworkUrl, null, Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).clickable { cb.preview(t) })
+        AlbumArt(t.artworkUrl, null, Modifier.size(48.dp).clip(RoundedCornerShape(10.dp)).clickable { cb.preview(t) })
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f).clickable { cb.preview(t) }) {
             Text(t.title, color = p.onBackground, style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)

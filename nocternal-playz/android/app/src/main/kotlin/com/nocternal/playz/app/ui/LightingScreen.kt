@@ -177,13 +177,15 @@ fun LabeledSlider(label: String, value: Float, range: ClosedFloatingPointRange<F
 @Composable
 private fun Swatch(color: NeonColor?, selected: Boolean, onClick: () -> Unit) {
     val p = Neon.palette
-    Box(
-        Modifier.size(34.dp).clip(CircleShape)
-            .background(color?.toColor() ?: p.accent)
-            .border(if (selected) 3.dp else 1.dp, if (selected) Color.White else Color.White.copy(alpha = 0.2f), CircleShape)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) { if (color == null) Text("A", color = Color.Black, style = MaterialTheme.typography.labelSmall) }
+    // The tappable area meets the 48dp minimum touch target even though the visible swatch stays smaller.
+    Box(Modifier.size(48.dp).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier.size(34.dp).clip(CircleShape)
+                .background(color?.toColor() ?: p.accent)
+                .border(if (selected) 3.dp else 1.dp, if (selected) Color.White else Color.White.copy(alpha = 0.2f), CircleShape),
+            contentAlignment = Alignment.Center,
+        ) { if (color == null) Text("A", color = Color.Black, style = MaterialTheme.typography.labelSmall) }
+    }
 }
 
 private fun demoSpectrum(): SpectrumFrame {

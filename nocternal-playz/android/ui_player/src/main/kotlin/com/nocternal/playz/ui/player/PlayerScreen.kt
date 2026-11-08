@@ -169,7 +169,7 @@ fun PlayerScreen(
             Spacer(Modifier.height(8.dp))
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                NeonIconButton(Icons.Filled.Shuffle, "Shuffle", size = 44.dp, active = state.shuffle, onClick = callbacks.shuffle)
+                NeonIconButton(Icons.Filled.Shuffle, "Shuffle", active = state.shuffle, onClick = callbacks.shuffle)
                 NeonIconButton(Icons.Filled.SkipPrevious, "Previous", size = 52.dp, onClick = callbacks.previous)
                 Box(
                     Modifier.size(78.dp).neonGlow(p.accent, p.glow * (0.7f + 0.3f * spectrum.bass), corner = 39.dp)
@@ -181,13 +181,13 @@ fun PlayerScreen(
                     }
                 }
                 NeonIconButton(Icons.Filled.SkipNext, "Next", size = 52.dp, onClick = callbacks.next)
-                NeonIconButton(if (state.repeat == RepeatMode.ONE) Icons.Filled.RepeatOne else Icons.Filled.Repeat, "Repeat", size = 44.dp, active = state.repeat != RepeatMode.OFF, onClick = callbacks.repeat)
+                NeonIconButton(if (state.repeat == RepeatMode.ONE) Icons.Filled.RepeatOne else Icons.Filled.Repeat, "Repeat", active = state.repeat != RepeatMode.OFF, onClick = callbacks.repeat)
             }
             Spacer(Modifier.height(12.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                NeonIconButton(Icons.Filled.Equalizer, "EQ & FX", size = 40.dp, onClick = callbacks.openEq)
+                NeonIconButton(Icons.Filled.Equalizer, "EQ & FX", onClick = callbacks.openEq)
                 Box {
-                    NeonIconButton(Icons.Filled.Bedtime, "Sleep timer", size = 40.dp, active = sleepRemainingMs != null, onClick = { sleepMenu = true })
+                    NeonIconButton(Icons.Filled.Bedtime, "Sleep timer", active = sleepRemainingMs != null, onClick = { sleepMenu = true })
                     DropdownMenu(expanded = sleepMenu, onDismissRequest = { sleepMenu = false }) {
                         listOf(15, 30, 45, 60, 90).forEach { m -> DropdownMenuItem(text = { Text("$m min") }, onClick = { callbacks.sleep(m); sleepMenu = false }) }
                         DropdownMenuItem(text = { Text("End of track") }, onClick = { callbacks.sleepEndOfTrack(); sleepMenu = false })
@@ -196,7 +196,7 @@ fun PlayerScreen(
                 }
                 Box {
                     NeonIconButton(
-                        Icons.Filled.Tune, "DJ auto-mix — tap to toggle, hold for mixer options", size = 40.dp, active = state.autoMix,
+                        Icons.Filled.Tune, "DJ auto-mix — tap to toggle, hold for mixer options", active = state.autoMix,
                         onLongClick = { autoMixMenu = true }, onClick = callbacks.toggleAutoMix,
                     )
                     DropdownMenu(expanded = autoMixMenu, onDismissRequest = { autoMixMenu = false }) {
@@ -229,7 +229,7 @@ fun PlayerScreen(
                         }
                     }
                 }
-                NeonIconButton(Icons.Filled.AutoAwesome, "Nocternal Bot — change any setting or give a command", size = 40.dp, onClick = callbacks.openAssistant)
+                NeonIconButton(Icons.Filled.AutoAwesome, "Nocternal Bot — change any setting or give a command", onClick = callbacks.openAssistant)
             }
             Spacer(Modifier.height(8.dp))
             NeonLightBar(lighting, spectrum, Modifier.clip(RoundedCornerShape(16.dp)), height = 48.dp, playing = state.isPlaying)
