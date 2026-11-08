@@ -13,6 +13,9 @@ import com.nocternal.playz.fx.dsp.SmoothGain
 import com.nocternal.playz.fx.dsp.StereoWidener
 import com.nocternal.playz.fx.dsp.Surround3D
 import com.nocternal.playz.fx.dsp.TenBandEqualizer
+import com.nocternal.playz.fx.dsp.Delay
+import com.nocternal.playz.fx.dsp.Echo
+import com.nocternal.playz.fx.dsp.Filter
 import com.nocternal.playz.fx.dsp.VocalRemover
 import kotlin.math.pow
 
@@ -47,8 +50,11 @@ class FxChain {
     private val boost = SmoothGain()
     private val fader = SmoothGain()
     private val limiter = Limiter()
+    private val delay = Delay()
+    private val echo = Echo()
+    private val filter = Filter()
 
-    private val all = listOf(normalization, noise, vocal, eq, bass, compressor, pitch, flanger, phaser, widener, surround, reverb, boost, fader, limiter)
+    private val all = listOf(normalization, noise, vocal, eq, bass, compressor, pitch, flanger, phaser, widener, surround, reverb, delay, echo, filter, boost, fader, limiter)
 
     val settings: FxSettings get() = pending
 
@@ -83,6 +89,9 @@ class FxChain {
         widener.process(buffer, frames)
         surround.process(buffer, frames)
         reverb.process(buffer, frames)
+        delay.process(buffer, frames)
+        echo.process(buffer, frames)
+        filter.process(buffer, frames)
         if (s.speakerBoost && s.route == OutputRoute.SPEAKER) {
             for (f in 0 until frames) {
                 buffer[2 * f] = speakerHpf.processL(buffer[2 * f]); buffer[2 * f + 1] = speakerHpf.processR(buffer[2 * f + 1])
@@ -116,6 +125,15 @@ class FxChain {
         widener.width = s.stereoWidth
         surround.amount = s.surround3d
         with(reverb) { wet = if (s.reverb.enabled) s.reverb.wet else 0f; roomSize = s.reverb.roomSize; damping = s.reverb.damping }
+        with(delay) { mix = if (s.delay.enabled) s.delay.mix else 0f; delayMs = s.delay.delayMs; feedback = s.delay.feedback }
+        with(echo) { mix = if (s.echo.enabled) s.echo.mix else 0f; delayMs = s.echo.delayMs; decayFactor = s.echo.decayFactor }
+        with(filter) {
+            mix = if (s.filter.enabled) s.filter.mix else 0f
+            cutoffHz = s.filter.cutoffHz
+            resonance = s.filter.resonance
+            highPass = s.filter.highPass
+            if (s.filter.enabled && s.filter.cutoffHz > 0f) updateCoefficients()
+        }
         boost.target = 10f.pow(s.boostDb() / 20f)
         limiter.ceilingDb = s.limiterCeilingDb()
     }

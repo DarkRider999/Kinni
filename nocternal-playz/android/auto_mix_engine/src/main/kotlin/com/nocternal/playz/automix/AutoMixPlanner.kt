@@ -30,12 +30,36 @@ class AutoMixPlanner(
     private val tempoWeight: Float = 0.4f,
     private val energyWeight: Float = 0.15f,
 ) {
+    companion object {
+        const val GENRE_AFRO_HOUSE = "Afro House"
+        const val GENRE_HOUSE = "House"
+        const val GENRE_TECH_HOUSE = "Tech House"
+        const val GENRE_TECHNO = "Techno"
+        const val GENRE_TRANCE = "Trance"
+        const val GENRE_DEEP_HOUSE = "Deep House"
+        const val GENRE_PROGRESSIVE = "Progressive"
+        const val GENRE_TRIBAL = "Tribal"
+        const val GENRE_MINIMAL = "Minimal"
+        const val GENRE_HARD_TECHNO = "Hard Techno"
+
+        /** Returns a genreFilter predicate matching tracks whose genreTag contains [genre] (case-insensitive). */
+        fun genreFilter(genre: String): (Track) -> Boolean =
+            { track -> track.genreTag?.contains(genre, ignoreCase = true) == true }
+    }
+
     data class Candidate(val track: Track, val score: Float, val relation: KeyRelation, val tempo: TempoMatch)
 
-    fun rank(current: Track, pool: List<Track>, recentlyPlayed: Set<String> = emptySet(), wantEnergyRise: Boolean = false): List<Candidate> {
+    fun rank(
+        current: Track,
+        pool: List<Track>,
+        recentlyPlayed: Set<String> = emptySet(),
+        wantEnergyRise: Boolean = false,
+        genreFilter: ((Track) -> Boolean)? = null,
+    ): List<Candidate> {
         val ck = current.camelotKey?.let(MusicalKey::fromCamelot)
         return pool.asSequence()
             .filter { it.id != current.id && it.id !in recentlyPlayed }
+            .filter { genreFilter == null || genreFilter(it) }
             .map { t ->
                 val rel = Harmonic.relation(ck, t.camelotKey?.let(MusicalKey::fromCamelot))
                 val tempo = Tempo.match(current.bpm, t.bpm)

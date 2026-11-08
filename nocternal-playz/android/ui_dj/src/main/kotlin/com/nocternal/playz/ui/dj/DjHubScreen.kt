@@ -52,6 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.nocternal.playz.audio.SamplerEngine
 import com.nocternal.playz.database.entity.CuePointEntity
 import com.nocternal.playz.database.entity.TrackEntity
 import com.nocternal.playz.designsystem.DarkBackground
@@ -90,6 +91,21 @@ fun DjHubScreen(viewModel: DjHubViewModel, onBack: () -> Unit, modifier: Modifie
     val fxEcho by viewModel.fxEcho.collectAsStateWithLifecycle()
     val fxPhaser by viewModel.fxPhaser.collectAsStateWithLifecycle()
     val fxFilter by viewModel.fxFilter.collectAsStateWithLifecycle()
+    val fxRoll by viewModel.fxRoll.collectAsStateWithLifecycle()
+    val fxBeatRepeat by viewModel.fxBeatRepeat.collectAsStateWithLifecycle()
+    val fxGate by viewModel.fxGate.collectAsStateWithLifecycle()
+    val fxReverse by viewModel.fxReverse.collectAsStateWithLifecycle()
+    val fxBrake by viewModel.fxBrake.collectAsStateWithLifecycle()
+    val fxSpinBack by viewModel.fxSpinBack.collectAsStateWithLifecycle()
+    val fxVinylStop by viewModel.fxVinylStop.collectAsStateWithLifecycle()
+    val selectedSamplerBank by viewModel.selectedSamplerBank.collectAsStateWithLifecycle()
+    val fourDeckMode by viewModel.fourDeckMode.collectAsStateWithLifecycle()
+    val deckCTrack by viewModel.deckCTrack.collectAsStateWithLifecycle()
+    val deckDTrack by viewModel.deckDTrack.collectAsStateWithLifecycle()
+    val deckCVolume by viewModel.deckCVolume.collectAsStateWithLifecycle()
+    val deckDVolume by viewModel.deckDVolume.collectAsStateWithLifecycle()
+    val showDeckCPicker by viewModel.showDeckCPicker.collectAsStateWithLifecycle()
+    val showDeckDPicker by viewModel.showDeckDPicker.collectAsStateWithLifecycle()
 
     // Tap-tempo timestamps; only the most recent taps feed the average.
     val tapTimes = remember { mutableStateListOf<Long>() }
@@ -107,6 +123,20 @@ fun DjHubScreen(viewModel: DjHubViewModel, onBack: () -> Unit, modifier: Modifie
                 tracks = availableTracks,
                 onSelect = viewModel::loadTrackToDeckB,
                 onDismiss = { viewModel.showDeckBPicker.value = false },
+            )
+        }
+        if (showDeckCPicker) {
+            TrackPickerSheet(
+                tracks = availableTracks,
+                onSelect = viewModel::loadTrackToDeckC,
+                onDismiss = { viewModel.showDeckCPicker.value = false },
+            )
+        }
+        if (showDeckDPicker) {
+            TrackPickerSheet(
+                tracks = availableTracks,
+                onSelect = viewModel::loadTrackToDeckD,
+                onDismiss = { viewModel.showDeckDPicker.value = false },
             )
         }
         Scaffold(
@@ -138,6 +168,23 @@ fun DjHubScreen(viewModel: DjHubViewModel, onBack: () -> Unit, modifier: Modifie
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     DeckPanel("DECK A", currentTrack, deckAVolume, NeonPink, { viewModel.deckAVolume.value = it }, { viewModel.showDeckAPicker.value = true })
                     DeckPanel("DECK B", nextTrack, deckBVolume, NeonCyan, { viewModel.deckBVolume.value = it }, { viewModel.showDeckBPicker.value = true })
+                }
+
+                ConsoleSection("DECK MODE") {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ConsoleButton(
+                            text = if (fourDeckMode) "4-DECK ON" else "4-DECK OFF",
+                            color = if (fourDeckMode) NeonGold else NeonGold.copy(alpha = 0.5f),
+                            onClick = { viewModel.fourDeckMode.value = !fourDeckMode },
+                        )
+                    }
+                }
+
+                if (fourDeckMode) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        DeckPanel("DECK C", deckCTrack, deckCVolume, NeonGold, { viewModel.deckCVolume.value = it }, { viewModel.showDeckCPicker.value = true })
+                        DeckPanel("DECK D", deckDTrack, deckDVolume, NeonPurple, { viewModel.deckDVolume.value = it }, { viewModel.showDeckDPicker.value = true })
+                    }
                 }
 
                 ConsoleSection("EQ") {
@@ -227,7 +274,30 @@ fun DjHubScreen(viewModel: DjHubViewModel, onBack: () -> Unit, modifier: Modifie
                 }
 
                 ConsoleSection("SAMPLER PADS") {
-                    val padLabels = listOf("KICK", "SNARE", "HI-HAT", "CLAP", "BASS DROP", "FX1", "FX2", "LOOP")
+                    val bankAccents = listOf(NeonGold, NeonPink, NeonCyan, NeonPurple)
+                    // Bank selector row
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                        SamplerEngine.BANK_NAMES.forEachIndexed { bankIdx, bankName ->
+                            val accent = bankAccents[bankIdx]
+                            val selected = bankIdx == selectedSamplerBank
+                            Button(
+                                onClick = { viewModel.selectBank(bankIdx) },
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                                border = BorderStroke(if (selected) 2.dp else 1.dp, accent),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (selected) accent.copy(alpha = 0.35f) else accent.copy(alpha = 0.1f),
+                                    contentColor = accent,
+                                ),
+                                modifier = Modifier.weight(1f).height(36.dp),
+                            ) {
+                                Text(bankName.replace(" ", "\n"), fontWeight = FontWeight.Black, fontSize = 7.sp, lineHeight = 8.sp)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    // Pad grid for selected bank
+                    val padLabels = SamplerEngine.PAD_LABELS[selectedSamplerBank].toList()
                     val padColors = listOf(NeonPink, NeonPurple, NeonCyan, NeonGold, NeonPink, NeonPurple, NeonCyan, NeonGold)
                     padLabels.chunked(4).forEachIndexed { rowIdx, row ->
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
@@ -235,7 +305,7 @@ fun DjHubScreen(viewModel: DjHubViewModel, onBack: () -> Unit, modifier: Modifie
                                 val idx = rowIdx * 4 + colIdx
                                 val accent = padColors[idx % padColors.size]
                                 Button(
-                                    onClick = { /* pad trigger — audio engine integration point */ },
+                                    onClick = { viewModel.triggerPad(idx) },
                                     shape = RoundedCornerShape(10.dp),
                                     contentPadding = PaddingValues(0.dp),
                                     border = BorderStroke(1.dp, accent),
@@ -281,6 +351,42 @@ fun DjHubScreen(viewModel: DjHubViewModel, onBack: () -> Unit, modifier: Modifie
                             }
                         }
                         if (rowIdx < fxList.chunked(3).size - 1) Spacer(Modifier.height(6.dp))
+                    }
+                }
+
+                ConsoleSection("ADVANCED FX") {
+                    val advFxList = listOf(
+                        "ROLL" to fxRoll, "BEAT RPT" to fxBeatRepeat, "GATE" to fxGate,
+                        "REVERSE" to fxReverse, "BRAKE" to fxBrake, "SPIN BACK" to fxSpinBack,
+                        "VINYL STOP" to fxVinylStop,
+                    )
+                    val advFxSetters: List<(Boolean) -> Unit> = listOf(
+                        { viewModel.fxRoll.value = it }, { viewModel.fxBeatRepeat.value = it },
+                        { viewModel.fxGate.value = it }, { viewModel.fxReverse.value = it },
+                        { viewModel.fxBrake.value = it }, { viewModel.fxSpinBack.value = it },
+                        { viewModel.fxVinylStop.value = it },
+                    )
+                    advFxList.chunked(4).forEachIndexed { rowIdx, row ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                            row.forEachIndexed { colIdx, (label, active) ->
+                                val idx = rowIdx * 4 + colIdx
+                                val accent = NeonPink
+                                Button(
+                                    onClick = { advFxSetters[idx](!active) },
+                                    shape = RoundedCornerShape(10.dp),
+                                    contentPadding = PaddingValues(0.dp),
+                                    border = BorderStroke(1.dp, if (active) accent else accent.copy(alpha = 0.4f)),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (active) accent.copy(alpha = 0.35f) else DarkBackground,
+                                        contentColor = if (active) accent else accent.copy(alpha = 0.5f),
+                                    ),
+                                    modifier = Modifier.weight(1f).height(44.dp),
+                                ) {
+                                    Text(label, fontWeight = FontWeight.Bold, fontSize = 9.sp)
+                                }
+                            }
+                        }
+                        if (rowIdx < advFxList.chunked(4).size - 1) Spacer(Modifier.height(6.dp))
                     }
                 }
             }

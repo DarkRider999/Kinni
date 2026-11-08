@@ -28,6 +28,7 @@ data class AppSettings(
     val edgeLighting: EdgeLightingSettings = EdgeLightingSettings(),
     val enabledPlugins: Set<String> = emptySet(),
     val assistantApiKey: String? = null,
+    val assistantModel: String = "claude-opus-5",
 )
 
 @Serializable
