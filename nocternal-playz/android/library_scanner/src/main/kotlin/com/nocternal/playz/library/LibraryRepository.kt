@@ -133,6 +133,19 @@ class LibraryRepository(
     fun savePlaylist(p: Playlist) = scope.launch { mutate { d -> d.copy(playlists = d.playlists.filterNot { it.id == p.id } + p) } }
     fun deletePlaylist(id: String) = scope.launch { mutate { d -> d.copy(playlists = d.playlists.filterNot { it.id == id }) } }
 
+    /**
+     * Adds a track to an existing playlist atomically (read-modify-write inside the same [mutate] lock),
+     * unlike building the updated [Playlist] from a UI-held snapshot and calling [savePlaylist] with it:
+     * that pattern loses an addition whenever two "add to playlist" actions for the same playlist land close
+     * together, because the second one's snapshot predates the first one's write and overwrites it on save.
+     */
+    fun addTrackToPlaylist(playlistId: String, trackId: String) = scope.launch {
+        mutate { d ->
+            val pl = d.playlists.firstOrNull { it.id == playlistId } ?: return@mutate d
+            if (trackId in pl.trackIds) d else d.copy(playlists = d.playlists.map { if (it.id == playlistId) it.copy(trackIds = it.trackIds + trackId) else it })
+        }
+    }
+
     fun isLyricBookmarked(trackId: String, lineStartMs: Long): Boolean =
         _data.value.lyricBookmarks.any { it.trackId == trackId && it.lineStartMs == lineStartMs }
 

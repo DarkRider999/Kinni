@@ -507,7 +507,7 @@ private fun AddToPlaylistDialog(c: AppContainer, t: Track, onDismiss: () -> Unit
                     Text(
                         pl.name, color = p.onBackground, modifier = Modifier.fillMaxWidth()
                             .clickable {
-                                if (t.id !in pl.trackIds) c.library.savePlaylist(pl.copy(trackIds = pl.trackIds + t.id))
+                                c.library.addTrackToPlaylist(pl.id, t.id)
                                 onDismiss()
                             }.padding(vertical = 10.dp),
                     )
