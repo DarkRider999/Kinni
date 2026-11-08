@@ -6,6 +6,6 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
     <color name="amoled">#FF000000</color>
-    <color name="neon_cyan">#FF00F0FF</color>
-    <color name="neon_magenta">#FFFF00E5</color>
+    <color name="neon_cyan">#FF00E5FF</color>
+    <color name="neon_orange">#FFFF6B00</color>
 </resources>

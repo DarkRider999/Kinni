@@ -135,10 +135,12 @@ object ThemePresets {
         lightBarAnimation = LightingAnimation.PULSE_WAVE_SPECTRUM, eqPresetId = "podcast_voice",
         backgroundStyle = BackgroundStyle.DEEP_SPACE, themeMode = ThemeMode.DARK,
     )
-    /** App default when nothing genre-specific applies. */
+    /** App default when nothing genre-specific applies: premium-DJ-gear cyan + orange, replacing the
+     *  previous cyan + magenta pairing as the app's own brand identity (genre presets below are untouched —
+     *  the music-reactive theming feature stays exactly as it was). */
     val NOCTERNAL_DEFAULT = ThemePreset(
         id = "nocternal_default", name = "Nocternal Default",
-        accent = NeonColor.hex("#00F0FF"), secondaryAccent = NeonColor.hex("#FF00E5"),
+        accent = NeonColor.hex("#00E5FF"), secondaryAccent = NeonColor.hex("#FF6B00"),
         glowIntensity = 1f, edgeLightingMode = EdgeLightingMode.MUSIC_REACTIVE,
         lightBarAnimation = LightingAnimation.HALLUCINATION_BLOOM, eqPresetId = "flat",
         backgroundStyle = BackgroundStyle.DEEP_SPACE,

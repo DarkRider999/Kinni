@@ -40,7 +40,7 @@ data class NeonPalette(
 )
 
 val LocalNeon = staticCompositionLocalOf {
-    NeonPalette(Color(0xFF00F0FF), Color(0xFFFF00E5), 0.8f, Color(0xFF0A0A0F), Color(0xFF14141C), Color.White, Color(0xFF8A8AA0), ThemeMode.NEON, BackgroundStyle.DEEP_SPACE)
+    NeonPalette(Color(0xFF00E5FF), Color(0xFFFF6B00), 0.8f, Color(0xFF080808), Color(0xFF101010), Color(0xFFFFFFFF), Color(0xFFB0B0B0), ThemeMode.NEON, BackgroundStyle.DEEP_SPACE)
 }
 
 object Neon {
@@ -68,18 +68,18 @@ fun NocternalTheme(state: NeonThemeState, userMode: ThemeMode = state.mode, cont
     val glow by animateFloatAsState(if (mode == ThemeMode.NEON || mode == ThemeMode.AMOLED) state.glowIntensity.coerceIn(0f, 1f) else state.glowIntensity.coerceIn(0f, 1f) * 0.55f, tween(600), label = "glow")
     val background = when (mode) {
         ThemeMode.AMOLED -> Color.Black
-        ThemeMode.NEON -> Color(0xFF0A0A0F)
-        ThemeMode.DARK -> Color(0xFF121218)
+        ThemeMode.NEON -> Color(0xFF080808)
+        ThemeMode.DARK -> Color(0xFF0F0F0F)
         ThemeMode.LIGHT -> Color(0xFFF4F4FA)
     }
     val surface = when (mode) {
-        ThemeMode.AMOLED -> Color(0xFF0B0B10)
-        ThemeMode.NEON -> Color(0xFF14141C)
-        ThemeMode.DARK -> Color(0xFF1E1E26)
+        ThemeMode.AMOLED -> Color(0xFF0C0C0C)
+        ThemeMode.NEON -> Color(0xFF101010)
+        ThemeMode.DARK -> Color(0xFF151515)
         ThemeMode.LIGHT -> Color.White
     }
-    val onBg = if (dark) Color(0xFFF2F2FF) else Color(0xFF101018)
-    val palette = NeonPalette(accent, secondary, glow, background, surface, onBg, if (dark) Color(0xFF8A8AA0) else Color(0xFF5A5A70), mode, state.background)
+    val onBg = if (dark) Color(0xFFFFFFFF) else Color(0xFF101018)
+    val palette = NeonPalette(accent, secondary, glow, background, surface, onBg, if (dark) Color(0xFFB0B0B0) else Color(0xFF5A5A70), mode, state.background)
     val scheme: ColorScheme = if (dark) darkColorScheme(
         primary = accent, secondary = secondary, background = background, surface = surface,
         onBackground = onBg, onSurface = onBg, surfaceVariant = surface.copy(alpha = 0.9f), onPrimary = Color.Black,

@@ -33,9 +33,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
-private val NeonCyan = Color(0xFF00F0FF)
-private val NeonMagenta = Color(0xFFFF00E5)
-private val NeonViolet = Color(0xFF8F00FF)
+private val NeonCyan = Color(0xFF00E5FF)
+private val NeonOrange = Color(0xFFFF6B00)
+private val NeonAmber = Color(0xFFFFA000)
 
 /**
  * Animated neon splash: a pulsing reactor ring with a sweeping sheen and a staggered wordmark
@@ -63,7 +63,7 @@ fun NeonSplashScreen(onFinished: () -> Unit, holdMs: Long = 1400L) {
         onFinished()
     }
 
-    Box(Modifier.fillMaxSize().background(Color(0xFF03030A)), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize().background(Color(0xFF080808)), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize().alpha(appear.value)) {
             val cx = size.width / 2f
             val cy = size.height / 2f
@@ -73,15 +73,15 @@ fun NeonSplashScreen(onFinished: () -> Unit, holdMs: Long = 1400L) {
             // outer bloom
             drawCircle(
                 Brush.radialGradient(
-                    listOf(NeonCyan.copy(alpha = 0.38f), NeonViolet.copy(alpha = 0.16f), Color.Transparent),
+                    listOf(NeonCyan.copy(alpha = 0.38f), NeonAmber.copy(alpha = 0.16f), Color.Transparent),
                     center = Offset(cx, cy), radius = r * 2.5f,
                 ),
                 radius = r * 2.5f, center = Offset(cx, cy),
             )
             // counter-rotating neon rings
-            drawCircle(Brush.sweepGradient(listOf(NeonCyan, NeonMagenta, NeonViolet, NeonCyan), center = Offset(cx, cy)),
+            drawCircle(Brush.sweepGradient(listOf(NeonCyan, NeonOrange, NeonAmber, NeonCyan), center = Offset(cx, cy)),
                 radius = r, center = Offset(cx, cy), style = Stroke(width = strokeW))
-            drawCircle(Brush.sweepGradient(listOf(NeonMagenta, NeonViolet, NeonCyan, NeonMagenta), center = Offset(cx, cy)),
+            drawCircle(Brush.sweepGradient(listOf(NeonOrange, NeonAmber, NeonCyan, NeonOrange), center = Offset(cx, cy)),
                 radius = r * 0.66f, center = Offset(cx, cy), style = Stroke(width = strokeW * 0.55f))
             // sweeping sheen arc
             val a0 = sweep * 360f
@@ -102,7 +102,7 @@ fun NeonSplashScreen(onFinished: () -> Unit, holdMs: Long = 1400L) {
                 style = TextStyle(
                     fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Black,
                     fontSize = 26.sp, letterSpacing = 5.sp,
-                    brush = Brush.horizontalGradient(listOf(NeonCyan, NeonMagenta, NeonCyan)),
+                    brush = Brush.horizontalGradient(listOf(NeonCyan, NeonOrange, NeonCyan)),
                 ),
                 modifier = Modifier.alpha(wordIn.value),
             )
