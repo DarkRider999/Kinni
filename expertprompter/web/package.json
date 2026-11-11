@@ -1,5 +1,5 @@
 {
-  "name": "expertprompter-web",
+  "name": "ananvi-promptmaster-web",
   "version": "1.0.0",
   "private": true,
   "scripts": {
@@ -40,7 +40,7 @@
     "typescript": "^5.9.3",
     "vitest": "^5.0.1"
   },
-  "description": "ExpertPrompter: Next.js app with built-in API routes (Prisma + PostgreSQL)",
+  "description": "Ananvi PromptMaster: AI prompt marketplace and content platform (Next.js, Prisma, PostgreSQL)",
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },

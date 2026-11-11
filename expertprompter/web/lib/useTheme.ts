@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 export type Theme = 'light' | 'dark';
-const THEME_KEY = 'expertprompter.theme';
+const THEME_KEY = 'ananvi-promptmaster.theme';
 
 /** Dark/light mode: toggles the "dark" class on <html> and remembers the choice. */
 export function useTheme() {

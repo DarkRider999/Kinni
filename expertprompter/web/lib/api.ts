@@ -22,7 +22,7 @@ export class ApiError extends Error {
   }
 }
 
-const TOKEN_KEY = 'expertprompter.token';
+const TOKEN_KEY = 'ananvi-promptmaster.token';
 
 export const tokenStore = {
   get(): string | null {
@@ -49,7 +49,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
       },
     });
   } catch {
-    throw new ApiError(0, 'Cannot reach the ExpertPrompter API. Check your connection and try again.');
+    throw new ApiError(0, 'Cannot reach the Ananvi PromptMaster API. Check your connection and try again.');
   }
   if (res.status === 204) return undefined as T;
   const body = await res.json().catch(() => ({}));

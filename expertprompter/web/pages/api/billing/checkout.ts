@@ -39,7 +39,7 @@ export default apiHandler(
               currency: 'usd',
               unit_amount: PREMIUM_PRICE_CENTS,
               recurring: { interval: 'month' as const },
-              product_data: { name: 'ExpertPrompter Premium', description: 'Unlimited expert prompts' },
+              product_data: { name: 'Ananvi PromptMaster Premium', description: 'Unlimited expert prompts' },
             },
           };
 
