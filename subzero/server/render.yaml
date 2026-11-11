@@ -1,0 +1,13 @@
+# One-click deploy of the SubZero relay to Render (free tier).
+# In Render: New + → Blueprint → pick this repo → it reads this file.
+# After deploy, your relay URL is  wss://<service-name>.onrender.com
+services:
+  - type: web
+    name: subzero-relay
+    runtime: node
+    rootDir: subzero/server
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    autoDeploy: false
