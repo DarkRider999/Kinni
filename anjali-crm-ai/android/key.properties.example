@@ -1,0 +1,5 @@
+# Copy to android/key.properties (git-ignored) and fill in. See README "Release signing".
+storePassword=
+keyPassword=
+keyAlias=anjali
+storeFile=../anjali-release.jks
