@@ -25,7 +25,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write   # needed to publish the APK to a GitHub Release
 
 jobs:
   android:
@@ -72,9 +72,23 @@ jobs:
       - name: Build debug APK
         run: gradle --no-daemon --stacktrace :app:assembleDebug
 
-      - name: Upload debug APK
+      - name: Upload debug APK (CI artifact, needs GitHub login to download)
         uses: actions/upload-artifact@v4
         with:
           name: kinni-debug-apk
           path: app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
+
+      # On main (and manual runs), also publish the APK to a rolling "app-latest"
+      # Release so it has a permanent, login-free public download URL that can be
+      # shared with family:
+      #   https://github.com/DarkRider999/Kinni/releases/download/app-latest/app-debug.apk
+      - name: Publish APK to the app-latest release
+        if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: app-latest
+          name: Kinni debug APK (latest)
+          body: "Latest Kinni debug APK, built automatically from the default branch. Debug build — enable 'Install unknown apps' to sideload."
+          files: app/build/outputs/apk/debug/*.apk
+          fail_on_unmatched_files: true
