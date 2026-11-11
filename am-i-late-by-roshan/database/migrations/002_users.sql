@@ -1,0 +1,8 @@
+-- Accounts. user_id everywhere else is derived from the JWT issued for a row here.
+CREATE TABLE IF NOT EXISTS users (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email         TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  display_name  TEXT,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
