@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App-module resources override the capacitor-android library's Material-default indigo/pink
+         (see node_modules/@capacitor/android/capacitor/src/main/res/values/colors.xml) with the
+         AI Face Studio brand: dark base, electric purple -> cyan accent (see SPEC §72). -->
+    <color name="colorPrimary">#8B5CF6</color>
+    <color name="colorPrimaryDark">#0A0A0F</color>
+    <color name="colorAccent">#22D3EE</color>
+</resources>
