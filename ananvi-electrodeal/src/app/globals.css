@@ -1,0 +1,162 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --navy-950: #02050d;
+  --navy-900: #040d1a;
+  --navy-800: #071428;
+  --navy-700: #0a1f3d;
+  --navy-600: #0d2a52;
+  --electric-blue: #0066ff;
+  --electric-cyan: #00d4ff;
+  --electric-glow: #00aaff;
+  --silver-100: #f0f4f8;
+  --silver-200: #e2e8f0;
+  --silver-400: #94a3b8;
+  --silver-600: #475569;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  background-color: var(--navy-950);
+  color: var(--silver-100);
+}
+
+body {
+  font-family: var(--font-inter), system-ui, sans-serif;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--navy-900);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--electric-blue);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--electric-cyan);
+}
+
+/* Selection */
+::selection {
+  background: rgba(0, 102, 255, 0.3);
+  color: white;
+}
+
+/* Glass card base */
+.glass-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.02) 100%);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.1);
+  box-shadow: 0 8px 32px 0 rgba(0,102,255,0.1), inset 0 1px 0 rgba(255,255,255,0.1);
+}
+
+/* Electric gradient text */
+.electric-text {
+  background: linear-gradient(135deg, #0066ff 0%, #00d4ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Neon glow */
+.neon-glow {
+  text-shadow: 0 0 10px rgba(0,212,255,0.6), 0 0 30px rgba(0,212,255,0.3);
+}
+
+/* Scan line animation */
+.scan-line {
+  position: absolute;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(0,212,255,0.6), transparent);
+  animation: scan 2s linear infinite;
+}
+
+/* Loading shimmer */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(90deg, rgba(255,255,255,0.03) 25%, rgba(0,102,255,0.08) 50%, rgba(255,255,255,0.03) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Page transition */
+.page-enter {
+  opacity: 0;
+  transform: translateY(10px);
+}
+.page-enter-active {
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 300ms, transform 300ms;
+}
+
+/* RTL support for Arabic */
+[dir="rtl"] {
+  text-align: right;
+}
+
+/* Price badge */
+.price-tag {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+.price-tag::before {
+  content: 'AED';
+  font-size: 0.65em;
+  font-weight: 500;
+  margin-right: 2px;
+  opacity: 0.7;
+  align-self: flex-start;
+  margin-top: 0.15em;
+}
+
+/* Condition badge colors */
+.condition-brand-new { background: rgba(0,212,255,0.15); color: #00d4ff; border-color: rgba(0,212,255,0.3); }
+.condition-open-box { background: rgba(0,102,255,0.15); color: #0066ff; border-color: rgba(0,102,255,0.3); }
+.condition-certified-refurb { background: rgba(16,185,129,0.15); color: #10b981; border-color: rgba(16,185,129,0.3); }
+.condition-refurb { background: rgba(52,211,153,0.15); color: #34d399; border-color: rgba(52,211,153,0.3); }
+.condition-preowned { background: rgba(251,191,36,0.15); color: #fbbf24; border-color: rgba(251,191,36,0.3); }
+.condition-unverified { background: rgba(148,163,184,0.15); color: #94a3b8; border-color: rgba(148,163,184,0.3); }
+
+/* Star rating */
+.star-filled { color: #fbbf24; }
+.star-empty { color: rgba(255,255,255,0.2); }
+
+/* Gradient borders */
+.gradient-border {
+  position: relative;
+  border-radius: 12px;
+}
+.gradient-border::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(0,102,255,0.4), rgba(0,212,255,0.4));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  border-radius: 12px;
+  pointer-events: none;
+}
