@@ -21,3 +21,7 @@ debug.keystore
 .harnesskit/
 .cto-toolkit/
 .claude/
+
+# Observability hook output (prompts, tool I/O) - never committed
+/logs/
+/.claude/data/
