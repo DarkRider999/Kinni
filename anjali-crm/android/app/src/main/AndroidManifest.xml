@@ -39,6 +39,29 @@
         </activity>
         <meta-data android:name="flutterEmbedding" android:value="2"/>
     </application>
+    <!--
+      Android 11+ package visibility: lets url_launcher check for apps that handle
+      calls (tel:), email (mailto:), WhatsApp links (https://wa.me) and maps (geo:).
+      These are queries, not permissions; dialling opens the dialer, it does not call.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.DIAL"/>
+            <data android:scheme="tel"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.SENDTO"/>
+            <data android:scheme="mailto"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="geo"/>
+        </intent>
+    </queries>
     <!-- Required to query activities that can process text (Flutter text selection). -->
     <queries>
         <intent>
