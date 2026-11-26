@@ -1,0 +1,29 @@
+name: anjali_crm_ai
+description: Anjali CRM AI - offline-first customer relationship manager.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+# Only packages the code imports. Add a package in the same change as the
+# feature that uses it (each one adds APK size, permissions and attack surface).
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  material_ui: ^1.1.0
+  sqflite: ^2.4.1
+  path: ^1.9.0
+  shared_preferences: ^2.3.5
+  local_auth: ^2.3.0
+  intl: ^0.20.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  sqflite_common_ffi: ^2.3.4
+
+flutter:
+  uses-material-design: true
