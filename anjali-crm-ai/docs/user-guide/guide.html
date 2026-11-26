@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Anjali CRM AI — User Guide</title>
+<style>
+  @page { size: A4; margin: 14mm 14mm 16mm 14mm; }
+  :root { --ink:#1f1d2b; --muted:#5d5a6e; --brand:#6c5ce7; --brand2:#a855f7; --soft:#f3f0ff; --line:#e4e0f5; --ok:#16a34a; --warn:#d97706; }
+  * { box-sizing: border-box; }
+  body { font-family: "Roboto", "Segoe UI", Arial, sans-serif; color: var(--ink); font-size: 10.2pt; line-height: 1.45; margin: 0; background: #fff; }
+  h1, h2, h3 { color: var(--ink); line-height: 1.2; }
+  h2 { font-size: 16pt; margin: 0 0 2mm; padding-bottom: 1.5mm; border-bottom: 2px solid var(--brand); }
+  h3 { font-size: 11pt; margin: 3mm 0 1mm; color: var(--brand); }
+  p { margin: 0 0 2mm; }
+  ul, ol { margin: 0 0 2mm; padding-left: 5mm; }
+  li { margin: 0 0 .6mm; }
+  b { color: #2b2840; }
+  .ui { background: var(--soft); border: 1px solid var(--line); border-radius: 3px; padding: 0 1.2mm; font-weight: 600; white-space: nowrap; }
+
+  .cover { height: 265mm; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+           background: linear-gradient(160deg, #3b2a73 0%, #6c5ce7 55%, #a855f7 100%); color: #fff; border-radius: 6mm; page-break-after: always; }
+  .cover h1 { color: #fff; font-size: 34pt; margin: 6mm 0 2mm; }
+  .cover .sub { font-size: 14pt; opacity: .92; }
+  .cover img { width: 62mm; border-radius: 5mm; box-shadow: 0 6mm 14mm rgba(0,0,0,.35); }
+  .cover .meta { margin-top: 10mm; font-size: 10pt; opacity: .85; }
+
+  .toc { page-break-after: always; }
+  .toc ol { columns: 2; column-gap: 10mm; font-size: 10.5pt; }
+  .toc a { color: var(--ink); text-decoration: none; }
+
+  section.screen { page-break-inside: avoid; break-inside: avoid; margin: 0 0 7mm; }
+  section.chapter { page-break-before: always; }
+  .row { display: flex; gap: 6mm; align-items: flex-start; }
+  .shot { flex: 0 0 58mm; }
+  .shot img { width: 58mm; border-radius: 4mm; border: 1px solid #d8d4ea; box-shadow: 0 1.5mm 4mm rgba(40,20,90,.15); display: block; }
+  .shot .cap { font-size: 8pt; color: var(--muted); text-align: center; margin-top: 1mm; }
+  .text { flex: 1 1 auto; min-width: 0; }
+  .purpose { background: var(--soft); border-left: 3px solid var(--brand); padding: 1.5mm 3mm; border-radius: 2px; margin-bottom: 2mm; }
+
+  table { border-collapse: collapse; width: 100%; margin: 1mm 0 2mm; font-size: 9.4pt; }
+  th, td { border: 1px solid var(--line); padding: 1.2mm 2mm; vertical-align: top; text-align: left; }
+  th { background: var(--soft); }
+  .tip { border: 1px solid #fde68a; background: #fffbeb; border-radius: 2mm; padding: 2mm 3mm; margin: 2mm 0; }
+  .warn { border: 1px solid #fecaca; background: #fef2f2; border-radius: 2mm; padding: 2mm 3mm; margin: 2mm 0; }
+  .steps li { margin-bottom: 1mm; }
+  .small { font-size: 8.8pt; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <img src="screens/03-lock-screen.png" alt="Anjali CRM AI lock screen">
+  <h1>Anjali CRM AI</h1>
+  <div class="sub">User Guide — every screen, every option, step by step</div>
+  <div class="meta">Android app · Works offline · Data encrypted on your phone</div>
+</div>
+
+<div class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#install">Installing the app</a></li>
+    <li><a href="#setup">First-time setup</a></li>
+    <li><a href="#lock">Unlocking the app</a></li>
+    <li><a href="#nav">Finding your way around</a></li>
+    <li><a href="#home">Home dashboard</a></li>
+    <li><a href="#clients">Clients list</a></li>
+    <li><a href="#form">Adding and editing a lead</a></li>
+    <li><a href="#profile">Client profile</a></li>
+    <li><a href="#notes">Voice notes and dictation</a></li>
+    <li><a href="#vault">Document vault</a></li>
+    <li><a href="#preview">Viewing a document</a></li>
+    <li><a href="#whatsapp-import">Importing files from WhatsApp</a></li>
+    <li><a href="#calls">Calls, followups and files tabs</a></li>
+    <li><a href="#card">Scanning a business card</a></li>
+    <li><a href="#followups">Followups</a></li>
+    <li><a href="#search">Search</a></li>
+    <li><a href="#reports">Reports</a></li>
+    <li><a href="#map">Picking a location on the map</a></li>
+    <li><a href="#whatsapp">Messaging on WhatsApp and read-aloud</a></li>
+    <li><a href="#settings">Settings</a></li>
+    <li><a href="#profile-settings">Your profile</a></li>
+    <li><a href="#products">Products</a></li>
+    <li><a href="#categories">Document categories</a></li>
+    <li><a href="#templates">Message templates</a></li>
+    <li><a href="#notifications">Notifications</a></li>
+    <li><a href="#voice">Voice and speech</a></li>
+    <li><a href="#security">Security and security log</a></li>
+    <li><a href="#export">Exporting data</a></li>
+    <li><a href="#backup">Backup and restore</a></li>
+    <li><a href="#sync">Cloud sync</a></li>
+    <li><a href="#sample">Sample data</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#faq">Tips, FAQ and troubleshooting</a></li>
+  </ol>
+  <p class="small">Screenshots in this guide use demo clients. Names and numbers are not real people.</p>
+</div>
+
+<!-- ============================================================ -->
+<section class="screen" id="install">
+  <h2>1. Installing the app</h2>
+  <div class="purpose">The app is installed from an APK file (it is not on the Play Store). You only do this once; later versions install over the top and keep your data.</div>
+  <ol class="steps">
+    <li>Open the APK download link you were given (GitHub → <b>Actions</b> → the latest green <b>Anjali CRM AI</b> run → <b>Artifacts</b> → <span class="ui">anjali-crm-ai-apk</span>). You must be signed in to GitHub to download it.</li>
+    <li>The download is a <b>.zip</b>. Open it in the <b>Files</b> app and extract the <b>.apk</b> inside.</li>
+    <li>Tap the <b>.apk</b>. If Android says installing is blocked, tap <b>Settings</b> and turn on <b>Allow from this source</b> for your Files app, then go back and tap <b>Install</b>.</li>
+    <li>If Google Play Protect shows a warning about an unknown developer, tap <b>More details → Install anyway</b>.</li>
+    <li>Open <b>Anjali CRM AI</b> from your app drawer.</li>
+  </ol>
+  <div class="tip"><b>Updating:</b> install the newer APK the same way. Your clients, documents and settings stay on the phone. Take a backup first (<a href="#backup">Backup and restore</a>) to be safe.</div>
+</section>
+
+<section class="screen" id="setup">
+  <h2>2. First-time setup</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/02-onboarding.png" alt="Onboarding"><div class="cap">Setup wizard</div></div>
+    <div class="text">
+      <div class="purpose">An 8-step wizard that runs the first time you open the app. The counter at the top shows your progress (for example <b>3/8</b>). Use the back arrow to go back a step.</div>
+      <ol class="steps">
+        <li><b>Profile picture</b> — tap <span class="ui">Camera</span> or <span class="ui">Gallery</span>, or <span class="ui">Skip for now</span>.</li>
+        <li><b>What should we call you?</b> — enter your name, tap <span class="ui">Continue</span>.</li>
+        <li><b>Your mobile number</b> — for example +971 50 123 4567.</li>
+        <li><b>Choose your look</b> — <span class="ui">Light</span>, <span class="ui">Dark</span> or <span class="ui">Match my phone</span>.</li>
+        <li><b>Create a 6-digit PIN</b>, then enter it again to confirm.</li>
+        <li><b>Unlock with your fingerprint</b> — turn on <span class="ui">Enable biometric unlock</span> if your phone supports it.</li>
+        <li><b>What do you sell?</b> — tick your products (Personal Loan, Business Loan, Mortgage, Credit Card, Auto Loan, Insurance) or tap <span class="ui">Add product</span>. At least one is required. Tick <span class="ui">Load sample data</span> to get 30 demo leads to practise with. Tap <span class="ui">Finish setup</span>.</li>
+        <li><b>Save your recovery code</b> — tap <span class="ui">Copy</span> and keep it somewhere safe (not only on this phone). Tick <span class="ui">I have saved my recovery code</span> and tap <span class="ui">Let's go!</span></li>
+      </ol>
+      <div class="warn">The recovery code is the <b>only</b> way back in if you forget your PIN. Write it down.</div>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="lock">
+  <h2>3. Unlocking the app</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/03-lock-screen.png" alt="Lock screen"><div class="cap">Lock screen</div></div>
+    <div class="text">
+      <div class="purpose">The app locks when you leave it for longer than the auto-lock time (5 minutes by default) and every time it starts.</div>
+      <table>
+        <tr><th>Option</th><th>What it does</th></tr>
+        <tr><td>PIN pad, <span class="ui">✓</span>, <span class="ui">⌫</span></td><td>Enter your 6-digit PIN; ✓ confirms, ⌫ deletes a digit.</td></tr>
+        <tr><td>Fingerprint icon / <span class="ui">Biometric</span></td><td>Unlock with fingerprint or face (if turned on).</td></tr>
+        <tr><td><span class="ui">Use pattern</span> / <span class="ui">Use PIN</span></td><td>Switch between pattern and PIN (only when pattern lock is set).</td></tr>
+        <tr><td><span class="ui">Forgot PIN?</span></td><td>Enter your recovery code (looks like K7QM-2XRP-H9TD), then choose a new PIN.</td></tr>
+      </table>
+      <p>After too many wrong attempts the app shows <b>Too many attempts. Try again in mm:ss</b>. Failed attempts, and a photo of whoever tried, are recorded in the <a href="#security">Security log</a>.</p>
+      <p>After unlocking, a short <b>daily motivation</b> message may appear (if turned on). Tap the heart to close it and start your day.</p>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="nav">
+  <h2>4. Finding your way around</h2>
+  <p>The bar at the bottom of the screen has six tabs:</p>
+  <table>
+    <tr><th>Tab</th><th>Use it to…</th></tr>
+    <tr><td><b>Home</b></td><td>See today's work, your pipeline and recommendations.</td></tr>
+    <tr><td><b>Clients</b></td><td>Browse, search, filter and sort all leads.</td></tr>
+    <tr><td><b>Add Lead</b></td><td>Add a new lead quickly.</td></tr>
+    <tr><td><b>Followups</b></td><td>See every followup by day. The red badge counts overdue ones.</td></tr>
+    <tr><td><b>Reports</b></td><td>Check performance and export Excel/PDF reports.</td></tr>
+    <tr><td><b>Settings</b></td><td>Profile, security, products, templates, backup and more.</td></tr>
+  </table>
+  <div class="tip"><b>Saving files from other apps:</b> in WhatsApp, Gmail or Files, tap <b>Share → Anjali CRM AI</b> on a PDF, JPG, PNG or WEBP. The app asks <b>Choose the client to save this document</b>, then which folder to save it in. If the app was locked, the file waits until you unlock.</div>
+</section>
+
+<!-- ============================================================ -->
+<section class="screen chapter" id="home">
+  <h2>5. Home dashboard</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/04-home-dashboard.png" alt="Home"><div class="cap">Home</div></div>
+    <div class="text">
+      <div class="purpose">Your day at a glance. Most cards are tappable and open the matching list.</div>
+      <ul>
+        <li><b>Header</b> — greeting, date and the <b>sync chip</b> (Synced / Pending Sync / Sync Failed). Tap your photo to open Settings.</li>
+        <li><b>Search bar</b> — <i>Search name, phone, company…</i>; the mic searches by voice.</li>
+        <li><b>Today's productivity</b> — Followups, Calls, Converted, Pending, plus weekly and monthly scores.</li>
+        <li><b>Pipeline at a glance</b> — Total leads, New leads, Interested, Awaiting documents, Documents completed, Pending documents, Docs expiring soon, Submitted, Approved, Rejected, Not interested, Not eligible, Followups today, Overdue, Conversions (month), Loan disbursed. Tap any card to see those clients.</li>
+        <li><b>AI recommendations</b> — best product and source, plus groups such as <i>Urgent followups</i>, <i>Pending document collection</i>, <i>Likely to convert</i>, <i>High priority</i>, <i>Waiting the longest</i>, <i>Upcoming opportunities</i>. Each row has WhatsApp and call buttons.</li>
+        <li><b>Today's tasks</b> — today's followups with call, WhatsApp and ✓ <i>Mark complete</i>. <span class="ui">All followups</span> opens the Followups tab.</li>
+        <li><b>Performance</b> — swipe through Lead funnel, Monthly performance, Product performance, Approval conversion rate and Status distribution charts.</li>
+        <li><b>Recent activity</b> — the latest things you did.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="clients">
+  <h2>6. Clients list</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/05-client-list.png" alt="Clients"><div class="cap">Clients</div></div>
+    <div class="text">
+      <div class="purpose">All your leads in one list, with fast filters. The number at the top right shows how many match.</div>
+      <table>
+        <tr><th>Option</th><th>What it does</th></tr>
+        <tr><td>Search box</td><td>Search by name, phone or company. <b>✕</b> clears it.</td></tr>
+        <tr><td><span class="ui">Filters</span></td><td>Product, Priority, Monthly salary range (AED), Company and Location. <span class="ui">Apply</span> or <span class="ui">Clear</span>. A dot shows when filters are on.</td></tr>
+        <tr><td><span class="ui">Sort</span></td><td>Recently updated, Name A–Z, Lead score, Next followup.</td></tr>
+        <tr><td>Quick chips</td><td>Credit Card, Loan, Approved, Rejected, Awaiting Documents, Not Interested, Follow Up, Today, This Week, This Month. Tap again to turn off.</td></tr>
+        <tr><td>Status chips</td><td><b>All</b> or one pipeline status.</td></tr>
+        <tr><td>Phone icon on a card</td><td>Call the client.</td></tr>
+        <tr><td>Swipe right / left</td><td>Right = WhatsApp, left = Edit.</td></tr>
+        <tr><td>Long press</td><td>Change the client's status.</td></tr>
+        <tr><td><span class="ui">+ Add lead</span></td><td>Open the new-lead form.</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="form">
+  <h2>7. Adding and editing a lead</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/06-client-form.png" alt="Lead form"><div class="cap">Add Lead</div></div>
+    <div class="text">
+      <div class="purpose">Opened from <b>Add Lead</b>, <b>+ Add lead</b> or <b>Edit</b>. Only <b>Full name</b> and <b>Phone</b> are required.</div>
+      <h3>Fast ways to fill it</h3>
+      <ul>
+        <li><span class="ui">Import contact</span> — pick someone from your phone book. If they have several numbers, choose the <b>Primary phone</b> and <b>WhatsApp number</b>.</li>
+        <li><span class="ui">Scan card</span> — read a business card with the camera (see <a href="#card">Scanning a business card</a>).</li>
+        <li>Photo — tap the avatar, then <b>Camera</b> or <b>Gallery</b>.</li>
+      </ul>
+      <h3>Fields</h3>
+      <ul>
+        <li><b>Contact:</b> Full name*, Phone*, <i>WhatsApp same as phone</i> (untick to type a different WhatsApp number), Email, Location / area, <span class="ui">Pick on map</span>.</li>
+        <li><b>Work &amp; finance:</b> Company, Job title, Nationality, Monthly salary (AED), Requested amount (AED).</li>
+        <li><b>Lead:</b> Product, Lead source, Status, Priority, Rating (stars), <span class="ui">Schedule followup</span>, Remarks.</li>
+      </ul>
+      <p>Tap <span class="ui">Save lead</span> (or <span class="ui">Save changes</span>). On the Add Lead tab, the eraser icon <b>Clear form</b> starts over.</p>
+      <div class="tip"><b>Duplicates:</b> if the phone number already exists, you'll see <b>Potential Duplicate Customer Found</b>: <span class="ui">Merge</span> into the existing record, <span class="ui">View Existing Record</span>, <span class="ui">Continue Anyway</span> or <span class="ui">Cancel</span>.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section class="screen chapter" id="profile">
+  <h2>8. Client profile</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/07-client-profile-timeline.png" alt="Client profile"><div class="cap">Profile — Timeline tab</div></div>
+    <div class="text">
+      <div class="purpose">Everything about one client: details, pipeline, history, notes, documents, calls, followups and files. Tap any client to open it.</div>
+      <h3>Header</h3>
+      <p>Name, job and company, status and priority, rating, the <b>lead score</b> (the circle), product, salary and requested/approved/disbursed amounts. Tap the phone icon to call, the WhatsApp icon to message, the email to write a mail, and the location to open the map. A speaker icon reads the remarks aloud.</p>
+      <h3>Quick actions</h3>
+      <table>
+        <tr><td><span class="ui">Call</span></td><td>Dial the client; afterwards the app asks how the call went.</td></tr>
+        <tr><td><span class="ui">WhatsApp</span></td><td>Open the WhatsApp sheet (chat, templates, share details).</td></tr>
+        <tr><td><span class="ui">Vault</span></td><td>Jump to the Documents tab.</td></tr>
+        <tr><td><span class="ui">Scan</span></td><td>Scan paper documents with the camera.</td></tr>
+        <tr><td><span class="ui">Upload</span></td><td>Gallery (multi-select), PDF / Files app, or WhatsApp files.</td></tr>
+        <tr><td><span class="ui">Edit</span></td><td>Open the edit form.</td></tr>
+      </table>
+      <h3>Pipeline</h3>
+      <p>Shows where the lead is (New Lead → Interested → Documents Requested → Documents Received → Application Submitted → …). Tap <span class="ui">Change status</span> to move it. For <b>Approved</b> and <b>Disbursed</b> you're asked for the amount in AED.</p>
+      <h3>Menu (⋮)</h3>
+      <p><span class="ui">Delete client</span> removes the client and their followups. You can restore them from a backup.</p>
+      <p>The <b>Timeline</b> tab lists everything that happened with this client in date order: calls, status changes, uploaded documents, messages and notes.</p>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="notes">
+  <h2>9. Voice notes and dictation (Notes tab)</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/08-client-profile-notes.png" alt="Notes tab"><div class="cap">Profile — Notes tab</div></div>
+    <div class="text">
+      <div class="purpose">Capture what the client said without typing.</div>
+      <ul>
+        <li><span class="ui">Record</span> — records audio. While recording: <span class="ui">Pause</span>/<span class="ui">Resume</span>, <span class="ui">Discard</span> or <span class="ui">Save</span>.</li>
+        <li><span class="ui">Dictate</span> — speak and the app types it for you (<i>Listening…</i>). Then <span class="ui">Save</span> or <span class="ui">Discard</span>.</li>
+        <li>On each note: ▶ play / pause, <span class="ui">Edit transcript</span> (or tap the text), and <span class="ui">Delete</span>.</li>
+      </ul>
+      <div class="tip">Dictation works offline on most phones once the language pack is downloaded in Google's speech settings.</div>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="vault">
+  <h2>10. Document vault (Documents tab)</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/09-client-profile-documents.png" alt="Documents tab"><div class="cap">Profile — Documents tab</div></div>
+    <div class="text">
+      <div class="purpose">Every document for the client, stored <b>encrypted</b> on your phone and sorted into folders (Passport, Emirates ID Front/Back, Visa, Salary Certificate, Bank Statement, Credit Card Form, Loan Application Form, Company Trade License, Other Documents).</div>
+      <h3>Checklist</h3>
+      <p>The card at the top lists the documents the client's product needs, with a completion %. While it isn't complete you can tap <span class="ui">Mark missing as requested</span> or <span class="ui">Request on WhatsApp</span>, which sends the <i>Documents Required</i> template.</p>
+      <h3>Adding documents</h3>
+      <ul>
+        <li><span class="ui">Scan</span> — scan pages, then <b>Save as one PDF</b> or <b>Save as images</b>.</li>
+        <li><span class="ui">Gallery</span> · <span class="ui">PDF / Files</span> · <span class="ui">From WhatsApp</span>.</li>
+        <li>Choose <b>Save to which folder?</b>. For ID, passport, visa and trade licence you can enter the <b>expiry date</b> (or <span class="ui">Skip</span>).</li>
+      </ul>
+      <p class="small">Supported: PDF, JPG, PNG, WEBP.</p>
+    </div>
+  </div>
+  <h3>Actions on a document (tap ⋮ on the row)</h3>
+  <table>
+    <tr><th>Action</th><th>What it does</th><th>Action</th><th>What it does</th></tr>
+    <tr><td>View</td><td>Open the preview.</td><td>Move to another category</td><td>Change the folder.</td></tr>
+    <tr><td>Rename</td><td>Give it a clear name.</td><td>Add note</td><td>Attach a short note.</td></tr>
+    <tr><td>Replace file / Attach file</td><td>Swap in a better copy, or attach one to an empty entry.</td><td>Mark as verified</td><td>Tick it off as checked.</td></tr>
+    <tr><td>Download</td><td>Save a normal (unencrypted) copy to the phone.</td><td>Change status…</td><td>Pending, Requested, Received, Verified, Rejected (asks why).</td></tr>
+    <tr><td>Share</td><td>Send via WhatsApp, email, etc.</td><td>Set expiry date</td><td>Track when it expires (shown on Home as <i>Docs expiring soon</i>).</td></tr>
+    <tr><td>Extract text (OCR)</td><td>Read text from an image; review it, then <b>Save to notes</b>.</td><td>Delete</td><td>Remove the document.</td></tr>
+  </table>
+</section>
+
+<section class="screen" id="preview">
+  <h2>11. Viewing a document</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/13-document-preview.png" alt="Document preview"><div class="cap">Document preview</div></div>
+    <div class="text">
+      <div class="purpose">Opens instantly inside the app. The file is decrypted in memory only and is never saved unencrypted unless you choose Download or Share.</div>
+      <table>
+        <tr><th>Button</th><th>What it does</th></tr>
+        <tr><td>Rotate</td><td>Turn the page 90°.</td></tr>
+        <tr><td>Zoom in / Zoom out</td><td>Enlarge or shrink (you can also pinch).</td></tr>
+        <tr><td>Fullscreen</td><td>Hide the bars. The small button at the bottom right exits fullscreen.</td></tr>
+        <tr><td>Share</td><td>Send the file to another app.</td></tr>
+        <tr><td>‹ Page X of Y ›</td><td>Move through the pages of a multi-page PDF.</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="whatsapp-import">
+  <h2>12. Importing files from WhatsApp</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/14-whatsapp-files.png" alt="Import from WhatsApp"><div class="cap">Import from WhatsApp</div></div>
+    <div class="text">
+      <div class="purpose">Attach documents a client sent you on WhatsApp or WhatsApp Business in a few taps. Open it from <b>Documents → From WhatsApp</b> or <b>Upload → WhatsApp files</b>.</div>
+      <ol class="steps">
+        <li>Allow photo/storage access when asked.</li>
+        <li>Use the chips to filter: <b>All</b>, WhatsApp Images, WhatsApp Documents, WhatsApp Business Images, WhatsApp Business Documents. The newest files are shown first.</li>
+        <li>Tick one or more files, then tap <span class="ui">Attach N</span>.</li>
+        <li>Choose the folder (and expiry date if asked).</li>
+      </ol>
+      <div class="tip"><b>Can't see a PDF?</b> Newer Android versions only let apps see WhatsApp <i>images</i>. Tap <span class="ui">Browse</span> to pick the PDF yourself, or in WhatsApp open the chat, long-press the file, and tap <b>Share → Anjali CRM AI</b>.</div>
+    </div>
+  </div>
+</section>
+
+<section class="screen chapter" id="calls">
+  <h2>13. Calls, followups and files tabs</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/10-client-profile-calls.png" alt="Calls tab"><div class="cap">Profile — Calls tab</div></div>
+    <div class="text">
+      <h3>Calls</h3>
+      <p><span class="ui">Call now</span> dials the client. When you come back to the app it asks <b>How did the call with … go?</b> Pick an outcome, add optional notes, or <span class="ui">Skip</span>. Choosing <i>call back</i> asks when, and creates a followup. If a number was flagged as a <b>wrong number</b>, you're warned before calling.</p>
+      <h3>Followups</h3>
+      <p><span class="ui">Add followup</span> → choose date and time → optional note. Each followup's menu has <b>Mark complete</b> (with an optional outcome), <b>Reschedule</b> and <b>Delete</b>. Reminders arrive as notifications (see <a href="#notifications">Notifications</a>).</p>
+      <h3>Files</h3>
+      <p><span class="ui">Generate profile PDF</span> creates a one-page summary of the client to share. Each file has <b>Open / share</b> and <b>Delete</b>.</p>
+    </div>
+  </div>
+  <div class="row" style="margin-top:4mm">
+    <div class="shot"><img src="screens/11-client-profile-followups.png" alt="Followups tab"><div class="cap">Profile — Followups tab</div></div>
+    <div class="shot"><img src="screens/12-client-profile-files.png" alt="Files tab"><div class="cap">Profile — Files tab</div></div>
+  </div>
+</section>
+
+<section class="screen" id="card">
+  <h2>14. Scanning a business card</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/15-card-scanner.png" alt="Card scanner"><div class="cap">Shown until camera access is allowed</div></div>
+    <div class="text">
+      <div class="purpose">Turn a visiting card into a new lead without typing. Open it from <b>Add Lead → Scan card</b>.</div>
+      <ol class="steps">
+        <li>Allow camera access when asked (until you do, the screen shows the message pictured; you can still use <span class="ui">Gallery</span>).</li>
+        <li>Point the camera at the card and tap <span class="ui">Capture</span>, or tap <span class="ui">Gallery</span> to use a photo.</li>
+        <li>On <b>Review card</b>, check Name, Phone(s), Email, Company and Job title. Use <span class="ui">Add phone</span> for another number.</li>
+        <li>Tap <span class="ui">Use details</span> to fill the lead form, or <span class="ui">Retake</span>.</li>
+      </ol>
+      <p class="small">The text is read on your phone; nothing is uploaded. If nothing is found, try again in better light.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section class="screen chapter" id="followups">
+  <h2>15. Followups</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/16-followups.png" alt="Followups"><div class="cap">Followups</div></div>
+    <div class="text">
+      <div class="purpose">Every followup across all clients, grouped so nothing is missed. A red pill shows how many are overdue.</div>
+      <ul>
+        <li><b>Tabs:</b> Today, Tomorrow, This Week, Upcoming, Overdue, Completed.</li>
+        <li><b>On each card:</b> <span class="ui">Call</span>, <span class="ui">Reschedule</span>, <span class="ui">Mark complete</span> (optional outcome note). The menu has <b>Delete</b>, which also cancels its reminders.</li>
+        <li><span class="ui">+ New followup</span> → search and pick a client → date and time → optional note.</li>
+      </ul>
+      <div class="tip">You can also tick a followup off directly from <b>Home → Today's tasks</b>.</div>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="search">
+  <h2>16. Search</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/17-search.png" alt="Search"><div class="cap">Search</div></div>
+    <div class="text">
+      <div class="purpose">Find any client by name, phone number, company, location, product, status or salary (for example <b>15000</b>).</div>
+      <ul>
+        <li>Type in the box, or tap the mic for <b>Voice search</b>.</li>
+        <li><b>Recent searches</b> appear as chips; tap one to repeat it.</li>
+        <li>Tap a result to open the client.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="reports">
+  <h2>17. Reports</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/18-reports.png" alt="Reports"><div class="cap">Reports</div></div>
+    <div class="text">
+      <div class="purpose">How you are performing over any period.</div>
+      <ul>
+        <li><b>Period</b> dropdown (top right): choose the time range.</li>
+        <li><b>KPIs:</b> Approval %, Rejection %, Conversion %, Avg followups / lead, Leads, Disbursed.</li>
+        <li><b>Breakdown:</b> pick a grouping chip (product, source, …) to see Leads vs converted, with a table of Leads, Conv., Rate and Disbursed.</li>
+        <li><b>Approval conversion</b> gauge and <b>Lead source performance</b> table.</li>
+        <li><b>Export:</b> <span class="ui">Excel</span> (sheets: All Leads, Approved, Rejected, Documents Pending, Followups, Disbursed) or <span class="ui">PDF</span>.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="map">
+  <h2>18. Picking a location on the map</h2>
+  <div class="row">
+    <div class="text">
+      <div class="purpose">Save where the client lives or works, so you can navigate there later. Open it from the lead form with <b>Pick on map</b>.</div>
+      <ol class="steps">
+        <li>Tap the map or drag the pin. The latitude and longitude are shown.</li>
+        <li><span class="ui">Current location</span> uses your phone's GPS. Turn on location if asked.</li>
+        <li>Tap <span class="ui">Use this</span> to save the point.</li>
+      </ol>
+      <p>On the client profile, tap the location to open it in your maps app. <b>Remove pin</b> on the form clears it.</p>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="whatsapp">
+  <h2>19. Messaging on WhatsApp and read-aloud</h2>
+  <p>Tap any WhatsApp icon (or long-press it) to open the <b>WhatsApp · client name</b> sheet:</p>
+  <ul>
+    <li><span class="ui">Open chat</span> — opens WhatsApp with the client.</li>
+    <li><span class="ui">Share client details</span> — send the client's details to someone else.</li>
+    <li><b>Templates</b> — tap a template (★ is your default). The message is filled in with the client's name, product and so on. Edit it in the <b>Message</b> box, then tap <span class="ui">Send on WhatsApp</span>.</li>
+  </ul>
+  <p><b>Read aloud:</b> the speaker buttons read text to you. Tap again to pause or resume, or long-press to stop. A mini player lets you change the <b>Speed</b>.</p>
+</section>
+
+<!-- ============================================================ -->
+<section class="screen chapter" id="settings">
+  <h2>20. Settings</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/20-settings.png" alt="Settings"><div class="cap">Settings</div></div>
+    <div class="text">
+      <table>
+        <tr><th>Item</th><th>What it's for</th></tr>
+        <tr><td>Profile card</td><td>Your name, mobile and photo.</td></tr>
+        <tr><td>Appearance</td><td>System, Light or Dark theme.</td></tr>
+        <tr><td>Security</td><td>PIN, pattern, biometrics, auto-lock.</td></tr>
+        <tr><td>Notifications</td><td>Reminder times, daily motivation.</td></tr>
+        <tr><td>Products</td><td>Add, edit and reorder the products you sell.</td></tr>
+        <tr><td>Message Templates</td><td>WhatsApp messages with {CustomerName} tags.</td></tr>
+        <tr><td>Document Categories</td><td>Vault folders: add, rename, reorder.</td></tr>
+        <tr><td>Voice &amp; Speech</td><td>Read-aloud voice, language and speed.</td></tr>
+        <tr><td>Export data</td><td>Excel or PDF report.</td></tr>
+        <tr><td>Backup &amp; restore</td><td>Local backups.</td></tr>
+        <tr><td>Cloud sync</td><td>Firebase sync status.</td></tr>
+        <tr><td>Sample data</td><td>Load or clear demo clients.</td></tr>
+        <tr><td>About</td><td>Version, licences, privacy.</td></tr>
+        <tr><td><span class="ui">Lock now</span></td><td>Lock the app immediately.</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="profile-settings">
+  <h2>21. Your profile</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/21-profile.png" alt="Profile"><div class="cap">Profile</div></div>
+    <div class="text">
+      <ul>
+        <li>Camera button on the photo: <b>Choose from gallery</b>, <b>Take a photo</b> or <b>Remove photo</b>.</li>
+        <li><b>Name</b> (required) and <b>Mobile</b> (optional).</li>
+        <li><span class="ui">Save</span>.</li>
+      </ul>
+      <p>Your name appears on the lock screen, in greetings and as the sign-off in message templates.</p>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="products">
+  <h2>22. Products</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/22-product-manager.png" alt="Products"><div class="cap">Products</div></div>
+    <div class="text">
+      <div class="purpose">The products you sell and the documents each one needs. These drive the checklist on every client's Documents tab.</div>
+      <ul>
+        <li><span class="ui">+ Add product</span> or tap a product to edit it: <b>Name</b>, <b>Icon</b>, <b>Colour</b>, <b>Required documents</b> (tap the folder chips to choose) and the <b>Active</b> switch.</li>
+        <li>Long-press and drag to reorder.</li>
+        <li><b>Inactive</b> products are hidden for new leads but kept on existing clients. This is safer than deleting.</li>
+        <li>The bin icon deletes a product (existing clients keep their records).</li>
+      </ul>
+      <p class="small">Default required documents — Loans and Mortgage: Passport, Emirates ID Front/Back, Visa, Salary Certificate, Bank Statement, Loan Application Form. Business Loan: Passport, Emirates ID Front/Back, Bank Statement, Company Trade License, Loan Application Form. Credit Card: as loans, but Credit Card Form instead of the loan form. Insurance: Passport, Emirates ID Front/Back.</p>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="categories">
+  <h2>23. Document categories</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/23-document-categories.png" alt="Document categories"><div class="cap">Document Categories</div></div>
+    <div class="text">
+      <div class="purpose">The folders in every client's vault.</div>
+      <ul>
+        <li><span class="ui">+ Add category</span> creates a folder.</li>
+        <li>Drag the handle to reorder.</li>
+        <li>Row menu: <b>Rename</b>, <b>Ask for expiry date</b> / <b>Stop asking for expiry</b>, and <b>Delete</b>.</li>
+        <li>When you delete a folder its documents move to <b>Other Documents</b>. Nothing is deleted. Other Documents itself can't be removed.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="screen chapter" id="templates">
+  <h2>24. Message templates</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/24-message-templates.png" alt="Templates"><div class="cap">Message Templates</div></div>
+    <div class="shot"><img src="screens/34-message-template-editor.png" alt="Template editor"><div class="cap">Template editor</div></div>
+    <div class="text">
+      <div class="purpose">Ready-made WhatsApp messages. The app ships with: Follow Up (default), Documents Required, Approved, Rejected, General Greeting.</div>
+      <ul>
+        <li><span class="ui">+ New template</span> or menu <b>Edit</b>: enter a <b>Template name</b> and the <b>Message</b>. <i>Tap a tag to insert it</i> (for example {CustomerName} or {ProductName}). The tags are replaced with the client's details when you send.</li>
+        <li><b>Default template</b> switch: the default is pre-selected in the WhatsApp sheet.</li>
+        <li><b>Preview</b> shows a sample with tags filled in, and can be read aloud.</li>
+        <li>Menu: <b>Duplicate</b>, <b>Set as default</b>, <b>Delete</b>. Drag to reorder.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="notifications">
+  <h2>25. Notifications</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/25-notification-settings.png" alt="Notifications"><div class="cap">Notifications</div></div>
+    <div class="text">
+      <ul>
+        <li><b>Followup reminders</b> — choose up to 4: 1 day before, 3 h before, 1 h before, 30 min before, 15 min before, At time. Existing reminders are updated automatically.</li>
+        <li><b>Daily motivation</b> — <i>Show a daily message</i> once a day when you open the app. <i>Preview a message</i> to see one now.</li>
+        <li><b>Request notification permission</b> — tap this if reminders don't appear (needed for reminders and exact alarms).</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="voice">
+  <h2>26. Voice and speech</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/26-voice-settings.png" alt="Voice"><div class="cap">Voice &amp; Speech</div></div>
+    <div class="text">
+      <ul>
+        <li><b>Reading speed</b> — slider from 0.2× to 2.0×.</li>
+        <li><b>Language</b> — or Device default. If none are listed, install <i>Speech Services by Google</i> from the Play Store (free).</li>
+        <li><b>Voice</b> — tap a voice to use it.</li>
+        <li><b>Test</b> — the speaker plays a sample sentence.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="screen chapter" id="security">
+  <h2>27. Security and security log</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/27-security.png" alt="Security"><div class="cap">Security</div></div>
+    <div class="shot"><img src="screens/28-security-log.png" alt="Security log"><div class="cap">Security log</div></div>
+    <div class="text">
+      <ul>
+        <li><b>Biometric unlock</b> — fingerprint or face.</li>
+        <li><b>Change PIN</b> — enter the current PIN, then the new one twice.</li>
+        <li><b>Pattern lock</b> — draw a pattern of at least 4 dots, twice. Asks for your PIN.</li>
+        <li><b>Lock after inactivity</b> — 1, 2, 5 (default), 10 or 30 minutes, or Never.</li>
+        <li><b>Regenerate recovery code</b> — makes a new code. The old one stops working at once. <span class="ui">Copy</span> it and tap <span class="ui">I saved it</span>.</li>
+        <li><b>Security log</b> — unlocks, failed attempts and <b>intruder photos</b> (tap one to see it full size).</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="export">
+  <h2>28. Exporting data</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/31-export.png" alt="Export"><div class="cap">Export data</div></div>
+    <div class="text">
+      <ol class="steps">
+        <li>Choose the <b>Period</b>. Leads are included by the date they were created.</li>
+        <li>Choose the <b>Format</b>: <b>Excel workbook (.xlsx)</b> (all leads plus approved, rejected, disbursed and pending-documents sheets) or <b>PDF report</b> (KPIs and summary tables).</li>
+        <li>When it's ready, tap <span class="ui">Share</span> or <span class="ui">Save to device…</span>.</li>
+      </ol>
+      <div class="warn">Exports contain customer data. Share them only with people you trust.</div>
+    </div>
+  </div>
+</section>
+
+<section class="screen chapter" id="backup">
+  <h2>29. Backup and restore</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/29-backup-restore.png" alt="Backup"><div class="cap">Backup &amp; restore</div></div>
+    <div class="text">
+      <div class="purpose">Protects you if the phone is lost, reset or replaced. A backup contains all clients, followups, notes, settings and documents.</div>
+      <ul>
+        <li><span class="ui">Backup now</span> — makes a backup immediately. An automatic backup is also made every day, and the newest ones are kept.</li>
+        <li>Each backup's menu: <b>Restore</b>, <b>Share</b>, <b>Save to device…</b>, <b>Delete</b>.</li>
+        <li><span class="ui">Restore from file…</span> — pick a backup .zip (for example one saved to Google Drive).</li>
+      </ul>
+      <div class="warn"><b>Restore replaces all current data on this phone.</b> Unlock the app first.</div>
+      <div class="tip"><b>Moving to a new phone:</b> on the old phone tap <b>Backup now</b>, then <b>Save to device…</b> or <b>Share</b> to Google Drive. On the new phone, install the app, finish setup, then <b>Restore from file…</b>.</div>
+      <div class="warn">The backup file contains customer documents in readable form. Keep it private.</div>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="sync">
+  <h2>30. Cloud sync</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/30-cloud-sync.png" alt="Cloud sync"><div class="cap">Cloud sync</div></div>
+    <div class="text">
+      <div class="purpose">Optional. It copies your data and documents to <b>your own</b> Firebase project, so a second phone can stay in step. Without it, the app works fully offline.</div>
+      <ul>
+        <li>Status: Not configured, Turned off, Offline, Up to date, Syncing…, or Last sync failed.</li>
+        <li><b>Sync to cloud</b> switch and <span class="ui">Sync now</span>. The result shows how many items were pushed, pulled and uploaded.</li>
+        <li>The chip on Home shows the same status. Tap it to retry.</li>
+        <li><i>Not configured</i> means this copy of the app was built without Firebase settings. Ask whoever built your APK.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="screen chapter" id="sample">
+  <h2>31. Sample data</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/32-sample-data.png" alt="Sample data"><div class="cap">Sample data</div></div>
+    <div class="text">
+      <ul>
+        <li><span class="ui">Load sample data</span> — adds demo clients, followups, calls and documents so you can practise.</li>
+        <li><span class="ui">Clear sample data</span> — removes only the demo clients and everything attached to them. Your real data is not touched.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="about">
+  <h2>32. About</h2>
+  <div class="row">
+    <div class="shot"><img src="screens/33-about.png" alt="About"><div class="cap">About</div></div>
+    <div class="text">
+      <p>Shows the version number (quote it when reporting a problem), the privacy statement and the open-source licences.</p>
+      <div class="purpose"><b>Privacy:</b> all CRM data stays on this device, encrypted with AES-256. The key is kept in the Android Keystore and the app is protected by your PIN. Cloud sync, when you turn it on, copies data to your own Firebase project only.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<section class="chapter" id="faq">
+  <h2>33. Tips, FAQ and troubleshooting</h2>
+  <h3>A daily routine that works</h3>
+  <ol class="steps">
+    <li>Unlock → check <b>Today's tasks</b> and <b>Overdue</b> on Home.</li>
+    <li>Call from the task list. After each call, pick the outcome so the timeline and score stay accurate.</li>
+    <li>Use <b>Request on WhatsApp</b> on the Documents tab for anything missing.</li>
+    <li>When documents arrive on WhatsApp: <b>Share → Anjali CRM AI</b>, then pick the client and folder.</li>
+    <li>Move the lead along with <b>Change status</b>, and schedule the next followup.</li>
+  </ol>
+
+  <table>
+    <tr><th style="width:38%">Problem</th><th>What to do</th></tr>
+    <tr><td>I forgot my PIN</td><td>Lock screen → <b>Forgot PIN?</b> → enter your recovery code → set a new PIN.</td></tr>
+    <tr><td>I lost the recovery code too</td><td>The data can't be opened without it (this protects your clients). Reinstall and restore from a backup file. Then go to Settings → Security → Regenerate recovery code and save the new one.</td></tr>
+    <tr><td>WhatsApp import shows no PDFs</td><td>Android 11 and newer hide WhatsApp PDFs from other apps. Use <b>Browse</b>, or Share the file from WhatsApp to Anjali CRM AI.</td></tr>
+    <tr><td>"Only PDF, JPG, PNG and WEBP files can be saved"</td><td>Ask the client to send a photo or PDF. Word and Excel files aren't stored in the vault.</td></tr>
+    <tr><td>Reminders don't arrive</td><td>Settings → Notifications → Request notification permission. Also allow the app in the phone's battery settings (no restriction).</td></tr>
+    <tr><td>Dictation or voice search doesn't work</td><td>Allow the microphone, and install or update <i>Speech Services by Google</i>.</td></tr>
+    <tr><td>Read-aloud has no voices</td><td>Install <i>Speech Services by Google</i>, then choose a language in Voice &amp; Speech.</td></tr>
+    <tr><td>Sync chip says "Sync Failed"</td><td>Check the internet connection and tap the chip to retry. Your data stays safe on the phone either way.</td></tr>
+    <tr><td>"Unlock the app before restoring a backup"</td><td>The vault was locked. Unlock, then restore again.</td></tr>
+    <tr><td>A document says "Could not open"</td><td>The file may be damaged. Use <b>Replace file</b> to attach a fresh copy.</td></tr>
+    <tr><td>Phone lost or changed</td><td>Restore from your latest backup (keep a copy off the phone, for example on Google Drive). If cloud sync was on, sign in on the new phone and sync.</td></tr>
+  </table>
+  <div class="tip"><b>Works offline:</b> everything except WhatsApp, cloud sync and maps works without internet. Business-card scanning and OCR run on the phone.</div>
+</section>
+
+</body>
+</html>
