@@ -44,4 +44,6 @@ data class EdgeLightingSettings(
     val mode: EdgeLightingMode = EdgeLightingMode.MUSIC_REACTIVE,
     val thickness: Float = 4f,
     val brightness: Float = 0.8f,
+    val color: NeonColor? = null,
+    val animation: LightingAnimation = LightingAnimation.PULSE_WAVE_SPECTRUM,
 )

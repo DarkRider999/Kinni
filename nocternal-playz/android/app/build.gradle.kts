@@ -39,6 +39,7 @@ kotlin {
 dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:designsystem"))
+    implementation(project(":core:database"))
     implementation(project(":plugin_api"))
     implementation(project(":theme_manager"))
     implementation(project(":playlists"))
@@ -54,6 +55,9 @@ dependencies {
     implementation(project(":ui_player"))
     implementation(project(":ui_youtube_panel"))
     implementation(project(":ui_radio_panel"))
+    implementation(project(":ui_library"))
+    implementation(project(":ui_dj"))
+    implementation(project(":ui_analytics"))
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)

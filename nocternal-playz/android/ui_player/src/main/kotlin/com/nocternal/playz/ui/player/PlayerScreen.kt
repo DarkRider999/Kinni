@@ -117,7 +117,7 @@ fun PlayerScreen(
                 } else {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         NeonFrame(spectrum.bass, Modifier.fillMaxWidth(0.86f).aspectRatio(1f)) {
-                            AlbumArt(track?.artworkUri, artSpec, Modifier.fillMaxSize())
+                            VinylDisk(artworkUri = track?.artworkUri, isPlaying = state.isPlaying, accentColor = p.accent, modifier = Modifier.fillMaxSize())
                         }
                     }
                 }

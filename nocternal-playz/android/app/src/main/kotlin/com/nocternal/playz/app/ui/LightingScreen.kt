@@ -93,6 +93,11 @@ fun LightingScreen(c: AppContainer, spectrum: SpectrumFrame, playing: Boolean) {
                 }
                 LabeledSlider("Thickness", lighting.edgeThickness, 1f..12f) { v -> c.lighting.setEdgeStyle(v, lighting.edgeBrightness); settings { it.copy(edgeLighting = it.edgeLighting.copy(thickness = v)) } }
                 LabeledSlider("Brightness", lighting.edgeBrightness, 0f..1f) { v -> c.lighting.setEdgeStyle(lighting.edgeThickness, v); settings { it.copy(edgeLighting = it.edgeLighting.copy(brightness = v)) } }
+                Text("Edge color", color = p.muted, style = MaterialTheme.typography.labelSmall)
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(vertical = 6.dp)) {
+                    item { Swatch(null, appSettings.edgeLighting.color == null) { settings { it.copy(edgeLighting = it.edgeLighting.copy(color = null)) } } }
+                    items(SWATCHES) { col -> Swatch(col, appSettings.edgeLighting.color == col) { settings { it.copy(edgeLighting = it.edgeLighting.copy(color = col)) } } }
+                }
             }
         }
 

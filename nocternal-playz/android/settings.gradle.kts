@@ -38,6 +38,7 @@ include(
 // Android modules.
 include(
     ":core:designsystem",
+    ":core:database",
     ":audio_engine",
     ":library_scanner",
     ":lighting_effects",
@@ -45,5 +46,8 @@ include(
     ":ui_player",
     ":ui_youtube_panel",
     ":ui_radio_panel",
+    ":ui_library",
+    ":ui_dj",
+    ":ui_analytics",
     ":app",
 )

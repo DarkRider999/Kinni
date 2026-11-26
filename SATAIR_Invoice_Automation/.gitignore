@@ -1,0 +1,6 @@
+.ruff_cache/
+data/
+logs/
+__pycache__/
+*.pyc
+*.db

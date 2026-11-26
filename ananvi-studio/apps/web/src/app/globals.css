@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --accent: #f5c518;
+  --accent-hover: #ffd740;
+}
+
+::selection {
+  background: var(--accent);
+  color: #000;
+}
