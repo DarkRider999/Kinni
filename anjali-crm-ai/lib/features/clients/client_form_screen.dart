@@ -360,9 +360,27 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
       ) ??
       _DupChoice.cancel;
 
+  /// Scrolls the first field with a validation error into view.
+  void _revealFirstError() {
+    FormFieldState<Object?>? first;
+    void visit(Element e) {
+      if (first != null) return;
+      if (e is StatefulElement && e.state is FormFieldState && (e.state as FormFieldState).hasError) {
+        first = e.state as FormFieldState<Object?>;
+        return;
+      }
+      e.visitChildElements(visit);
+    }
+
+    _form.currentContext?.visitChildElements(visit);
+    final ctx = first?.context;
+    if (ctx != null) Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 250), alignment: 0.1);
+  }
+
   Future<void> _save() async {
     if (_saving) return;
     if (!(_form.currentState?.validate() ?? false)) {
+      _revealFirstError();
       showSnack(context, 'Please fix the highlighted fields', error: true);
       return;
     }
@@ -421,10 +439,15 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
 
     final form = Form(
       key: _form,
-      child: ListView(
+      // A scroll view over a Column, not a lazy ListView: Form.validate() only
+      // checks fields that are built, and a ListView drops the off-screen ones,
+      // so Save at the bottom used to skip the required name and phone.
+      child: SingleChildScrollView(
         key: ValueKey(_generation),
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
-        children: [
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           if (!_isEdit)
             Row(
               children: [
@@ -600,7 +623,8 @@ class _ClientFormScreenState extends ConsumerState<ClientFormScreen> {
           ),
           const SizedBox(height: 16),
           GradientButton(label: _isEdit ? 'Save changes' : 'Save lead', icon: Icons.check_rounded, loading: _saving, onPressed: _save),
-        ],
+          ],
+        ),
       ),
     );
 
